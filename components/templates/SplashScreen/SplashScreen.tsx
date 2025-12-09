@@ -1,13 +1,23 @@
-import React from 'react';
-import { StatusBar } from '@/organisms/StatusBar';
 import { Text } from '@/atoms/Text';
+import { StatusBar } from '@/organisms/StatusBar';
 import { cn } from '@/utils/cn';
+import { useRouter } from 'next/router';
+import React, { useEffect } from 'react';
 
 export interface SplashScreenProps {
   className?: string;
 }
 
 export const SplashScreen: React.FC<SplashScreenProps> = ({ className }) => {
+  const router = useRouter();
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      router.push('/home');
+    }, 2000);
+
+    return () => clearTimeout(timer);
+  }, [router]);
   return (
     <div
       className={cn(
