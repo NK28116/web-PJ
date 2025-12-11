@@ -7,6 +7,12 @@
 ```mermaid
 erDiagram
     USER ||--o{ POST : creates
+    USER ||--|| SUBSCRIPTION : has
+    SUBSCRIPTION }o--|| PLAN : belongs_to
+    USER ||--o{ NOTIFICATION : receives
+    USER ||--o{ REPLY : writes
+    REVIEW ||--o{ REPLY : has
+    
     USER {
         string id PK
         string email
@@ -14,6 +20,22 @@ erDiagram
         datetime createdAt
         datetime updatedAt
     }
+    
+    PLAN {
+        string id PK
+        string code
+        string name
+        int price
+    }
+
+    SUBSCRIPTION {
+        string id PK
+        string userId FK
+        string planId FK
+        string status
+        datetime currentPeriodEnd
+    }
+
     POST {
         string id PK
         string userId FK
@@ -21,6 +43,31 @@ erDiagram
         string content
         datetime createdAt
         datetime updatedAt
+    }
+    
+    REVIEW {
+        string id PK
+        string source
+        string content
+        int rating
+        datetime createdAt
+    }
+
+    REPLY {
+        string id PK
+        string reviewId FK
+        string userId FK
+        string content
+        datetime createdAt
+    }
+
+    NOTIFICATION {
+        string id PK
+        string userId FK
+        string type
+        string message
+        boolean isRead
+        datetime createdAt
     }
 ```
 
@@ -46,23 +93,46 @@ erDiagram
 | updated_at | TIMESTAMP | NO | CURRENT_TIMESTAMP | 更新日時 |
 
 #### インデックス
-
 - PRIMARY KEY: `id`
 - UNIQUE INDEX: `email`
-- INDEX: `created_at`
 
-#### 制約
-
-- `email`: メール形式、ユニーク制約
-- `password_hash`: 最小60文字 (bcryptハッシュ)
-- `name`: 1文字以上100文字以下
-
----
-
-### 2.2 posts テーブル
+### 2.2 plans テーブル
 
 #### 概要
-投稿情報を管理するテーブル
+料金プラン（Light / Basic / Pro）のマスタデータ
+
+#### カラム定義
+
+| カラム名 | 型 | NULL | デフォルト | 説明 |
+|----------|-----|------|-----------|------|
+| id | VARCHAR(36) | NO | UUID | プランID (主キー) |
+| code | VARCHAR(20) | NO | - | プランコード (light, basic, pro) |
+| name | VARCHAR(50) | NO | - | 表示用プラン名 |
+| price | INT | NO | 0 | 月額料金 |
+| features | JSON | YES | NULL | プラン機能定義（JSON） |
+| created_at | TIMESTAMP | NO | CURRENT_TIMESTAMP | 作成日時 |
+
+### 2.3 subscriptions テーブル
+
+#### 概要
+ユーザーの契約情報を管理
+
+#### カラム定義
+
+| カラム名 | 型 | NULL | デフォルト | 説明 |
+|----------|-----|------|-----------|------|
+| id | VARCHAR(36) | NO | UUID | サブスクリプションID (主キー) |
+| user_id | VARCHAR(36) | NO | - | ユーザーID (外部キー) |
+| plan_id | VARCHAR(36) | NO | - | プランID (外部キー) |
+| status | ENUM | NO | 'active' | active, canceled, past_due |
+| current_period_end | TIMESTAMP | NO | - | 契約終了予定日 |
+| created_at | TIMESTAMP | NO | CURRENT_TIMESTAMP | 作成日時 |
+| updated_at | TIMESTAMP | NO | CURRENT_TIMESTAMP | 更新日時 |
+
+### 2.4 posts テーブル
+
+#### 概要
+投稿情報を管理
 
 #### カラム定義
 
@@ -77,24 +147,59 @@ erDiagram
 | created_at | TIMESTAMP | NO | CURRENT_TIMESTAMP | 作成日時 |
 | updated_at | TIMESTAMP | NO | CURRENT_TIMESTAMP | 更新日時 |
 
-#### インデックス
+### 2.5 reviews テーブル
 
-- PRIMARY KEY: `id`
-- FOREIGN KEY: `user_id` REFERENCES `users(id)` ON DELETE CASCADE
-- INDEX: `user_id, created_at`
-- INDEX: `status, published_at`
+#### 概要
+外部または内部の口コミデータ
 
-#### 制約
+#### カラム定義
 
-- `title`: 1文字以上200文字以下
-- `content`: 必須
-- `status`: 'draft', 'published', 'archived' のいずれか
+| カラム名 | 型 | NULL | デフォルト | 説明 |
+|----------|-----|------|-----------|------|
+| id | VARCHAR(36) | NO | UUID | レビューID |
+| source | VARCHAR(50) | NO | 'internal' | ソース (google_maps, internal等) |
+| external_id | VARCHAR(255) | YES | NULL | 外部サービスのID |
+| content | TEXT | NO | - | 口コミ内容 |
+| rating | INT | NO | - | 評価 (1-5) |
+| created_at | TIMESTAMP | NO | CURRENT_TIMESTAMP | 作成日時 |
+
+### 2.6 replies テーブル
+
+#### 概要
+口コミへの返信
+
+#### カラム定義
+
+| カラム名 | 型 | NULL | デフォルト | 説明 |
+|----------|-----|------|-----------|------|
+| id | VARCHAR(36) | NO | UUID | 返信ID |
+| review_id | VARCHAR(36) | NO | - | 対象レビューID |
+| user_id | VARCHAR(36) | NO | - | 返信者ID |
+| content | TEXT | NO | - | 返信内容 |
+| created_at | TIMESTAMP | NO | CURRENT_TIMESTAMP | 作成日時 |
+
+### 2.7 notifications テーブル
+
+#### 概要
+ユーザーへの通知
+
+#### カラム定義
+
+| カラム名 | 型 | NULL | デフォルト | 説明 |
+|----------|-----|------|-----------|------|
+| id | VARCHAR(36) | NO | UUID | 通知ID |
+| user_id | VARCHAR(36) | NO | - | 通知先ユーザーID |
+| type | VARCHAR(50) | NO | - | 通知タイプ (system, reply, etc) |
+| message | VARCHAR(255) | NO | - | 通知文言 |
+| is_read | BOOLEAN | NO | FALSE | 既読フラグ |
+| link_url | VARCHAR(500) | YES | NULL | 遷移先URL |
+| created_at | TIMESTAMP | NO | CURRENT_TIMESTAMP | 作成日時 |
 
 ---
 
 ## 3. データ型定義 (TypeScript)
 
-### 3.1 User型
+### 3.1 ユーザー・契約関連
 
 ```typescript
 interface User {
@@ -106,24 +211,25 @@ interface User {
   updatedAt: Date;
 }
 
-// API レスポンス用 (パスワードハッシュを除外)
-type UserResponse = Omit<User, 'passwordHash'>;
-
-// 作成時の入力型
-interface CreateUserInput {
-  email: string;
-  password: string;
+interface Plan {
+  id: string;
+  code: 'light' | 'basic' | 'pro';
   name: string;
+  price: number;
+  features: Record<string, boolean>; // { "report_detail": true, "analysis_chart": false }
 }
 
-// 更新時の入力型
-interface UpdateUserInput {
-  name?: string;
-  avatarUrl?: string;
+interface Subscription {
+  id: string;
+  userId: string;
+  planId: string;
+  status: 'active' | 'canceled' | 'past_due';
+  currentPeriodEnd: Date;
+  plan?: Plan; // Join用
 }
 ```
 
-### 3.2 Post型
+### 3.2 投稿・レビュー関連
 
 ```typescript
 interface Post {
@@ -137,136 +243,97 @@ interface Post {
   updatedAt: Date;
 }
 
-// 作成時の入力型
-interface CreatePostInput {
-  title: string;
+interface Review {
+  id: string;
+  source: string;
   content: string;
-  status?: 'draft' | 'published';
+  rating: number;
+  createdAt: Date;
+  replies?: Reply[];
 }
 
-// 更新時の入力型
-interface UpdatePostInput {
-  title?: string;
-  content?: string;
-  status?: 'draft' | 'published' | 'archived';
+interface Reply {
+  id: string;
+  reviewId: string;
+  userId: string;
+  content: string;
+  createdAt: Date;
 }
 
-// ユーザー情報を含む投稿型
-interface PostWithUser extends Post {
-  user: UserResponse;
+interface Notification {
+  id: string;
+  userId: string;
+  type: 'system' | 'reply' | 'alert';
+  message: string;
+  isRead: boolean;
+  linkUrl?: string;
+  createdAt: Date;
 }
 ```
 
 ---
 
-## 4. バリデーションルール
+## 4. データフロー
 
-### 4.1 User
-
-| フィールド | ルール |
-|-----------|--------|
-| email | 必須、メール形式、ユニーク、最大255文字 |
-| password | 必須、最小8文字、英数字記号を含む |
-| name | 必須、1〜100文字 |
-| avatarUrl | URL形式、最大500文字 |
-
-### 4.2 Post
-
-| フィールド | ルール |
-|-----------|--------|
-| title | 必須、1〜200文字 |
-| content | 必須、1文字以上 |
-| status | 'draft', 'published', 'archived' のいずれか |
-
----
-
-## 5. データフロー
-
-### 5.1 ユーザー登録フロー
+### 4.1 契約更新・変更フロー
 
 ```mermaid
 sequenceDiagram
     participant Client
     participant API
     participant DB
-    
-    Client->>API: POST /api/users (email, password, name)
-    API->>API: バリデーション
-    API->>API: パスワードハッシュ化
-    API->>DB: INSERT users
-    DB-->>API: 作成されたユーザー
-    API-->>Client: UserResponse (パスワード除外)
+    participant PaymentProvider
+
+    Client->>API: POST /api/subscription/change (planId)
+    API->>PaymentProvider: 決済処理/プラン変更API呼び出し
+    PaymentProvider-->>API: 成功レスポンス
+    API->>DB: UPDATE subscriptions SET plan_id, current_period_end
+    DB-->>API: 更新完了
+    API-->>Client: 新しいSubscription情報
 ```
 
-### 5.2 投稿作成フロー
+### 4.2 口コミ返信フロー
 
 ```mermaid
 sequenceDiagram
     participant Client
     participant API
     participant DB
-    
-    Client->>API: POST /api/posts (title, content, status)
-    API->>API: 認証チェック
-    API->>API: バリデーション
-    API->>DB: INSERT posts
-    DB-->>API: 作成された投稿
-    API-->>Client: Post
+
+    Client->>API: POST /api/reviews/:id/reply (content)
+    API->>DB: INSERT replies
+    API->>DB: UPDATE reviews (statusなどあれば)
+    DB-->>API: 作成完了
+    API-->>Client: 返信データ
 ```
 
 ---
 
-## 6. ストレージ設計
+## 5. ストレージ設計
 
-### 6.1 ファイルストレージ
-
-<!-- 画像やファイルのアップロード先 -->
+### 5.1 ファイルストレージ
 
 - サービス: (AWS S3 / Google Cloud Storage / Firebase Storage など)
 - バケット構成:
-  - `avatars/`: ユーザーアバター画像
-  - `posts/`: 投稿に添付された画像
+  - `avatars/`: ユーザーアバター
+  - `posts/`: 投稿画像
 - ファイル命名規則: `{userId}/{timestamp}_{originalFilename}`
-- 最大ファイルサイズ: 5MB
-- 許可する拡張子: .jpg, .jpeg, .png, .gif
 
-### 6.2 キャッシュ設計
+### 5.2 キャッシュ設計
 
-<!-- Redisなどのキャッシュ戦略 -->
-
-- キャッシュキー命名規則:
-  - ユーザー情報: `user:{userId}`
-  - 投稿一覧: `posts:list:{page}:{limit}`
-- TTL (有効期限):
-  - ユーザー情報: 1時間
-  - 投稿一覧: 5分
+- **ユーザー情報**: `user:{userId}` (TTL: 1h)
+- **ダッシュボード統計**: `dashboard:stats:{userId}` (TTL: 10m) - 計算コスト削減
+- **プランマスタ**: `plans:all` (TTL: 24h) - 変更頻度低
 
 ---
 
-## 7. データ移行・シード
-
-### 7.1 初期データ
-
-<!-- 開発環境で必要な初期データ -->
+## 6. 初期データ (Seed)
 
 ```typescript
-// 管理者ユーザー
-const adminUser = {
-  email: 'admin@example.com',
-  password: 'Admin123!',
-  name: '管理者'
-};
-
-// テストユーザー
-const testUsers = [
-  { email: 'user1@example.com', password: 'User123!', name: 'テストユーザー1' },
-  { email: 'user2@example.com', password: 'User123!', name: 'テストユーザー2' }
+// プランマスタ
+const plans = [
+  { code: 'light', name: 'Light Plan', price: 980 },
+  { code: 'basic', name: 'Basic Plan', price: 2980 },
+  { code: 'pro', name: 'Pro Plan', price: 9800 }
 ];
 ```
-
-### 7.2 マイグレーション戦略
-
-<!-- データベーススキーマの変更管理方法 -->
-
-- ツール: (Prisma / TypeORM / Knex.js など)
-- マイグレーションファイルの命名: `YYYYMMDDHHMMSS_description.sql`
