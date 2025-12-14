@@ -78,6 +78,7 @@ erDiagram
 ### 2.1 users テーブル
 
 #### 概要
+
 ユーザー情報を管理するテーブル
 
 #### カラム定義
@@ -93,12 +94,14 @@ erDiagram
 | updated_at | TIMESTAMP | NO | CURRENT_TIMESTAMP | 更新日時 |
 
 #### インデックス
+
 - PRIMARY KEY: `id`
 - UNIQUE INDEX: `email`
 
 ### 2.2 plans テーブル
 
 #### 概要
+
 料金プラン（Light / Basic / Pro）のマスタデータ
 
 #### カラム定義
@@ -115,6 +118,7 @@ erDiagram
 ### 2.3 subscriptions テーブル
 
 #### 概要
+
 ユーザーの契約情報を管理
 
 #### カラム定義
@@ -132,6 +136,7 @@ erDiagram
 ### 2.4 posts テーブル
 
 #### 概要
+
 投稿情報を管理
 
 #### カラム定義
@@ -150,6 +155,7 @@ erDiagram
 ### 2.5 reviews テーブル
 
 #### 概要
+
 外部または内部の口コミデータ
 
 #### カラム定義
@@ -166,6 +172,7 @@ erDiagram
 ### 2.6 replies テーブル
 
 #### 概要
+
 口コミへの返信
 
 #### カラム定義
@@ -181,6 +188,7 @@ erDiagram
 ### 2.7 notifications テーブル
 
 #### 概要
+
 ユーザーへの通知
 
 #### カラム定義
