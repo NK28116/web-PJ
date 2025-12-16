@@ -1,12 +1,8 @@
-import React, { useState } from 'react';
-import { BaseTemplate } from '@/templates/BaseTemplate';
+import React from 'react';
+import { PostTemplate } from '@/templates/PostTemplate';
 import Head from 'next/head';
 
 export default function PostPage() {
-  const [activeTab, setActiveTab] = useState<
-    'home' | 'post' | 'report' | 'auto-reply'
-  >('post');
-
   return (
     <>
       <Head>
@@ -25,10 +21,7 @@ export default function PostPage() {
           rel="stylesheet"
         />
       </Head>
-      <BaseTemplate activeTab={activeTab} onTabChange={setActiveTab}>
-        <h1>投稿</h1>
-      </BaseTemplate>
+      <PostTemplate />
     </>
   );
 }
-

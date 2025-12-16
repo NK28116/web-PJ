@@ -35,5 +35,6 @@ next-env.d.ts
 
 .cursor/*
 .vscode/*
+.swc/*
 
 package-lock.json

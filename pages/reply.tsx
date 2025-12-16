@@ -1,13 +1,20 @@
-import React from 'react';
-import { ReplyTemplate } from '@/templates/ReplyTemplate';
+import React, { useState } from 'react';
+import { BaseTemplate } from '@/templates/BaseTemplate';
 import Head from 'next/head';
 
 export default function AutoReplyPage() {
+  const [activeTab, setActiveTab] = useState<
+    'home' | 'post' | 'report' | 'auto-reply'
+  >('auto-reply');
+
   return (
     <>
       <Head>
-        <title>口コミ返信 - Wyze System</title>
-        <meta name="description" content="Wyze System Web Application - Reply" />
+        <title>自動返信 - Wyze System</title>
+        <meta
+          name="description"
+          content="Wyze System Web Application - Auto Reply"
+        />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="icon" href="/favicon.ico" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -21,7 +28,10 @@ export default function AutoReplyPage() {
           rel="stylesheet"
         />
       </Head>
-      <ReplyTemplate />
+      <BaseTemplate activeTab={activeTab} onTabChange={setActiveTab}>
+        <h1>自動返信</h1>
+      </BaseTemplate>
     </>
   );
 }
+
