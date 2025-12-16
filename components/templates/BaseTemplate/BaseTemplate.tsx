@@ -6,6 +6,7 @@ export interface BaseTemplateProps {
   className?: string;
   activeTab?: 'home' | 'post' | 'report' | 'auto-reply';
   onTabChange?: (tab: 'home' | 'post' | 'report' | 'auto-reply') => void;
+  customTabLabels?: { [key: string]: string };
   children: React.ReactNode;
 }
 
@@ -13,6 +14,7 @@ export const BaseTemplate: React.FC<BaseTemplateProps> = ({
   className,
   activeTab = 'home',
   onTabChange,
+  customTabLabels,
   children,
 }) => {
   return (
@@ -24,11 +26,14 @@ export const BaseTemplate: React.FC<BaseTemplateProps> = ({
       )}
     >
       {/* ヘッター */}
-      <Header activeTab={activeTab} onTabChange={onTabChange} />
+      <Header 
+        activeTab={activeTab} 
+        onTabChange={onTabChange} 
+        customTabLabels={customTabLabels}
+      />
 
       {/* メインコンテンツ */}
       <div className="flex-1 px-4 py-6">{children}</div>
     </div>
   );
 };
-

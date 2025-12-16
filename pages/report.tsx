@@ -1,12 +1,8 @@
-import React, { useState } from 'react';
-import { BaseTemplate } from '@/templates/BaseTemplate';
+import React from 'react';
+import { ReportTemplate } from '@/templates/ReportTemplate';
 import Head from 'next/head';
 
 export default function ReportPage() {
-  const [activeTab, setActiveTab] = useState<
-    'home' | 'post' | 'report' | 'auto-reply'
-  >('report');
-
   return (
     <>
       <Head>
@@ -25,10 +21,7 @@ export default function ReportPage() {
           rel="stylesheet"
         />
       </Head>
-      <BaseTemplate activeTab={activeTab} onTabChange={setActiveTab}>
-        <h1>レポート</h1>
-      </BaseTemplate>
+      <ReportTemplate />
     </>
   );
 }
-

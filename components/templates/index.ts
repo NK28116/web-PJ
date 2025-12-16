@@ -4,4 +4,7 @@ export { HomeTemplate } from './HomeTemplate';
 export type { HomeTemplateProps } from './HomeTemplate';
 export { BaseTemplate } from './BaseTemplate';
 export type { BaseTemplateProps } from './BaseTemplate';
-
+export { PostTemplate } from './PostTemplate';
+export type { PostTemplateProps } from './PostTemplate';
+export { ReportTemplate } from './ReportTemplate';
+export { ReplyTemplate } from './ReplyTemplate';

@@ -8,6 +8,7 @@ export interface HeaderProps {
   className?: string;
   activeTab?: 'home' | 'post' | 'report' | 'auto-reply';
   onTabChange?: (tab: 'home' | 'post' | 'report' | 'auto-reply') => void;
+  customTabLabels?: { [key: string]: string };
 }
 
 const tabs = [
@@ -21,6 +22,7 @@ export const Header: React.FC<HeaderProps> = ({
   className,
   activeTab = 'home',
   onTabChange,
+  customTabLabels,
 }) => {
   const router = useRouter();
 
@@ -58,10 +60,10 @@ export const Header: React.FC<HeaderProps> = ({
         />
 
         {/* ロゴテキスト */}
-        <div className="relative z-10 flex items-center justify-center h-[62px]">
+        <div className="relative z-10 flex items-center justify-between h-[62px] px-[18px]">
           <Text
             as="h1"
-            className="text-[48px] leading-[1.546em] text-center"
+            className="text-[24px] leading-[1.546em]"
             style={{
               fontFamily: "'Kdam Thmor Pro', sans-serif",
               fontWeight: 400,
@@ -70,6 +72,13 @@ export const Header: React.FC<HeaderProps> = ({
           >
             wyze
           </Text>
+
+          {/* ハンバーガーメニュー */}
+          <div className="flex flex-col gap-[6px]">
+            <div className="w-8 h-px bg-white" />
+            <div className="w-8 h-px bg-white" />
+            <div className="w-8 h-px bg-white" />
+          </div>
         </div>
       </div>
 
@@ -93,16 +102,15 @@ export const Header: React.FC<HeaderProps> = ({
                   fontFamily: "'Inter', sans-serif",
                 }}
               >
-                {tab.label}
+                {customTabLabels?.[tab.id] || tab.label}
               </button>
 
               {/* アクティブインジケーター */}
               {activeTab === tab.id && (
                 <div
-                  className="mt-1 h-px w-full"
+                  className="mt-1 h-[3px] w-[45px] mx-auto"
                   style={{
-                    background:
-                      'linear-gradient(to right, #C4C4C4, rgba(0, 0, 0, 0.2))',
+                    backgroundColor: '#00A48D',
                   }}
                 />
               )}
@@ -116,4 +124,3 @@ export const Header: React.FC<HeaderProps> = ({
     </div>
   );
 };
-
