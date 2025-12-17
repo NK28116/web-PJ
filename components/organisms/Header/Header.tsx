@@ -1,8 +1,7 @@
-import React from 'react';
-import { useRouter } from 'next/router';
-import { StatusBar } from '@/organisms/StatusBar';
 import { Text } from '@/atoms/Text';
 import { cn } from '@/utils/cn';
+import { useRouter } from 'next/router';
+import React from 'react';
 
 export interface HeaderProps {
   className?: string;
@@ -48,19 +47,16 @@ export const Header: React.FC<HeaderProps> = ({
         className
       )}
     >
-      {/* ステータスバー */}
-      <StatusBar />
-
       {/* ロゴエリア */}
       <div className="relative">
         {/* 背景色の矩形 */}
         <div
-          className="absolute inset-x-0 top-0 h-[62px]"
+          className="absolute inset-x-0 top-0 h-[54px]"
           style={{ backgroundColor: '#00A48D' }}
         />
 
         {/* ロゴテキスト */}
-        <div className="relative z-10 flex items-center justify-between h-[62px] px-[18px]">
+        <div className="relative z-10 flex items-center justify-between h-[54px] px-[18px]">
           <Text
             as="h1"
             className="text-[24px] leading-[1.546em]"

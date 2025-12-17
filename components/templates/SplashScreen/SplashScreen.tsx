@@ -1,5 +1,4 @@
 import { Text } from '@/atoms/Text';
-import { StatusBar } from '@/organisms/StatusBar';
 import { cn } from '@/utils/cn';
 import { useRouter } from 'next/router';
 import React, { useEffect } from 'react';
@@ -27,14 +26,11 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ className }) => {
       )}
       style={{ height: '852px' }}
     >
-      {/* ステータスバー */}
-      <StatusBar />
-
       {/* メインコンテンツエリア */}
       <div className="flex-1 flex flex-col items-center justify-center relative">
         {/* 背景色の矩形 */}
         <div
-          className="absolute inset-x-0 top-[62px] bottom-0"
+          className="absolute inset-x-0 top-0 bottom-0"
           style={{ backgroundColor: '#00A48D' }}
         />
 
@@ -70,4 +66,3 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ className }) => {
     </div>
   );
 };
-

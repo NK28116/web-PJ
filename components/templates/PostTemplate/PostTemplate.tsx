@@ -3,6 +3,7 @@ import { BaseTemplate } from '@/templates/BaseTemplate';
 import { Text } from '@/atoms/Text';
 import { cn } from '@/utils/cn';
 import { PostListItem } from './PostListItem';
+import { PostDetailModal } from './PostDetailModal';
 
 const GridIcon = ({ active }: { active: boolean }) => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -80,18 +81,23 @@ export interface PostTemplateProps {
 }
 
 export const PostTemplate: React.FC<PostTemplateProps> = () => {
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-
   // ダミーデータ
   const posts = Array.from({ length: 27 }, (_, i) => ({
     id: i,
     bgColor: ['#2D3748', '#4FD1C5', '#3182CE', '#E53E3E'][i % 4],
-    title: '【NEW】Smash Do ...',
+    title: '【NEW】Smash Double Cheese Burgar',
+    content: 'パティとチーズは同じものを使っています！\n変更点は、\n・グリルドオニオン\n・ピクルス\n・オーロラソース\n\n既存のタルタルソースをかけたマッシュダブルチーズバーガーも好評いただいておりますが、こちらもかなり自信作です！\nまだメニューに載ってないので、お声がけください！',
     tags: '#cheeseburger #中目黒 #ハンバーガー',
     rate: 30.4,
     views: 196,
     date: 'July 6, 2025',
+    username: '@wyzesystem_1212',
+    status: '表示中'
   }));
+
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  // postsの型推論を利用してstateの型を定義
+  const [selectedPost, setSelectedPost] = useState<typeof posts[0] | null>(null);
 
   return (
     <BaseTemplate activeTab="post">
@@ -131,19 +137,30 @@ export const PostTemplate: React.FC<PostTemplateProps> = () => {
             {posts.map((post) => (
               <div
                 key={post.id}
-                className="aspect-square w-full rounded-sm overflow-hidden"
+                className="aspect-square w-full rounded-sm overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
                 style={{ backgroundColor: post.bgColor }}
+                onClick={() => setSelectedPost(post)}
               />
             ))}
           </div>
         ) : (
           <div className="flex flex-col">
             {posts.map((post) => (
-              <PostListItem key={post.id} post={post} />
+              <PostListItem 
+                key={post.id} 
+                post={post} 
+                onClick={() => setSelectedPost(post)}
+              />
             ))}
           </div>
         )}
       </div>
+
+      <PostDetailModal 
+        isOpen={!!selectedPost} 
+        onClose={() => setSelectedPost(null)} 
+        post={selectedPost}
+      />
     </BaseTemplate>
   );
 };
