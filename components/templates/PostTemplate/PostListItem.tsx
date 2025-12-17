@@ -12,11 +12,15 @@ export interface PostListItemProps {
     views: number;
     date: string;
   };
+  onClick?: () => void;
 }
 
-export const PostListItem: React.FC<PostListItemProps> = ({ post }) => {
+export const PostListItem: React.FC<PostListItemProps> = ({ post, onClick }) => {
   return (
-    <div className="relative w-full h-[158px] border-b border-[#C4C4C4]/20 flex overflow-hidden">
+    <div 
+      className="relative w-full h-[158px] border-b border-[#C4C4C4]/20 flex overflow-hidden cursor-pointer hover:bg-gray-50 transition-colors"
+      onClick={onClick}
+    >
       {/* 左側の画像 */}
       <div 
         className="w-[128px] h-[160px] flex-shrink-0 -mt-[1px] ml-[10px]"
