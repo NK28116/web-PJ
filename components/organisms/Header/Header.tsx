@@ -138,7 +138,7 @@ export const Header: React.FC<HeaderProps> = ({
             <li><a href="/home" className="text-lg m-4">ホーム</a></li>
             <li><a href="/current-features" className="text-lg m-4">ご利用中の機能</a></li>
             <li><a href="/billing" className="text-lg m-4">ご請求内容</a></li>
-            <li><a href="#" className="text-lg m-4">アカウント情報</a></li>
+            <li><a href="/account" className="text-lg m-4">アカウント情報</a></li>
             <li><a href="#" className="text-lg m-4">お問い合わせ</a></li>
             <li><a href="#" className="text-lg m-4">ログアウト</a></li>
           </ul>
