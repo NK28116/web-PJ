@@ -119,7 +119,7 @@ export const ReplyTemplate: React.FC = () => {
                     </div>
                   </div>
                   {review.isNew && (
-                    <span className="bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-full">NEW</span>
+                    <span className="bg-red-500 text-[10px] px-2 py-0.5 rounded-full">NEW</span>
                   )}
                 </div>
                 <Text className="text-sm text-gray-700 mb-3 leading-relaxed">
@@ -129,7 +129,7 @@ export const ReplyTemplate: React.FC = () => {
                   <Button className="text-xs px-3 py-1.5 border border-gray-300 rounded text-gray-600">
                     詳細を見る
                   </Button>
-                  <Button className="text-xs px-3 py-1.5 bg-[#00A48D] text-white rounded">
+                  <Button className="text-xs px-3 py-1.5 bg-[#00A48D]  rounded">
                     返信する
                   </Button>
                 </div>

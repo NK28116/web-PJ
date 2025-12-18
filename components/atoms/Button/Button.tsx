@@ -1,6 +1,21 @@
-import React from 'react';
+import { BaseComponentProps, ButtonVariant, ClickableProps, Size, Variant } from '@/types';
 import { cn } from '@/utils/cn';
-import { BaseComponentProps, ClickableProps, Size, ButtonVariant, Variant } from '@/types';
+import React from 'react';
+
+/**
+ * 使い方
+ * <Button
+ *   onClick={() => {}} // クリックイベント
+ *   variant="solid"    // スタイルバリエーション ('solid' | 'outline' | 'ghost' | 'link')
+ *   color="primary"    // カラーテーマ ('primary' | 'secondary' | 'success' | 'warning' | 'error' | 'info')
+ *                      // 未指定(undefined/null)の場合は、黒を基調としたデフォルトの配色になります。
+ *                      // variantが未指定の状態でcolorを指定した場合、'solid'バリアントが適用されます。
+ *   size="md"          // サイズ ('xs' | 'sm' | 'md' | 'lg' | 'xl')
+ *   fullWidth={false}  // 横幅いっぱいにするか
+ * >
+ *   ボタンコンポーネント
+ * </Button>
+ */
 
 export interface ButtonProps extends BaseComponentProps, ClickableProps {
   variant?: ButtonVariant;
@@ -53,18 +68,31 @@ const variantClasses: Record<ButtonVariant, Record<Variant, string>> = {
   },
 };
 
+const defaultVariantClasses: Record<ButtonVariant, string> = {
+  solid: 'bg-black text-white hover:bg-gray-800',
+  outline: 'border-2 border-black text-black hover:bg-gray-50',
+  ghost: 'text-black hover:bg-gray-100',
+  link: 'text-black underline hover:text-gray-800',
+};
+
 export const Button: React.FC<ButtonProps> = ({
   children,
-  variant = 'solid',
-  color = 'primary',
+  variant,
+  color,
   size = 'md',
   type = 'button',
   fullWidth = false,
   disabled = false,
-  onClick,
+  onClick = () => alert('clicked!'),
   className,
   style,
 }) => {
+  const variantStyle =
+    variant && color ? variantClasses[variant][color] :
+    variant ? defaultVariantClasses[variant] :
+    color ? variantClasses['solid'][color] :
+    'border border-black text-black bg-transparent hover:bg-gray-50';
+
   return (
     <button
       type={type}
@@ -74,7 +102,7 @@ export const Button: React.FC<ButtonProps> = ({
         'font-medium rounded-lg transition-colors duration-200',
         'focus:outline-none focus:ring-2 focus:ring-offset-2',
         sizeClasses[size],
-        variantClasses[variant][color],
+        variantStyle,
         disabled && 'opacity-50 cursor-not-allowed',
         fullWidth && 'w-full',
         className
@@ -85,6 +113,3 @@ export const Button: React.FC<ButtonProps> = ({
     </button>
   );
 };
-
-
-

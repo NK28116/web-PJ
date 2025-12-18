@@ -24,86 +24,8 @@ export const HomeTemplate: React.FC<HomeTemplateProps> = ({
       onTabChange={onTabChange}
     >
       <div className="space-y-6 pb-20">
-        
-        {/* アカウント連携セクション */}
-        <section className="space-y-3">
-          <Text className="text-[15px] font-normal text-black pl-2">
-            アカウント連携
-          </Text>
 
-          <div className="border border-gray-300 rounded-lg p-4 space-y-4 bg-transparent">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                {/* Google Icon Placeholder */}
-                <div className="w-8 h-8 bg-white flex items-center justify-center">
-                    {/* 簡易的なGロゴ */}
-                   <span className="text-xl font-bold text-[#4285F4]">G</span>
-                </div>
-                <div className="flex flex-col">
-                    <Text className="text-[12px] text-black">Google</Text>
-                    <Text className="text-[10px] text-black">未連携</Text>
-                </div>
-              </div>
-              
-              <Button 
-                size="sm"
-                className="bg-[#006355] text-white hover:bg-[#004d42] text-[10px] h-8 px-4 rounded"
-              >
-                連携する
-              </Button>
-            </div>
-             <div className="flex justify-end pt-2 border-t border-gray-200">
-                 <Button className="text-[10px] text-[#006355] font-bold">
-                    アカウントを追加
-                 </Button>
-            </div>
-          </div>
-        </section>
-
-        {/* インスタグラム連携セクション */}
-        <section className="space-y-3">
-          <Text className="text-[15px] font-normal text-black pl-2">
-            インスタグラム連携
-          </Text>
-
-          <div className="border border-gray-300 rounded-lg p-4 flex justify-center bg-transparent">
-            <Button
-              className="w-full bg-[#006355] text-white hover:bg-[#004d42] text-[10px] h-9"
-            >
-              ビジネスプロフィールからインポート
-            </Button>
-          </div>
-        </section>
-
-        {/* 店舗一覧セクション */}
-        <section className="space-y-3">
-          <Text className="text-[15px] font-normal text-black pl-2">
-            店舗一覧
-          </Text>
-
-          <div className="border border-gray-300 rounded-lg p-4 space-y-2 bg-transparent">
-            <div className="flex justify-between items-start">
-                <div>
-                     <Text className="text-[24px] font-normal text-black leading-tight">
-                        ID: 0001
-                     </Text>
-                     <Text className="text-[14px] font-normal text-black mt-1">
-                        wyzesystem○○@gmail.com
-                     </Text>
-                </div>
-                <div className="w-16 h-16 flex items-center justify-center">
-                    <span className="text-4xl font-serif text-black">w</span>
-                </div>
-            </div>
-            
-            <div className="flex items-center gap-2 mt-4">
-                <div className="w-3 h-3 rounded-full bg-[#3498DB]"></div>
-                <Text className="text-[12px] text-black">連携待ち</Text>
-            </div>
-          </div>
-        </section>
-
-        {/* ダッシュボードセクション */}
+               {/* ダッシュボードセクション */}
         <section className="space-y-3 pt-6">
              <div className="flex items-center justify-between px-2">
                 <Text className="text-[15px] font-normal text-black">
@@ -182,8 +104,99 @@ export const HomeTemplate: React.FC<HomeTemplateProps> = ({
                     </div>
                 </div>
             </div>
-
         </section>
+        
+        {/* アカウント連携セクション */}
+        <section className="space-y-3">
+          <div className="border border-gray-300 rounded-lg p-4 space-y-4 bg-transparent">
+              <Text className="text-[15px] font-normal text-black pl-2">
+            アカウント連携
+          </Text>        
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                {/* Google Icon Placeholder */}
+                <div className="w-8 h-8 bg-white flex items-center justify-center">
+                    {/* 簡易的なGロゴ */}
+                   <span className="text-xl font-bold text-[#4285F4]">G</span>
+                </div>
+                <div className="flex flex-col">
+                    <Text className="text-[12px] text-black">Google</Text>
+                    <Text className="text-[10px] text-black">未連携</Text>
+                </div>
+              </div>
+              <Button 
+                size="sm"
+                className="bg-[#006355]  hover:bg-[#004d42] text-[10px] h-8 px-4 rounded"
+              >
+                連携する
+              </Button>
+            </div>
+
+          </div>
+        </section>
+
+        {/* インスタグラム連携セクション */}
+      <section className="space-y-3">
+          <div className="border border-gray-300 rounded-lg p-4 space-y-4 bg-transparent">
+              <Text className="text-[15px] font-normal text-black pl-2">
+            アカウント連携
+          </Text>        
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                {/* Instagram Icon Placeholder */}
+                <div className="w-8 h-8 bg-white flex items-center justify-center">
+                    {/* 簡易的なIロゴ */}
+                   <span className="text-xl font-bold text-[#df42f4]">I</span>
+                </div>
+                <div className="flex flex-col">
+                    <Text className="text-[12px] text-black">Instagram</Text>
+                    <Text className="text-[10px] text-black">未連携</Text>
+                </div>
+              </div>
+              <Button 
+                size="sm"
+                className="bg-[#006355]  hover:bg-[#004d42] text-[10px] h-8 px-4 rounded"
+              >
+                連携する
+              </Button>
+            </div>
+             <div className="flex justify-end pt-2 border-t border-gray-200">
+                 <Button className="text-[10px] text-[#006355] font-bold">
+                    アカウントを追加
+                 </Button>
+            </div>
+          </div>
+        </section>
+
+        {/* 店舗一覧セクション */}
+        <section className="space-y-3">
+          <Text className="text-[15px] font-normal text-black pl-2">
+            店舗一覧
+          </Text>
+
+          <div className="border border-gray-300 rounded-lg p-4 space-y-2 bg-transparent">
+            <div className="flex justify-between items-start">
+                <div>
+                     <Text className="text-[24px] font-normal text-black leading-tight">
+                        ID: 0001
+                     </Text>
+                     <Text className="text-[14px] font-normal text-black mt-1">
+                        wyzesystem○○@gmail.com
+                     </Text>
+                </div>
+                <div className="w-16 h-16 flex items-center justify-center">
+                    <span className="text-4xl font-serif text-black">w</span>
+                </div>
+            </div>
+            
+            <div className="flex items-center gap-2 mt-4">
+                <div className="w-3 h-3 rounded-full bg-[#3498DB]"></div>
+                <Text className="text-[12px] text-black">連携待ち</Text>
+            </div>
+          </div>
+        </section>
+
+ 
       </div>
     </BaseTemplate>
   );

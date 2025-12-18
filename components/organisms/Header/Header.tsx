@@ -82,7 +82,7 @@ export const Header: React.FC<HeaderProps> = ({
 
             {/* ハンバーガーメニュー */}
             <Button 
-              className="flex flex-col gap-[6px] focus:outline-none"
+              className="flex flex-col gap-[6px] focus:outline-none border-none"
               onClick={() => setIsMenuOpen(true)}
               aria-label="メニューを開く"
             >
@@ -105,6 +105,7 @@ export const Header: React.FC<HeaderProps> = ({
                   className={cn(
                     'w-full py-2 text-base font-normal leading-[1.21em] text-center',
                     'transition-colors',
+                    'border-none',
                     activeTab === tab.id ? 'text-black' : 'text-black'
                   )}
                   style={{
