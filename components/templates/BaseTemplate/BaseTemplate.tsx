@@ -1,6 +1,6 @@
-import React from 'react';
 import { Header } from '@/organisms/Header';
 import { cn } from '@/utils/cn';
+import React from 'react';
 
 export interface BaseTemplateProps {
   className?: string;
@@ -21,7 +21,6 @@ export const BaseTemplate: React.FC<BaseTemplateProps> = ({
     <div
       className={cn(
         'w-full min-h-screen bg-white flex flex-col',
-        'max-w-[393px] mx-auto',
         className
       )}
     >

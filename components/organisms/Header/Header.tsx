@@ -1,7 +1,9 @@
 import { Text } from '@/atoms/Text';
+import { SideMenu } from '@/organisms/SideMenu';
 import { cn } from '@/utils/cn';
 import { useRouter } from 'next/router';
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { IoMdClose, IoMdMenu } from "react-icons/io";
 
 export interface HeaderProps {
   className?: string;
@@ -24,10 +26,18 @@ export const Header: React.FC<HeaderProps> = ({
   customTabLabels,
 }) => {
   const router = useRouter();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [headerHeight, setHeaderHeight] = useState(0);
+  const headerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (headerRef.current) {
+      setHeaderHeight(headerRef.current.clientHeight);
+    }
+  }, []);
 
   const handleTabClick = (tab: 'home' | 'post' | 'report' | 'auto-reply') => {
     onTabChange?.(tab);
-    // ルーティング
     if (tab === 'home') {
       router.push('/home');
     } else if (tab === 'post') {
@@ -40,83 +50,100 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   return (
-    <div
-      className={cn(
-        'w-full bg-white flex flex-col',
-        'max-w-[393px] mx-auto',
-        className
-      )}
-    >
-      {/* ロゴエリア */}
-      <div className="relative">
-        {/* 背景色の矩形 */}
-        <div
-          className="absolute inset-x-0 top-0 h-[54px]"
-          style={{ backgroundColor: '#00A48D' }}
-        />
+    <>
+      <div
+        className={cn(
+          'w-full bg-white flex flex-col',
+          className
+        )}
+      >
+        {/* ロゴエリア */}
+        <div className="relative" ref={headerRef}>
+          {/* 背景色の矩形 */}
+          <div
+            className="absolute inset-x-0 top-0 h-[54px]"
+            style={{ backgroundColor: '#00A48D' }}
+          />
 
-        {/* ロゴテキスト */}
-        <div className="relative z-10 flex items-center justify-between h-[54px] px-[18px]">
-          <Text
-            as="h1"
-            className="text-[24px] leading-[1.546em]"
-            style={{
-              fontFamily: "'Kdam Thmor Pro', sans-serif",
-              fontWeight: 400,
-              color: '#FFFAFA',
-            }}
-          >
-            wyze
-          </Text>
+          {/* ロゴテキスト */}
+          <div className="relative z-10 flex items-center justify-between h-[54px] px-[18px]">
+            <Text
+              as="h1"
+              className="text-[24px] leading-[1.546em]"
+              style={{
+                fontFamily: "'Kdam Thmor Pro', sans-serif",
+                fontWeight: 400,
+                color: '#FFFAFA',
+              }}
+            >
+              wyze
+            </Text>
 
-          {/* ハンバーガーメニュー */}
-          <div className="flex flex-col gap-[6px]">
-            <div className="w-8 h-px bg-white" />
-            <div className="w-8 h-px bg-white" />
-            <div className="w-8 h-px bg-white" />
+            {/* ハンバーガーメニュー */}
+            <button 
+              className="flex flex-col gap-[6px] focus:outline-none"
+              onClick={() => setIsMenuOpen(true)}
+              aria-label="メニューを開く"
+            >
+              <IoMdMenu size={24} color="#FFFAFA" />
+            </button>
           </div>
         </div>
-      </div>
 
-      {/* ナビゲーションタブ */}
-      <div className="relative">
-        {/* 区切り線（上） */}
-        <div className="absolute top-0 left-0 right-0 h-px bg-white" />
+        {/* ナビゲーションタブ */}
+        <div className="relative ">
+          {/* 区切り線（上） */}
+          <div className="absolute top-0 left-0 right-0 h-px bg-white" />
 
-        {/* タブリスト */}
-        <div className="flex items-center justify-around pt-4 pb-3">
-          {tabs.map((tab, index) => (
-            <div key={tab.id} className="flex-1 flex flex-col items-center">
-              <button
-                onClick={() => handleTabClick(tab.id)}
-                className={cn(
-                  'w-full py-2 text-base font-normal leading-[1.21em] text-center',
-                  'transition-colors',
-                  activeTab === tab.id ? 'text-black' : 'text-black'
-                )}
-                style={{
-                  fontFamily: "'Inter', sans-serif",
-                }}
-              >
-                {customTabLabels?.[tab.id] || tab.label}
-              </button>
-
-              {/* アクティブインジケーター */}
-              {activeTab === tab.id && (
-                <div
-                  className="mt-1 h-[3px] w-[45px] mx-auto"
+          {/* タブリスト */}
+          <div className="flex items-center justify-around pt-4 pb-3">
+            {tabs.map((tab, index) => (
+              <div key={tab.id} className="flex-1 flex flex-col items-center">
+                <button
+                  onClick={() => handleTabClick(tab.id)}
+                  className={cn(
+                    'w-full py-2 text-base font-normal leading-[1.21em] text-center',
+                    'transition-colors',
+                    activeTab === tab.id ? 'text-black' : 'text-black'
+                  )}
                   style={{
-                    backgroundColor: '#00A48D',
+                    fontFamily: "'Inter', sans-serif",
                   }}
-                />
-              )}
-            </div>
-          ))}
-        </div>
+                >
+                  {customTabLabels?.[tab.id] || tab.label}
+                </button>
 
-        {/* 区切り線（下） */}
-        <div className="absolute bottom-0 left-0 right-0 h-px bg-white" />
+                {/* アクティブインジケーター */}
+                {activeTab === tab.id && (
+                  <div
+                    className="mt-1 h-[3px] w-[45px] mx-auto"
+                    style={{
+                      backgroundColor: '#00A48D',
+                    }}
+                  />
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* 区切り線（下） */}
+          <div className="absolute bottom-0 left-0 right-0 h-px bg-wyze-primary" />
+        </div>
       </div>
-    </div>
+
+      {/* サイドメニュー */}
+      <SideMenu isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} top={headerHeight}>
+        <div>
+          <ul className=" mt-8 space-y-4 grid grid-cols-1 divide-y divide-primary-200 border-y  border-wyze-primary border-b-2 h-min p-4">
+            <li><a href="/home" className="text-lg">ホーム</a></li>
+            <li><a href="#" className="text-lg">ご利用中の機能</a></li>
+            <li><a href="#" className="text-lg">ご請求内容</a></li>
+            <li><a href="#" className="text-lg">アカウント情報</a></li>
+            <li><a href="#" className="text-lg">お問い合わせ</a></li>
+            <li><a href="#" className="text-lg">ログアウト</a></li>
+          </ul>
+        </div>
+      </SideMenu>
+    </>
   );
 };
