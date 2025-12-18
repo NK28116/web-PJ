@@ -7,6 +7,21 @@ export interface ModalProps {
   children: React.ReactNode;
 }
 
+/**
+* Modal component that portals its children to document.body.
+* @example
+* Modal({ isOpen: true, onClose: () => {}, children: <div /> })
+* React.ReactPortal | null
+* @param {boolean} isOpen - Whether the modal is open and should be rendered.
+* @param {() => void} onClose - Callback invoked to request closing the modal (e.g. overlay click).
+* @param {React.ReactNode} children - Content to render inside the modal.
+* @returns {React.ReactPortal | null} A portal containing the modal when open; otherwise null.
+* @description
+*   - Renders only after a client-side mount to avoid SSR/rehydration mismatches.
+*   - Toggles document.body.style.overflow to disable page scrolling while open and always resets on cleanup.
+*   - Returns null if not mounted or not open.
+*   - The full-viewport overlay handles clicks and forwards them to onClose.
+*/
 export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children }) => {
   const [mounted, setMounted] = useState(false);
 
