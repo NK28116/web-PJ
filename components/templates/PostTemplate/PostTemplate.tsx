@@ -5,6 +5,7 @@ import { cn } from '@/utils/cn';
 import { PostListItem } from './PostListItem';
 import { PostDetailModal } from './PostDetailModal';
 import { Button } from '@/components/atoms/Button/Button';
+import { Modal } from '@/components/organisms/Modal';
 
 const GridIcon = ({ active }: { active: boolean }) => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -99,6 +100,9 @@ export const PostTemplate: React.FC<PostTemplateProps> = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   // postsの型推論を利用してstateの型を定義
   const [selectedPost, setSelectedPost] = useState<typeof posts[0] | null>(null);
+  const [open, setOpen] = useState(false);
+const [order, setOrder] = useState("postDate");
+
 
   return (
     <BaseTemplate activeTab="post">
@@ -125,10 +129,32 @@ export const PostTemplate: React.FC<PostTemplateProps> = () => {
           {/* 右側：並べ替え */}
           <div className="flex items-center gap-2">
             <Text className="text-base">表示中</Text>
-            <Button className="flex items-center gap-2 px-3 py-1 border border-[#11EMI6] rounded text-sm bg-white">
-              <Text className="text-sm">投稿順</Text>
-              <ChevronDownIcon />
-            </Button>
+ <Button onClick={() => setOpen(true)}>
+  並び順
+</Button>
+
+<Modal isOpen={open} onClose={() => setOpen(false)}>
+  <ul className="text-sm">
+    {[
+      { label: "投稿順", value: "postDate" },
+      { label: "集客効果が高い順", value: "effect" },
+      { label: "いいねが多い順", value: "favorite" },
+      { label: "コメントが多い順", value: "comment" },
+      { label: "アクセスが多い順", value: "access" },
+    ].map((item) => (
+      <li
+        key={item.value}
+        onClick={() => {
+          setOrder(item.value);
+          setOpen(false);
+        }}
+        className="px-4 py-3 hover:bg-gray-100 cursor-pointer"
+      >
+        {item.label}
+      </li>
+    ))}
+  </ul>
+</Modal>
           </div>
         </div>
 
