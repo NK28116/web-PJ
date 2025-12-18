@@ -1,4 +1,5 @@
 import { Text } from '@/atoms/Text';
+import { Button } from '@/components/atoms/Button';
 import { BaseTemplate } from '@/templates/BaseTemplate';
 import React from 'react';
 
@@ -63,9 +64,9 @@ export const AccountTemplate: React.FC <AccountTemplateProps>= ({
          <div className="border border-gray-300 bg-white">
               <div className="border-b border-gray-300 p-2 flex items-center justify-between">
                  <Text className="text-[14px] text-black">アカウント設定</Text>
-                 <button>
-                     <Text className="text-[14px] text-[#00A48D] border-2" >編集</Text>
-                 </button>
+                  <Button onClick={() => alert('clicked')}>
+                     <Text className="text-[14px] border-2" >編集</Text>
+                 </Button>
               </div>
 
               <div className="p-4 space-y-2">
@@ -93,9 +94,9 @@ export const AccountTemplate: React.FC <AccountTemplateProps>= ({
                  <div className="flex justify-between gap-3">
                      <Text className="text-[14px] ">パスワード</Text>
                      <Text className="text-[14px]">*******</Text>
-                                    <button>
+                  <Button onClick={() => alert('clicked')}>
                      <Text className="text-[14px] border-2" >変更</Text>
-                 </button>
+                 </Button>
                  </div>
               </div>
          </div>

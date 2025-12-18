@@ -1,4 +1,5 @@
 import { Text } from '@/atoms/Text';
+import { Button } from '@/components/atoms/Button';
 import { SideMenu } from '@/organisms/SideMenu';
 import { cn } from '@/utils/cn';
 import { useRouter } from 'next/router';
@@ -80,13 +81,13 @@ export const Header: React.FC<HeaderProps> = ({
             </Text>
 
             {/* ハンバーガーメニュー */}
-            <button 
+            <Button 
               className="flex flex-col gap-[6px] focus:outline-none"
               onClick={() => setIsMenuOpen(true)}
               aria-label="メニューを開く"
             >
               <IoMdMenu size={24} color="#FFFAFA" />
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -99,7 +100,7 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="flex items-center justify-around pt-4 pb-3">
             {tabs.map((tab, index) => (
               <div key={tab.id} className="flex-1 flex flex-col items-center">
-                <button
+                <Button
                   onClick={() => handleTabClick(tab.id)}
                   className={cn(
                     'w-full py-2 text-base font-normal leading-[1.21em] text-center',
@@ -111,7 +112,7 @@ export const Header: React.FC<HeaderProps> = ({
                   }}
                 >
                   {customTabLabels?.[tab.id] || tab.label}
-                </button>
+                </Button>
 
                 {/* アクティブインジケーター */}
                 {activeTab === tab.id && (

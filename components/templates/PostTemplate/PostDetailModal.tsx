@@ -1,6 +1,7 @@
 import React from 'react';
 import { Modal } from '@/components/organisms/Modal';
 import { Text } from '@/components/atoms/Text';
+import { Button } from '@/components/atoms/Button';
 
 interface Post {
   id: number;
@@ -36,12 +37,12 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({ isOpen, onClos
               {post.status || '表示中'}
             </div>
           </div>
-          <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded-full transition-colors">
+          <Button onClick={onClose} className="p-1 hover:bg-gray-100 rounded-full transition-colors">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M18 6L6 18" stroke="#333" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
               <path d="M6 6L18 18" stroke="#333" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
-          </button>
+          </Button>
         </div>
 
         <div className="overflow-y-auto p-5 flex-1 scrollbar-hide">
@@ -102,12 +103,12 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({ isOpen, onClos
 
         {/* フッターアクション */}
         <div className="p-4 flex gap-3 justify-center pb-6">
-          <button className="px-4 py-2 border border-[#C4C4C4] rounded-md text-[13px] text-gray-700 font-bold hover:bg-gray-50 transition-colors">
+          <Button className="px-4 py-2 border border-[#C4C4C4] rounded-md text-[13px] text-gray-700 font-bold hover:bg-gray-50 transition-colors">
             投稿を編集
-          </button>
-          <button className="px-4 py-2 border border-[#C4C4C4] rounded-md text-[13px] text-gray-700 font-bold hover:bg-gray-50 transition-colors">
+          </Button>
+          <Button className="px-4 py-2 border border-[#C4C4C4] rounded-md text-[13px] text-gray-700 font-bold hover:bg-gray-50 transition-colors">
             非表示にする
-          </button>
+          </Button>
         </div>
       </div>
     </Modal>
