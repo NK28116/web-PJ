@@ -3,7 +3,7 @@ import { SideMenu } from '@/organisms/SideMenu';
 import { cn } from '@/utils/cn';
 import { useRouter } from 'next/router';
 import React, { useEffect, useRef, useState } from 'react';
-import { IoMdClose, IoMdMenu } from "react-icons/io";
+import { IoMdMenu } from "react-icons/io";
 
 export interface HeaderProps {
   className?: string;
@@ -136,7 +136,7 @@ export const Header: React.FC<HeaderProps> = ({
         <div>
           <ul className=" mt-8 space-y-4 grid grid-cols-1 divide-y divide-primary-200 border-y  border-wyze-primary border-b-2 h-min p-4">
             <li><a href="/home" className="text-lg">ホーム</a></li>
-            <li><a href="#" className="text-lg">ご利用中の機能</a></li>
+            <li><a href="/current-features" className="text-lg">ご利用中の機能</a></li>
             <li><a href="#" className="text-lg">ご請求内容</a></li>
             <li><a href="#" className="text-lg">アカウント情報</a></li>
             <li><a href="#" className="text-lg">お問い合わせ</a></li>
