@@ -1,5 +1,6 @@
 import { BillingTemplate } from "@/components/templates/BillingTemplate";
 import Head from "next/head";
+import React from "react";
 
 export default function BillingPage() {
   return(
