@@ -104,7 +104,7 @@ export const CurrentFeaturesTemplate: React.FC<CurrentFeaturesTemplateProps> = (
             </div>
             
             <div className="flex justify-end mt-4">
-                <Button className="bg-[#006355] text-white text-[12px] px-8 py-1 h-auto rounded-none hover:bg-[#004d42]">
+                <Button className="bg-[#006355] text-[12px] px-8 py-1 h-auto rounded-none hover:bg-[#004d42]">
                     申込む
                 </Button>
             </div>
