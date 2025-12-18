@@ -134,13 +134,13 @@ export const Header: React.FC<HeaderProps> = ({
       {/* サイドメニュー */}
       <SideMenu isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} top={headerHeight}>
         <div>
-          <ul className=" mt-8 space-y-4 grid grid-cols-1 divide-y divide-primary-200 border-y  border-wyze-primary border-b-2 h-min p-4">
-            <li><a href="/home" className="text-lg">ホーム</a></li>
-            <li><a href="/current-features" className="text-lg">ご利用中の機能</a></li>
-            <li><a href="#" className="text-lg">ご請求内容</a></li>
-            <li><a href="#" className="text-lg">アカウント情報</a></li>
-            <li><a href="#" className="text-lg">お問い合わせ</a></li>
-            <li><a href="#" className="text-lg">ログアウト</a></li>
+          <ul className="grid grid-cols-1 divide-y divide-black   border-wyze-primary border-2 h-min ">
+            <li><a href="/home" className="text-lg m-4">ホーム</a></li>
+            <li><a href="/current-features" className="text-lg m-4">ご利用中の機能</a></li>
+            <li><a href="#" className="text-lg m-4">ご請求内容</a></li>
+            <li><a href="#" className="text-lg m-4">アカウント情報</a></li>
+            <li><a href="#" className="text-lg m-4">お問い合わせ</a></li>
+            <li><a href="#" className="text-lg m-4">ログアウト</a></li>
           </ul>
         </div>
       </SideMenu>
