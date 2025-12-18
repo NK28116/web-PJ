@@ -45,7 +45,7 @@ export const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onClose, children, t
       {/* Content */}
       <div
         className={cn(
-          'absolute right-0 bg-white shadow-xl w-full max-w-xs transition-transform transform',
+          'absolute right-4 bg-white shadow-xl w-fit max-w-xs transition-transform transform',
           isOpen ? 'translate-x-0' : 'translate-x-full'
         )}
         style={{ top: `${top}px` }}
