@@ -53,9 +53,9 @@ export const HomeTemplate: React.FC<HomeTemplateProps> = ({
               </Button>
             </div>
              <div className="flex justify-end pt-2 border-t border-gray-200">
-                 <button className="text-[10px] text-[#006355] font-bold">
+                 <Button className="text-[10px] text-[#006355] font-bold">
                     アカウントを追加
-                 </button>
+                 </Button>
             </div>
           </div>
         </section>
@@ -109,9 +109,9 @@ export const HomeTemplate: React.FC<HomeTemplateProps> = ({
                 <Text className="text-[15px] font-normal text-black">
                     ダッシュボード
                 </Text>
-                <button className="bg-[#C4C4C4] rounded-full px-4 py-1">
+                <Button className="bg-[#C4C4C4] rounded-full px-4 py-1">
                     <Text className="text-[11px] text-black">更新する</Text>
-                </button>
+                </Button>
             </div>
             
             <div className="border-t border-[#D9D9D9] pt-4 space-y-4">

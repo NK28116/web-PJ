@@ -4,6 +4,7 @@ import { Text } from '@/atoms/Text';
 import { cn } from '@/utils/cn';
 import { PostListItem } from './PostListItem';
 import { PostDetailModal } from './PostDetailModal';
+import { Button } from '@/components/atoms/Button/Button';
 
 const GridIcon = ({ active }: { active: boolean }) => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -107,12 +108,12 @@ export const PostTemplate: React.FC<PostTemplateProps> = () => {
           {/* 左側：ビュー切り替えと件数 */}
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
-              <button onClick={() => setViewMode('grid')} className="p-1">
+              <Button onClick={() => setViewMode('grid')} className="p-1">
                 <GridIcon active={viewMode === 'grid'} />
-              </button>
-              <button onClick={() => setViewMode('list')} className="p-1">
+              </Button>
+              <Button onClick={() => setViewMode('list')} className="p-1">
                 <ListIcon active={viewMode === 'list'} />
-              </button>
+              </Button>
             </div>
             
             {/* 縦線 */}
@@ -124,10 +125,10 @@ export const PostTemplate: React.FC<PostTemplateProps> = () => {
           {/* 右側：並べ替え */}
           <div className="flex items-center gap-2">
             <Text className="text-base">表示中</Text>
-            <button className="flex items-center gap-2 px-3 py-1 border border-[#11EMI6] rounded text-sm bg-white">
+            <Button className="flex items-center gap-2 px-3 py-1 border border-[#11EMI6] rounded text-sm bg-white">
               <Text className="text-sm">投稿順</Text>
               <ChevronDownIcon />
-            </button>
+            </Button>
           </div>
         </div>
 

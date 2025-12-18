@@ -2,6 +2,7 @@ import React from 'react';
 import { BaseTemplate } from '@/templates/BaseTemplate';
 import { Text } from '@/atoms/Text';
 import { cn } from '@/utils/cn';
+import { Button } from '@/components/atoms/Button';
 
 export const ReplyTemplate: React.FC = () => {
   // ダミーデータ（口コミありの状態）
@@ -125,12 +126,12 @@ export const ReplyTemplate: React.FC = () => {
                   {review.content}
                 </Text>
                 <div className="flex justify-end gap-2">
-                  <button className="text-xs px-3 py-1.5 border border-gray-300 rounded text-gray-600">
+                  <Button className="text-xs px-3 py-1.5 border border-gray-300 rounded text-gray-600">
                     詳細を見る
-                  </button>
-                  <button className="text-xs px-3 py-1.5 bg-[#00A48D] text-white rounded">
+                  </Button>
+                  <Button className="text-xs px-3 py-1.5 bg-[#00A48D] text-white rounded">
                     返信する
-                  </button>
+                  </Button>
                 </div>
               </div>
             ))}
