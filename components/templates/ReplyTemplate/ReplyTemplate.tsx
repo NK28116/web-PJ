@@ -1,7 +1,6 @@
 import React from 'react';
 import { BaseTemplate } from '@/templates/BaseTemplate';
 import { Text } from '@/atoms/Text';
-import { cn } from '@/utils/cn';
 import { Button } from '@/components/atoms/Button';
 
 export const ReplyTemplate: React.FC = () => {

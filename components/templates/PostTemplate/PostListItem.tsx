@@ -1,6 +1,5 @@
 import React from 'react';
 import { Text } from '@/atoms/Text';
-import { cn } from '@/utils/cn';
 
 export interface PostListItemProps {
   post: {

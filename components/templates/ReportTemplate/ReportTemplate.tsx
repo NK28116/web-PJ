@@ -1,7 +1,6 @@
 import React from 'react';
 import { BaseTemplate } from '@/templates/BaseTemplate';
 import { Text } from '@/atoms/Text';
-import { cn } from '@/utils/cn';
 
 const PieChart = () => (
   <div className="relative w-[130px] h-[130px] mx-auto">

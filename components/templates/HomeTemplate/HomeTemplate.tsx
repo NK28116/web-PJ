@@ -2,7 +2,6 @@ import React from 'react';
 import { BaseTemplate } from '@/templates/BaseTemplate';
 import { Text } from '@/atoms/Text';
 import { Button } from '@/atoms/Button';
-import { cn } from '@/utils/cn';
 
 export interface HomeTemplateProps {
   className?: string;
@@ -15,7 +14,6 @@ export const HomeTemplate: React.FC<HomeTemplateProps> = ({
   className,
   activeTab = 'home',
   onTabChange,
-  children,
 }) => {
   return (
     <BaseTemplate

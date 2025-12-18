@@ -1,11 +1,10 @@
-import React, { useState } from 'react';
-import { BaseTemplate } from '@/templates/BaseTemplate';
 import { Text } from '@/atoms/Text';
-import { cn } from '@/utils/cn';
-import { PostListItem } from './PostListItem';
-import { PostDetailModal } from './PostDetailModal';
 import { Button } from '@/components/atoms/Button/Button';
 import { Modal } from '@/components/organisms/Modal';
+import { BaseTemplate } from '@/templates/BaseTemplate';
+import React, { useMemo, useState } from 'react';
+import { PostDetailModal } from './PostDetailModal';
+import { PostListItem } from './PostListItem';
 
 const GridIcon = ({ active }: { active: boolean }) => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -82,6 +81,21 @@ export interface PostTemplateProps {
   className?: string;
 }
 
+type PostOrder =
+  | "postDate"
+  | "effect"
+  | "favorite"
+  | "comment"
+  | "access";
+
+const sortOptions: { label: string; value: PostOrder }[] = [
+  { label: "投稿順", value: "postDate" },
+  { label: "集客効果が高い順", value: "effect" },
+  { label: "いいねが多い順", value: "favorite" },
+  { label: "コメントが多い順", value: "comment" },
+  { label: "アクセスが多い順", value: "access" },
+];
+
 export const PostTemplate: React.FC<PostTemplateProps> = () => {
   // ダミーデータ
   const posts = Array.from({ length: 27 }, (_, i) => ({
@@ -89,20 +103,44 @@ export const PostTemplate: React.FC<PostTemplateProps> = () => {
     bgColor: ['#2D3748', '#4FD1C5', '#3182CE', '#E53E3E'][i % 4],
     title: '【NEW】Smash Double Cheese Burgar',
     content: 'パティとチーズは同じものを使っています！\n変更点は、\n・グリルドオニオン\n・ピクルス\n・オーロラソース\n\n既存のタルタルソースをかけたマッシュダブルチーズバーガーも好評いただいておりますが、こちらもかなり自信作です！\nまだメニューに載ってないので、お声がけください！',
-    tags: '#cheeseburger #中目黒 #ハンバーガー',
-    rate: 30.4,
-    views: 196,
-    date: 'July 6, 2025',
+    tags: '#cheeseburger #中目黒 #ハンバーガー', // NOTE: rate, views, date have been randomized/sequenced to make sorting visible.
+    rate: Math.round((30 + Math.random() * 20) * 10) / 10,
+    views: 196 + i * 17,
+    date: new Date(2025, 6, 27 - i).toISOString(),
     username: '@wyzesystem_1212',
     status: '表示中'
   }));
-
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   // postsの型推論を利用してstateの型を定義
   const [selectedPost, setSelectedPost] = useState<typeof posts[0] | null>(null);
   const [open, setOpen] = useState(false);
-const [order, setOrder] = useState("postDate");
+  const [order, setOrder] = useState<PostOrder>("postDate");
 
+  const handleSortChange = (value: PostOrder) => {
+    setOrder(value);
+    setOpen(false);
+  };
+
+  const sortedPosts = useMemo(() => {
+    // Create a mutable copy to sort
+    const sortablePosts = [...posts];
+    switch (order) {
+      case 'postDate':
+        return sortablePosts.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      case 'effect':
+        return sortablePosts.sort((a, b) => b.rate - a.rate);
+      case 'access':
+        return sortablePosts.sort((a, b) => b.views - a.views);
+      case 'favorite':
+        // TODO: Implement sorting by favorites when data is available.
+        return sortablePosts;
+      case 'comment':
+        // TODO: Implement sorting by comments when data is available.
+        return sortablePosts;
+      default:
+        return sortablePosts;
+    }
+  }, [order, posts]);
 
   return (
     <BaseTemplate activeTab="post">
@@ -132,23 +170,21 @@ const [order, setOrder] = useState("postDate");
  <Button onClick={() => setOpen(true)}>
   並び順
 </Button>
-
+<ChevronDownIcon/>
 <Modal isOpen={open} onClose={() => setOpen(false)}>
-  <ul className="text-sm">
-    {[
-      { label: "投稿順", value: "postDate" },
-      { label: "集客効果が高い順", value: "effect" },
-      { label: "いいねが多い順", value: "favorite" },
-      { label: "コメントが多い順", value: "comment" },
-      { label: "アクセスが多い順", value: "access" },
-    ].map((item) => (
+  <ul className="text-sm" role="menu">
+    {sortOptions.map((item) => (
       <li
         key={item.value}
-        onClick={() => {
-          setOrder(item.value);
-          setOpen(false);
+        onClick={() => handleSortChange(item.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            handleSortChange(item.value);
+          }
         }}
-        className="px-4 py-3 hover:bg-gray-100 cursor-pointer"
+        className="px-4 py-3 hover:bg-gray-100 cursor-pointer focus:bg-gray-100 focus:outline-none"
+        role="menuitem"
+        tabIndex={0}
       >
         {item.label}
       </li>
@@ -161,7 +197,7 @@ const [order, setOrder] = useState("postDate");
         {/* コンテンツ */}
         {viewMode === 'grid' ? (
           <div className="grid grid-cols-3 gap-5 pt-2">
-            {posts.map((post) => (
+            {sortedPosts.map((post) => (
               <div
                 key={post.id}
                 className="aspect-square w-full rounded-sm overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
@@ -172,7 +208,7 @@ const [order, setOrder] = useState("postDate");
           </div>
         ) : (
           <div className="flex flex-col">
-            {posts.map((post) => (
+            {sortedPosts.map((post) => (
               <PostListItem 
                 key={post.id} 
                 post={post} 

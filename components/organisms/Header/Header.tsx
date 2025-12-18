@@ -98,7 +98,7 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* タブリスト */}
           <div className="flex items-center justify-around pt-4 pb-3">
-            {tabs.map((tab, index) => (
+            {tabs.map((tab) => (
               <div key={tab.id} className="flex-1 flex flex-col items-center">
                 <Button
                   onClick={() => handleTabClick(tab.id)}

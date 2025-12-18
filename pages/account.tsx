@@ -1,5 +1,6 @@
 import { AccountTemplate } from "@/components/templates/AccountTemplate";
 import Head from "next/head";
+import React from "react";
 
 export default function AccountPage() {
   return(
