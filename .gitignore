@@ -38,3 +38,23 @@ next-env.d.ts
 .swc/*
 
 package-lock.json
+.ai/turn
+.ai/README.md
+.github/PULL_REQUEST_TEMPLATE.md
+.github/ISSUE_TEMPLATE/bug.yml
+.github/ISSUE_TEMPLATE/feature.yml
+mcp/claude_desktop_config.json
+prompts/claude/implement.md
+prompts/claude/test.md
+prompts/gemini/design-review.md
+prompts/gemini/risk-check.md
+prompts/serena/commit-check.md
+prompts/serena/project-status.md
+docs/ai-rules.md
+docs/architecture.md
+docs/ci-cd.md
+docs/coding-standards.md
+docs/decisions.md
+docs/release-strategy.md
+docs/requirements.md
+docs/workflow.md
