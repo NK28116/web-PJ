@@ -88,6 +88,8 @@ type PostOrder =
   | "comment"
   | "access";
 
+type FilterStatus = 'all' | 'visible' | 'hidden';
+
 const sortOptions: { label: string; value: PostOrder }[] = [
   { label: "投稿順", value: "postDate" },
   { label: "集客効果が高い順", value: "effect" },
@@ -108,22 +110,39 @@ export const PostTemplate: React.FC<PostTemplateProps> = () => {
     views: 196 + i * 17,
     date: new Date(2025, 6, 27 - i).toISOString(),
     username: '@wyzesystem_1212',
-    status: '表示中'
+    status: i % 3 === 0 ? '非表示' : '表示中'
   }));
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   // postsの型推論を利用してstateの型を定義
   const [selectedPost, setSelectedPost] = useState<typeof posts[0] | null>(null);
   const [open, setOpen] = useState(false);
   const [order, setOrder] = useState<PostOrder>("postDate");
+  const [filterStatus, setFilterStatus] = useState<FilterStatus>('all');
 
   const handleSortChange = (value: PostOrder) => {
     setOrder(value);
     setOpen(false);
   };
 
+  const handleFilterToggle = () => {
+    setFilterStatus((prev) => {
+      if (prev === 'all') return 'visible';
+      if (prev === 'visible') return 'hidden';
+      return 'all';
+    });
+  };
+
   const sortedPosts = useMemo(() => {
-    // Create a mutable copy to sort
-    const sortablePosts = [...posts];
+    // フィルタリング処理
+    let filteredPosts = posts;
+    if (filterStatus === 'visible') {
+      filteredPosts = posts.filter((post) => post.status === '表示中');
+    } else if (filterStatus === 'hidden') {
+      filteredPosts = posts.filter((post) => post.status === '非表示');
+    }
+
+    // ソート処理
+    const sortablePosts = [...filteredPosts];
     switch (order) {
       case 'postDate':
         return sortablePosts.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -140,7 +159,7 @@ export const PostTemplate: React.FC<PostTemplateProps> = () => {
       default:
         return sortablePosts;
     }
-  }, [order, posts]);
+  }, [order, posts, filterStatus]);
 
   return (
     <BaseTemplate activeTab="post">
@@ -166,7 +185,9 @@ export const PostTemplate: React.FC<PostTemplateProps> = () => {
 
           {/* 右側：並べ替え */}
           <div className="flex items-center gap-2">
-            <Text className="text-base">表示中</Text>
+            <Button onClick={handleFilterToggle} className="text-base">
+              {filterStatus === 'all' ? '全て' : filterStatus === 'visible' ? '表示' : '非表示'}
+            </Button>
  <Button onClick={() => setOpen(true)}>
   並び順
 </Button>
