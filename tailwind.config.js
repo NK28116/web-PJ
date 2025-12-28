@@ -7,6 +7,10 @@ module.exports = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        'kdam-thmor-pro': ['"Kdam Thmor Pro"', 'sans-serif'],
+        'tiro-telugu': ['"Tiro Telugu"', 'serif'],
+      },
       colors: {
         primary: {
           50: '#f0f9ff',
