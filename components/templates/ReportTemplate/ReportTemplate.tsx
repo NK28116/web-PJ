@@ -934,6 +934,5 @@ export const ReportTemplate: React.FC = () => {
 					<div className="grid grid-cols-2 gap-3"></div>
 				</div>
 			</div>
-		</BaseTemplate>
-	)
+		</BaseTemplate>)
 }
