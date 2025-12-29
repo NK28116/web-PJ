@@ -5,7 +5,6 @@ import { BaseTemplate } from '@/templates/BaseTemplate';
 import React, { useMemo, useState } from 'react';
 import { PostDetailModal } from './PostDetailModal';
 import { PostListItem } from './PostListItem';
-import { PostDetailModal } from './PostDetailModal';
 
 const GridIcon = ({ active }: { active: boolean }) => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
