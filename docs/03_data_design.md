@@ -151,12 +151,14 @@ erDiagram
 | published_at | TIMESTAMP | YES | NULL | 公開日時 |
 | created_at | TIMESTAMP | NO | CURRENT_TIMESTAMP | 作成日時 |
 | updated_at | TIMESTAMP | NO | CURRENT_TIMESTAMP | 更新日時 |
+| customers_induction_rate | INT | NO | 0 | 集客誘導率 |
+|profile_view| INT | NO | 0 | プロフィ-ル閲覧回数 |
 
 ### 2.5 reviews テーブル
 
 #### 概要
 
-外部または内部の口コミデータ
+GoogleMapから取得する店につけられた口コミデータ
 
 #### カラム定義
 
@@ -166,6 +168,7 @@ erDiagram
 | source | VARCHAR(50) | NO | 'internal' | ソース (google_maps, internal等) |
 | external_id | VARCHAR(255) | YES | NULL | 外部サービスのID |
 | content | TEXT | NO | - | 口コミ内容 |
+| img_url | VARCHAR(500) | YES | NULL | 口コミ画像URL |
 | rating | INT | NO | - | 評価 (1-5) |
 | created_at | TIMESTAMP | NO | CURRENT_TIMESTAMP | 作成日時 |
 
@@ -181,9 +184,12 @@ erDiagram
 |----------|-----|------|-----------|------|
 | id | VARCHAR(36) | NO | UUID | 返信ID |
 | review_id | VARCHAR(36) | NO | - | 対象レビューID |
-| user_id | VARCHAR(36) | NO | - | 返信者ID |
+| replied | BOOLEAN | NO | FALSE | 返信済み/未返信 |
 | content | TEXT | NO | - | 返信内容 |
 | created_at | TIMESTAMP | NO | CURRENT_TIMESTAMP | 作成日時 |
+| replied_at | TIMESTAMP | YES | NULL | 返信日時 |
+| status | ENUM | NO | 'pending' | ステータス (pending/posted/failed) |
+| recommend_repliled_rate | FLOAT | NO | 0 | 返信推奨度 |
 
 ### 2.7 notifications テーブル
 

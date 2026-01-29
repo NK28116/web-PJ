@@ -1,7 +1,13 @@
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import { BaseTemplate } from '@/templates/BaseTemplate';
-import { Text } from '@/atoms/Text';
-import { Button } from '@/atoms/Button';
+import {
+  DashboardSection,
+  DashboardStats,
+  AccountLinkingSection,
+  AccountLinkingState,
+  ShopListSection,
+  Shop,
+} from '@/organisms/Home';
 
 export interface HomeTemplateProps {
   className?: string;
@@ -10,191 +16,111 @@ export interface HomeTemplateProps {
   children?: React.ReactNode;
 }
 
+// Mock data for demonstration
+const INITIAL_STATS: DashboardStats = {
+  systemStatus: '-',
+  aiReplyWaiting: null,
+  newReviews: null,
+  todayProfileViews: null,
+  todaySearchCount: null,
+  weekOverWeek: null,
+  monthOverMonth: null,
+};
+
+const LINKED_STATS: DashboardStats = {
+  systemStatus: '正常稼働中',
+  aiReplyWaiting: 3,
+  newReviews: 5,
+  todayProfileViews: 128,
+  todaySearchCount: 45,
+  weekOverWeek: '+12%',
+  monthOverMonth: '+8%',
+};
+
+const MOCK_SHOPS: Shop[] = [
+  {
+    id: '0001',
+    email: 'wyzesystem○○@gmail.com',
+    status: 'pending',
+    logoText: 'w',
+  },
+];
+
 export const HomeTemplate: React.FC<HomeTemplateProps> = ({
   className,
   activeTab = 'home',
   onTabChange,
 }) => {
+  // Account linking state management
+  const [linkingState, setLinkingState] = useState<AccountLinkingState>({
+    google: false,
+    instagram: false,
+  });
+
+  // AI priority action (null when no action)
+  const [aiPriorityAction] = useState<string | null>(null);
+
+  // Dashboard stats - changes based on Google linking state
+  const stats = linkingState.google ? LINKED_STATS : INITIAL_STATS;
+
+  // Event handlers
+  const handleToggleGoogle = useCallback(() => {
+    setLinkingState((prev) => ({
+      ...prev,
+      google: !prev.google,
+    }));
+  }, []);
+
+  const handleToggleInstagram = useCallback(() => {
+    setLinkingState((prev) => ({
+      ...prev,
+      instagram: !prev.instagram,
+    }));
+  }, []);
+
+  const handleRefresh = useCallback(() => {
+    // Refresh logic will be implemented when API is ready
+    console.log('Dashboard refresh requested');
+  }, []);
+
+  const handleAddAccount = useCallback(() => {
+    // Add account logic will be implemented when API is ready
+    console.log('Add account requested');
+  }, []);
+
+  const handleShopClick = useCallback((shopId: string) => {
+    // Shop click logic will be implemented when navigation is ready
+    console.log('Shop clicked:', shopId);
+  }, []);
+
   return (
     <BaseTemplate
       className={className}
       activeTab={activeTab}
       onTabChange={onTabChange}
     >
-      <div className="space-y-6 pb-20">
+      <div className="space-y-6 pt-6 pb-20">
+        {/* Dashboard Section */}
+        <DashboardSection
+          isGoogleLinked={linkingState.google}
+          aiPriorityAction={aiPriorityAction}
+          stats={stats}
+          onRefresh={handleRefresh}
+        />
 
-               {/* ダッシュボードセクション */}
-        <section className="space-y-3 pt-6">
-             <div className="flex items-center justify-between px-2">
-                <Text className="text-[15px] font-normal text-black">
-                    ダッシュボード
-                </Text>
-                <Button className="bg-[#C4C4C4] rounded-full px-4 py-1">
-                    <Text className="text-[11px] text-black">更新する</Text>
-                </Button>
-            </div>
-            
-            <div className="border-t border-[#D9D9D9] pt-4 space-y-4">
-                {/* AI Action */}
-                <div className="bg-[#D5F6F2] rounded-md p-4 text-center space-y-2 mx-1">
-                    <Text className="text-[15px] text-black block">AIによる最優先アクション</Text>
-                    <Text className="text-[15px] text-black block font-medium">-</Text>
-                </div>
+        {/* Account Linking Section */}
+        <AccountLinkingSection
+          linkingState={linkingState}
+          onToggleGoogle={handleToggleGoogle}
+          onToggleInstagram={handleToggleInstagram}
+          onAddAccount={handleAddAccount}
+        />
 
-                {/* Stats */}
-                <div className="relative">
-                    {/* Overlay Message */}
-                    <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
-                        <div className="bg-white/90 p-4 rounded text-center">
-                            <Text className="text-[15px] text-black whitespace-pre-wrap leading-relaxed">
-                                Googleで連携すると{"\n"}使用できます
-                            </Text>
-                        </div>
-                    </div>
-
-                    {/* Stats List (Blurred/Disabled) */}
-                    <div className="space-y-0 opacity-50 blur-[1px] pointer-events-none select-none">
-                        {/* Row 1 */}
-                        <div className="py-3 px-2 flex justify-between items-center border-b border-[#E5E5E5]">
-                            <Text className="text-[15px] text-black">システム稼働状況</Text>
-                            <Text className="text-[15px] text-black">-</Text>
-                        </div>
-
-                        {/* Row 2 */}
-                        <div className="py-3 px-2 flex justify-between items-center border-b border-[#E5E5E5]">
-                            <Text className="text-[15px] text-black">AI返信待ち口コミ</Text>
-                            <div className="flex items-center gap-2">
-                                <Text className="text-[15px] text-black font-bold">-</Text>
-                                <Text className="text-[15px] text-black">件</Text>
-                            </div>
-                        </div>
-                        {/* Row 3 */}
-                        <div className="py-3 px-2 flex justify-between items-center border-b border-[#E5E5E5]">
-                            <Text className="text-[15px] text-black">新しい口コミ</Text>
-                            <div className="flex items-center gap-2">
-                                <Text className="text-[15px] text-black font-bold">-</Text>
-                                <Text className="text-[15px] text-black">件</Text>
-                            </div>
-                        </div>
-                        {/* Row 4 */}
-                        <div className="py-3 px-2 flex justify-between items-center border-b border-[#E5E5E5]">
-                            <Text className="text-[15px] text-black">本日のプロフィール閲覧数</Text>
-                            <div className="flex items-center gap-2">
-                                <Text className="text-[15px] text-black font-bold">-</Text>
-                                <Text className="text-[15px] text-black">件</Text>
-                            </div>
-                        </div>
-                        {/* Row 5 */}
-                        <div className="py-3 px-2 flex justify-between items-center border-b border-[#E5E5E5]">
-                            <Text className="text-[15px] text-black">本日の検索数</Text>
-                            <div className="flex items-center gap-2">
-                                <Text className="text-[15px] text-black font-bold">-</Text>
-                                <Text className="text-[15px] text-black">件</Text>
-                            </div>
-                        </div>
-                        {/* Row 6 */}
-                        <div className="py-3 px-2 flex justify-between items-center">
-                            <Text className="text-[15px] text-black">前週比 / 前月比</Text>
-                            <div className="flex items-center gap-2">
-                                <Text className="text-[15px] text-black font-bold">-% / -%</Text>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-        
-        {/* アカウント連携セクション */}
-        <section className="space-y-3">
-          <div className="border border-gray-300 rounded-lg p-4 space-y-4 bg-transparent">
-              <Text className="text-[15px] font-normal text-black pl-2">
-            アカウント連携
-          </Text>        
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                {/* Google Icon Placeholder */}
-                <div className="w-8 h-8 bg-white flex items-center justify-center">
-                    {/* 簡易的なGロゴ */}
-                   <span className="text-xl font-bold text-[#4285F4]">G</span>
-                </div>
-                <div className="flex flex-col">
-                    <Text className="text-[12px] text-black">Google</Text>
-                    <Text className="text-[10px] text-black">未連携</Text>
-                </div>
-              </div>
-              <Button 
-                size="sm"
-                className="bg-[#006355]  hover:bg-[#004d42] text-[10px] h-8 px-4 rounded"
-              >
-                連携する
-              </Button>
-            </div>
-
-          </div>
-        </section>
-
-        {/* インスタグラム連携セクション */}
-      <section className="space-y-3">
-          <div className="border border-gray-300 rounded-lg p-4 space-y-4 bg-transparent">
-              <Text className="text-[15px] font-normal text-black pl-2">
-            アカウント連携
-          </Text>        
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                {/* Instagram Icon Placeholder */}
-                <div className="w-8 h-8 bg-white flex items-center justify-center">
-                    {/* 簡易的なIロゴ */}
-                   <span className="text-xl font-bold text-[#df42f4]">I</span>
-                </div>
-                <div className="flex flex-col">
-                    <Text className="text-[12px] text-black">Instagram</Text>
-                    <Text className="text-[10px] text-black">未連携</Text>
-                </div>
-              </div>
-              <Button 
-                size="sm"
-                className="bg-[#006355]  hover:bg-[#004d42] text-[10px] h-8 px-4 rounded"
-              >
-                連携する
-              </Button>
-            </div>
-             <div className="flex justify-end pt-2 border-t border-gray-200">
-                 <Button className="text-[10px] text-[#006355] font-bold">
-                    アカウントを追加
-                 </Button>
-            </div>
-          </div>
-        </section>
-
-        {/* 店舗一覧セクション */}
-        <section className="space-y-3">
-          <Text className="text-[15px] font-normal text-black pl-2">
-            店舗一覧
-          </Text>
-
-          <div className="border border-gray-300 rounded-lg p-4 space-y-2 bg-transparent">
-            <div className="flex justify-between items-start">
-                <div>
-                     <Text className="text-[24px] font-normal text-black leading-tight">
-                        ID: 0001
-                     </Text>
-                     <Text className="text-[14px] font-normal text-black mt-1">
-                        wyzesystem○○@gmail.com
-                     </Text>
-                </div>
-                <div className="w-16 h-16 flex items-center justify-center">
-                    <span className="text-4xl font-serif text-black">w</span>
-                </div>
-            </div>
-            
-            <div className="flex items-center gap-2 mt-4">
-                <div className="w-3 h-3 rounded-full bg-[#3498DB]"></div>
-                <Text className="text-[12px] text-black">連携待ち</Text>
-            </div>
-          </div>
-        </section>
-
- 
+        {/* Shop List Section */}
+        <ShopListSection
+          shops={MOCK_SHOPS}
+          onShopClick={handleShopClick}
+        />
       </div>
     </BaseTemplate>
   );
