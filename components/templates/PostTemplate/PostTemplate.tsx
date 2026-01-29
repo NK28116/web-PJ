@@ -2,9 +2,10 @@ import { Text } from '@/atoms/Text';
 import { Button } from '@/components/atoms/Button/Button';
 import { Modal } from '@/components/organisms/Modal';
 import { BaseTemplate } from '@/templates/BaseTemplate';
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { PostDetailModal } from './PostDetailModal';
 import { PostListItem } from './PostListItem';
+import { PostGridItem } from './PostGridItem';
 
 const GridIcon = ({ active }: { active: boolean }) => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -81,6 +82,22 @@ export interface PostTemplateProps {
   className?: string;
 }
 
+export interface Post {
+  id: number;
+  bgColor: string;
+  title: string;
+  content: string;
+  tags: string;
+  rate: number;
+  views: number;
+  likes: number;
+  comments: number;
+  date: string;
+  username: string;
+  status: '表示中' | '非表示';
+  isNew?: boolean;
+}
+
 type PostOrder =
   | "postDate"
   | "effect"
@@ -98,26 +115,57 @@ const sortOptions: { label: string; value: PostOrder }[] = [
   { label: "アクセスが多い順", value: "access" },
 ];
 
-export const PostTemplate: React.FC<PostTemplateProps> = () => {
-  // ダミーデータ
-  const posts = Array.from({ length: 27 }, (_, i) => ({
+// ダミーデータ生成
+const generateMockPosts = (): Post[] => {
+  return Array.from({ length: 27 }, (_, i) => ({
     id: i,
     bgColor: ['#2D3748', '#4FD1C5', '#3182CE', '#E53E3E'][i % 4],
     title: '【NEW】Smash Double Cheese Burgar',
     content: 'パティとチーズは同じものを使っています！\n変更点は、\n・グリルドオニオン\n・ピクルス\n・オーロラソース\n\n既存のタルタルソースをかけたマッシュダブルチーズバーガーも好評いただいておりますが、こちらもかなり自信作です！\nまだメニューに載ってないので、お声がけください！',
-    tags: '#cheeseburger #中目黒 #ハンバーガー', // NOTE: rate, views, date have been randomized/sequenced to make sorting visible.
+    tags: '#cheeseburger #中目黒 #ハンバーガー',
     rate: Math.round((30 + Math.random() * 20) * 10) / 10,
     views: 196 + i * 17,
+    likes: Math.floor(50 + Math.random() * 100),
+    comments: Math.floor(5 + Math.random() * 30),
     date: new Date(2025, 6, 27 - i).toISOString(),
     username: '@wyzesystem_1212',
-    status: i % 3 === 0 ? '非表示' : '表示中'
+    status: i % 3 === 0 ? '非表示' : '表示中',
+    isNew: i < 3,
   }));
+};
+
+// 日付フォーマット関数
+const formatDate = (dateString: string): string => {
+  const date = new Date(dateString);
+  return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`;
+};
+
+export const PostTemplate: React.FC<PostTemplateProps> = () => {
+  // ダミーデータをuseStateで管理
+  const [posts, setPosts] = useState<Post[]>(() => generateMockPosts());
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  // postsの型推論を利用してstateの型を定義
-  const [selectedPost, setSelectedPost] = useState<typeof posts[0] | null>(null);
+  const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [open, setOpen] = useState(false);
   const [order, setOrder] = useState<PostOrder>("postDate");
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all');
+
+  // ステータス変更ハンドラ
+  const handleStatusChange = useCallback((postId: number) => {
+    setPosts((prevPosts) =>
+      prevPosts.map((post) =>
+        post.id === postId
+          ? { ...post, status: post.status === '表示中' ? '非表示' : '表示中' }
+          : post
+      )
+    );
+    // 選択中の投稿も更新
+    setSelectedPost((prev) => {
+      if (prev && prev.id === postId) {
+        return { ...prev, status: prev.status === '表示中' ? '非表示' : '表示中' };
+      }
+      return prev;
+    });
+  }, []);
 
   const handleSortChange = (value: PostOrder) => {
     setOrder(value);
@@ -151,15 +199,16 @@ export const PostTemplate: React.FC<PostTemplateProps> = () => {
       case 'access':
         return sortablePosts.sort((a, b) => b.views - a.views);
       case 'favorite':
-        // TODO: Implement sorting by favorites when data is available.
-        return sortablePosts;
+        return sortablePosts.sort((a, b) => b.likes - a.likes);
       case 'comment':
-        // TODO: Implement sorting by comments when data is available.
-        return sortablePosts;
+        return sortablePosts.sort((a, b) => b.comments - a.comments);
       default:
         return sortablePosts;
     }
   }, [order, posts, filterStatus]);
+
+  // フィルタ後の件数
+  const postCount = sortedPosts.length;
 
   return (
     <BaseTemplate activeTab="post">
@@ -180,13 +229,20 @@ export const PostTemplate: React.FC<PostTemplateProps> = () => {
             {/* 縦線 */}
             <div className="w-px h-6 bg-[#E1E1E1]" />
             
-            <Text className="text-base">27 件</Text>
+            <Text className="text-base">{postCount} 件</Text>
           </div>
 
           {/* 右側：並べ替え */}
           <div className="flex items-center gap-2">
-            <Button onClick={handleFilterToggle} className="text-base">
-              {filterStatus === 'all' ? '全て' : filterStatus === 'visible' ? '表示' : '非表示'}
+            <Button
+              onClick={handleFilterToggle}
+              className={`text-base px-3 py-1 rounded-md border transition-colors ${
+                filterStatus !== 'all'
+                  ? 'border-[#00A48D] text-[#00A48D] bg-[#00A48D]/10'
+                  : 'border-[#C4C4C4] text-gray-700'
+              }`}
+            >
+              {filterStatus === 'all' ? '全て' : filterStatus === 'visible' ? '表示中' : '非表示'}
             </Button>
  <Button onClick={() => setOpen(true)}>
   並び順
@@ -217,12 +273,11 @@ export const PostTemplate: React.FC<PostTemplateProps> = () => {
 
         {/* コンテンツ */}
         {viewMode === 'grid' ? (
-          <div className="grid grid-cols-3 gap-5 pt-2">
+          <div className="grid grid-cols-3 gap-3 pt-2">
             {sortedPosts.map((post) => (
-              <div
+              <PostGridItem
                 key={post.id}
-                className="aspect-square w-full rounded-sm overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
-                style={{ backgroundColor: post.bgColor }}
+                post={post}
                 onClick={() => setSelectedPost(post)}
               />
             ))}
@@ -230,20 +285,23 @@ export const PostTemplate: React.FC<PostTemplateProps> = () => {
         ) : (
           <div className="flex flex-col">
             {sortedPosts.map((post) => (
-              <PostListItem 
-                key={post.id} 
-                post={post} 
+              <PostListItem
+                key={post.id}
+                post={post}
                 onClick={() => setSelectedPost(post)}
+                formatDate={formatDate}
               />
             ))}
           </div>
         )}
       </div>
 
-      <PostDetailModal 
-        isOpen={!!selectedPost} 
-        onClose={() => setSelectedPost(null)} 
+      <PostDetailModal
+        isOpen={!!selectedPost}
+        onClose={() => setSelectedPost(null)}
         post={selectedPost}
+        onStatusChange={handleStatusChange}
+        formatDate={formatDate}
       />
     </BaseTemplate>
   );

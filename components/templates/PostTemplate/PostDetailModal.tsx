@@ -2,28 +2,33 @@ import React from 'react';
 import { Modal } from '@/components/organisms/Modal';
 import { Text } from '@/components/atoms/Text';
 import { Button } from '@/components/atoms/Button';
-
-interface Post {
-  id: number;
-  bgColor: string;
-  title: string;
-  tags: string;
-  rate: number;
-  views: number;
-  date: string;
-  content?: string;
-  username?: string;
-  status?: string;
-}
+import type { Post } from './PostTemplate';
 
 interface PostDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   post: Post | null;
+  onStatusChange?: (postId: number) => void;
+  formatDate?: (dateString: string) => string;
 }
 
-export const PostDetailModal: React.FC<PostDetailModalProps> = ({ isOpen, onClose, post }) => {
+export const PostDetailModal: React.FC<PostDetailModalProps> = ({
+  isOpen,
+  onClose,
+  post,
+  onStatusChange,
+  formatDate,
+}) => {
   if (!post) return null;
+
+  const isHidden = post.status === '非表示';
+  const displayDate = formatDate ? formatDate(post.date) : post.date;
+
+  const handleStatusToggle = () => {
+    if (onStatusChange) {
+      onStatusChange(post.id);
+    }
+  };
 
   return (
     <Modal isOpen={isOpen} onClose={onClose}>
@@ -32,9 +37,15 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({ isOpen, onClos
         <div className="flex items-center justify-between p-4 border-b border-gray-100">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-full bg-gray-200" />
-            <Text className="font-bold text-sm">{post.username || '@wyzesystem_1212'}</Text>
-            <div className="px-2 py-[2px] border border-[#00A48D] text-[#00A48D] text-[10px] rounded bg-white">
-              {post.status || '表示中'}
+            <Text className="font-bold text-sm">{post.username}</Text>
+            <div
+              className={`px-2 py-[2px] border text-[10px] rounded ${
+                isHidden
+                  ? 'border-gray-500 text-gray-500 bg-gray-100'
+                  : 'border-[#00A48D] text-[#00A48D] bg-white'
+              }`}
+            >
+              {post.status}
             </div>
           </div>
           <Button onClick={onClose} className="p-1 hover:bg-gray-100 rounded-full transition-colors">
@@ -47,14 +58,18 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({ isOpen, onClos
 
         <div className="overflow-y-auto p-5 flex-1 scrollbar-hide">
           {/* 画像エリア */}
-          <div 
+          <div
             className="w-full aspect-square relative mb-5 border border-gray-100"
             style={{ backgroundColor: post.bgColor }}
           >
             {/* 画像内の黄色い帯 */}
             <div className="absolute bottom-0 left-0 right-0 bg-[#F4D03F] p-3">
-               <Text className="text-[10px] font-bold leading-none mb-1">NEW</Text>
-               <Text className="font-bold text-xs uppercase tracking-wide truncate">{post.title.replace(/^【.*?】/, '')}</Text>
+              {post.isNew && (
+                <Text className="text-[10px] font-bold leading-none mb-1">NEW</Text>
+              )}
+              <Text className="font-bold text-xs uppercase tracking-wide truncate">
+                {post.title.replace(/^【.*?】/, '')}
+              </Text>
             </div>
           </div>
 
@@ -65,7 +80,7 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({ isOpen, onClos
               {post.content || '投稿の本文がここに入ります。'}
             </Text>
             <div className="text-right mt-2">
-              <Text className="text-[12px] text-gray-500">{post.date}</Text>
+              <Text className="text-[12px] text-gray-500">{displayDate}</Text>
             </div>
           </div>
 
@@ -106,8 +121,15 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({ isOpen, onClos
           <Button className="px-4 py-2 border border-[#C4C4C4] rounded-md text-[13px] text-gray-700 font-bold hover:bg-gray-50 transition-colors">
             投稿を編集
           </Button>
-          <Button className="px-4 py-2 border border-[#C4C4C4] rounded-md text-[13px] text-gray-700 font-bold hover:bg-gray-50 transition-colors">
-            非表示にする
+          <Button
+            onClick={handleStatusToggle}
+            className={`px-4 py-2 border rounded-md text-[13px] font-bold transition-colors ${
+              isHidden
+                ? 'border-[#00A48D] text-[#00A48D] hover:bg-[#00A48D]/10'
+                : 'border-[#C4C4C4] text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            {isHidden ? '表示する' : '非表示にする'}
           </Button>
         </div>
       </div>
