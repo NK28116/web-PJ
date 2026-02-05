@@ -1,47 +1,37 @@
 # Task Definition for Claude
 
 ## Objective
-Implement the **Post Tab (投稿タブ)** and its related features (Post List, Post Details Modal) based on the newly defined requirements and design.
+Adjust the Report Tab layout to a single column format as per the latest feedback, while maintaining all existing functional and visual improvements.
 
 ## References
-1. **Requirements**: `docs/requirements.md` (Section: 投稿タブ修正要件)
-   - Adhere strictly to the Figma design mentioned (docs/figma/post.png).
-2. **Design**: `docs/design.md` (Section: 2. 投稿タブ設計)
+1. **Review**: `docs/review.md` (Updated 2026-02-06: Worker requested 1-column layout).
 
 ## Scope of Work
 
-### 1. Page & Layout Implementation
-- Create/Update `pages/post.tsx` (or appropriate route) for the Post Tab.
-- Ensure the Global Header and Tab Navigation are consistent with the Home Tab.
+### 1. Layout Adjustment
+- **Single Column Layout (`ReportTab.tsx`)**:
+  - **Issue**: The current grid layout (2 columns on tablet/desktop) is deemed "weird" by the reviewer.
+  - **Action**: Change the root container of `ReportTab` to a **single column** layout for all screen sizes. 
+  - **Implementation**: Use `flex flex-col gap-4` or `grid grid-cols-1 gap-4`. Remove all `sm:grid-cols-2` and `sm:col-span-2` classes. All cards (KPI cards, charts, etc.) should take the full width of the container.
 
-### 2. Post List Feature
-- **View Toggle**: Implement Grid View and List View switching.
-- **Components**:
-  - `PostGridItem`: Square card with thumbnail and status.
-  - `PostListItem`: Vertical card with thumbnail, title, and metrics.
-- **Controls**:
-  - Display total post count.
-  - Implement "Sort" modal/bottom sheet (Date, Effect, Likes, Comments, Access).
-  - Implement "Hidden" filter toggle.
+### 2. Maintenance of Previous Improvements
+- Ensure the following remain intact after the layout change:
+  - **MEO Rank History**: Chart -> Keyword List (ascending rank sort) -> Disclaimer order.
+  - **MEO Rank History**: `invertYAxis={true}` and circular plot points.
+  - **Breakdown Charts**: Horizontal layout (Chart Left, List Right) for "Media Breakdown", "Instagram Source", and "Google Search Keywords".
+  - **Typography**: Emphasized numbers in "Review Reply Performance" and correct Tailwind classes for KPI numbers.
+  - **Tooltips**: Tap-to-toggle interaction logic.
 
-### 3. Post Detail Modal
-- Implement a modal that opens when a post item is clicked.
-- **Content**: User info, Status badge, Close button, Image, Title, Body, Date, Tags, Metrics (e.g., Attraction Rate bar).
-- **Actions**: "Edit Post" button, Status Toggle (Show/Hide).
+## Test Items (Verification Criteria)
 
-### 4. State Management & Data
-- Use **Dummy Data** for posts.
-- Manage state for:
-  - View mode (Grid/List)
-  - Filter (Show/Hide hidden posts)
-  - Sort order
-  - Post Status (Show/Hide) - toggling this should update the UI immediately.
+### A. Layout & Structure
+- [ ] **Single Column**: All elements are stacked vertically in a single column regardless of screen width.
+- [ ] **Full Width**: Each card/section spans the full width of the parent container (minus padding).
 
-## Constraints
-- **Figma Compliance**: Layout, spacing, colors, and font usage must match the Figma design screenshot provided in requirements.
-- **Mobile First**: Optimize for smartphone display.
-- **No Real API**: Do not connect to a real backend yet; mock the data handling.
+### B. Visual Consistency
+- [ ] **Charts**: Breakdown sections still show the chart and list side-by-side horizontally within their full-width cards.
+- [ ] **Spacing**: Gap between vertical elements is consistent (`gap-4`).
 
-## Deliverables
-- Functional Post Tab with all UI states implemented.
-- Verified interaction for toggles, modals, and filters.
+### C. Build & Quality
+- [ ] **Build**: `npm run build` passes without errors.
+- [ ] **Clean Code**: No leftover `col-span` or multi-column grid classes.

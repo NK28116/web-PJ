@@ -10,16 +10,20 @@ const customJestConfig = {
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
   testEnvironment: 'jest-environment-jsdom',
   moduleNameMapper: {
-    '^@/(.*)$': '<rootDir>/$1',
-    '^@/components/(.*)$': '<rootDir>/components/$1',
+    // More specific patterns must come first
     '^@/atoms/(.*)$': '<rootDir>/components/atoms/$1',
     '^@/molecules/(.*)$': '<rootDir>/components/molecules/$1',
     '^@/organisms/(.*)$': '<rootDir>/components/organisms/$1',
     '^@/templates/(.*)$': '<rootDir>/components/templates/$1',
+    '^@/components/(.*)$': '<rootDir>/components/$1',
     '^@/pages/(.*)$': '<rootDir>/pages/$1',
     '^@/utils/(.*)$': '<rootDir>/utils/$1',
+    // Handle bare @/types import (without trailing path)
+    '^@/types$': '<rootDir>/types/index.ts',
     '^@/types/(.*)$': '<rootDir>/types/$1',
     '^@/styles/(.*)$': '<rootDir>/styles/$1',
+    // Most general pattern last (fallback)
+    '^@/(.*)$': '<rootDir>/$1',
   },
 }
 
