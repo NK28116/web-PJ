@@ -29,7 +29,12 @@ jest.mock('../components/templates/ReportTemplate/AiTab', () => ({
 // ReportTabコンポーネントのモック
 jest.mock('../components/templates/ReportTemplate/ReportTab', () => ({
   __esModule: true,
-  default: () => <div data-testid="report-tab">レポート内容</div>,
+  default: ({ data }: { data: unknown }) => (
+    <div data-testid="report-tab">
+      レポート内容
+      {data && <span data-testid="has-data">データあり</span>}
+    </div>
+  ),
 }))
 
 describe('ReportTemplate Component - Tab Switching Functionality', () => {

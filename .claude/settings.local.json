@@ -6,7 +6,10 @@
       "Bash(npx tsc:*)",
       "Bash(npx eslint:*)",
       "Bash(npm run build:*)",
-      "Bash(npm run type-check:*)"
+      "Bash(npm run type-check:*)",
+      "Bash(npm test:*)",
+      "Bash(npx jest --clearCache)",
+      "Bash(npx jest:*)"
     ]
   }
 }
