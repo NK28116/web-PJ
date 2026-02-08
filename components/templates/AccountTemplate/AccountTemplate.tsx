@@ -6,8 +6,8 @@ import React from 'react';
 
 export interface AccountTemplateProps {
   className?: string;
-  activeTab?: 'home' | 'post' | 'report' | 'auto-reply';
-  onTabChange?: (tab: 'home' | 'post' | 'report' | 'auto-reply') => void;
+  activeTab?: 'home' | 'post' | 'report' | 'review';
+  onTabChange?: (tab: 'home' | 'post' | 'report' | 'review') => void;
 }
 export const AccountTemplate: React.FC <AccountTemplateProps>= ({
   className,

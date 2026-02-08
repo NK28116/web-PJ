@@ -8,8 +8,8 @@ import { IoMdMenu } from "react-icons/io";
 
 export interface HeaderProps {
   className?: string;
-  activeTab?: 'home' | 'post' | 'report' | 'auto-reply';
-  onTabChange?: (tab: 'home' | 'post' | 'report' | 'auto-reply') => void;
+  activeTab?: 'home' | 'post' | 'report' | 'review';
+  onTabChange?: (tab: 'home' | 'post' | 'report' | 'review') => void;
   customTabLabels?: { [key: string]: string };
 }
 
@@ -17,7 +17,7 @@ const tabs = [
   { id: 'home' as const, label: 'ホーム' },
   { id: 'post' as const, label: '投稿' },
   { id: 'report' as const, label: 'レポート' },
-  { id: 'auto-reply' as const, label: '自動返信' },
+  { id: 'review' as const, label: '口コミ・返信' },
 ] as const;
 
 export const Header: React.FC<HeaderProps> = ({
@@ -37,7 +37,7 @@ export const Header: React.FC<HeaderProps> = ({
     }
   }, []);
 
-  const handleTabClick = (tab: 'home' | 'post' | 'report' | 'auto-reply') => {
+  const handleTabClick = (tab: 'home' | 'post' | 'report' | 'review') => {
     onTabChange?.(tab);
     if (tab === 'home') {
       router.push('/home');
@@ -45,8 +45,8 @@ export const Header: React.FC<HeaderProps> = ({
       router.push('/post');
     } else if (tab === 'report') {
       router.push('/report');
-    } else if (tab === 'auto-reply') {
-      router.push('/auto-reply');
+    } else if (tab === 'review') {
+      router.push('/review');
     }
   };
 

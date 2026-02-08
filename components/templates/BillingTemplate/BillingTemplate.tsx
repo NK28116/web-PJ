@@ -5,8 +5,8 @@ import React from 'react';
 
 export interface BillingTemplateProps {
   className?: string;
-  activeTab?: 'home' | 'post' | 'report' | 'auto-reply';
-  onTabChange?: (tab: 'home' | 'post' | 'report' | 'auto-reply') => void;
+  activeTab?: 'home' | 'post' | 'report' | 'review';
+  onTabChange?: (tab: 'home' | 'post' | 'report' | 'review') => void;
 }
 export const BillingTemplate: React.FC <BillingTemplateProps>= ({
   className,

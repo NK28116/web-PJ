@@ -367,3 +367,62 @@ AIタブに「Coming Soon」メッセージを表示する機能実装と、そ�
 ### 技術的な判断
 1. **flexbox採用**: `grid grid-cols-1` でも同等の結果だが、単純な縦積みには `flex flex-col` がより明示的で軽量。
 2. **内部レイアウト維持**: カード内部の横並びレイアウト（チャート左・リスト右）は変更せず、視覚的な情報密度を維持。
+
+---
+
+## 2026-02-09
+
+### 概要
+Reply機能のReviewへの置き換え。プロジェクト全体で `Reply` / `auto-reply` 関連の名称を `Review` / `review` に統一し、ルーティング・型定義・ナビゲーションを更新。
+
+### 詳細
+
+#### Phase 1: ReviewTemplateコンポーネント作成
+- **[Claude]** 以下のファイルを新規作成。
+  - `components/templates/ReviewTemplate/ReviewTemplate.tsx`
+    - `ReplyTemplate`の内容をベースに、コンポーネント名を`ReviewTemplate`に変更
+    - `activeTab`を`"review"`に変更
+    - `customTabLabels`を`{ 'review': '口コミ・返信' }`に変更
+  - `components/templates/ReviewTemplate/index.ts`
+    - `ReviewTemplate`をエクスポート
+
+#### Phase 2: ページファイル作成
+- **[Claude]** `pages/review.tsx` を新規作成。
+  - `ReviewTemplate`をインポートして使用
+  - Headタイトル: 「口コミ・返信 - Wyze System」
+  - metaディスクリプション: "Wyze System Web Application - Review"
+
+#### Phase 3: エクスポート・ナビゲーション更新
+- **[Claude]** 以下のファイルを更新。
+  - `components/templates/index.ts`:
+    - `export { ReplyTemplate } from './ReplyTemplate'` → `export { ReviewTemplate } from './ReviewTemplate'`
+  - `components/organisms/Header/Header.tsx`:
+    - タブID: `'auto-reply'` → `'review'`
+    - タブラベル: 「自動返信」→「口コミ・返信」
+    - `router.push('/auto-reply')` → `router.push('/review')`
+    - 型定義: `'home' | 'post' | 'report' | 'auto-reply'` → `'home' | 'post' | 'report' | 'review'`
+
+#### Phase 4: 全テンプレート型定義更新
+- **[Claude]** 以下のファイルの`activeTab`型定義を `'auto-reply'` → `'review'` に変更。
+  - `components/templates/BaseTemplate/BaseTemplate.tsx`
+  - `components/templates/HomeTemplate/HomeTemplate.tsx`
+  - `components/templates/CurrentFeaturesTemplate/CurrentFeaturesTemplate.tsx`
+  - `components/templates/AccountTemplate/AccountTemplate.tsx`
+  - `components/templates/BillingTemplate/BillingTemplate.tsx`
+  - `pages/home.tsx`
+
+#### Phase 5: 旧ファイル削除
+- **[Claude]** 以下のファイル・ディレクトリを削除。
+  - `pages/reply.tsx`
+  - `pages/auto-reply.tsx`
+  - `components/templates/ReplyTemplate/` (ディレクトリごと)
+
+### 検証結果
+- Next.js build: ✅ 成功
+- ルート生成確認: `/review` が正しく生成（86.5 kB）
+- `auto-reply` / `ReplyTemplate` の残存参照: ✅ なし（grep確認済み）
+
+### 技術的な判断
+1. **タブID変更**: `'auto-reply'` → `'review'` に統一。URLパス `/review` と一致させ、命名の一貫性を確保。
+2. **旧ファイル完全削除**: `pages/reply.tsx`（未使用の古いページ）と `pages/auto-reply.tsx`（ReplyTemplate使用ページ）の両方を削除し、`pages/review.tsx` に一本化。
+3. **型定義の一括更新**: 6ファイルの型ユニオンを変更。TypeScriptコンパイラにより未更新箇所があればビルド時に検出可能。

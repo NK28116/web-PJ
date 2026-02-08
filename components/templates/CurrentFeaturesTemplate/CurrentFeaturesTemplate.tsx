@@ -6,8 +6,8 @@ import { MdCheckBox, MdCheckBoxOutlineBlank } from "react-icons/md";
 
 export interface CurrentFeaturesTemplateProps {
   className?: string;
-  activeTab?: 'home' | 'post' | 'report' | 'auto-reply';
-  onTabChange?: (tab: 'home' | 'post' | 'report' | 'auto-reply') => void;
+  activeTab?: 'home' | 'post' | 'report' | 'review';
+  onTabChange?: (tab: 'home' | 'post' | 'report' | 'review') => void;
 }
 
 export const CurrentFeaturesTemplate: React.FC<CurrentFeaturesTemplateProps> = ({

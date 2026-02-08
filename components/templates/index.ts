@@ -6,7 +6,7 @@ export { HomeTemplate } from './HomeTemplate';
 export type { HomeTemplateProps } from './HomeTemplate';
 export { PostTemplate } from './PostTemplate';
 export type { PostTemplateProps } from './PostTemplate';
-export { ReplyTemplate } from './ReplyTemplate';
+export { ReviewTemplate } from './ReviewTemplate';
 export { ReportTemplate } from './ReportTemplate';
 export { SplashScreen } from './SplashScreen';
 export type { SplashScreenProps } from './SplashScreen';

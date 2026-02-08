@@ -4,7 +4,7 @@ import Head from 'next/head';
 
 export default function HomePage() {
   const [activeTab, setActiveTab] = useState<
-    'home' | 'post' | 'report' | 'auto-reply'
+    'home' | 'post' | 'report' | 'review'
   >('home');
 
   return (

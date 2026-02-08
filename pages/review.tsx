@@ -1,13 +1,13 @@
 import React from 'react';
-import { ReplyTemplate } from '@/templates/ReplyTemplate';
+import { ReviewTemplate } from '@/templates/ReviewTemplate';
 import Head from 'next/head';
 
-export default function AutoReplyPage() {
+export default function ReviewPage() {
   return (
     <>
       <Head>
-        <title>口コミ返信 - Wyze System</title>
-        <meta name="description" content="Wyze System Web Application - Reply" />
+        <title>口コミ・返信 - Wyze System</title>
+        <meta name="description" content="Wyze System Web Application - Review" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="icon" href="/favicon.ico" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -21,7 +21,7 @@ export default function AutoReplyPage() {
           rel="stylesheet"
         />
       </Head>
-      <ReplyTemplate />
+      <ReviewTemplate />
     </>
   );
 }
