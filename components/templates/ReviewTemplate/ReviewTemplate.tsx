@@ -3,7 +3,7 @@ import { BaseTemplate } from '@/templates/BaseTemplate';
 import { Text } from '@/atoms/Text';
 import { Button } from '@/components/atoms/Button';
 
-export const ReplyTemplate: React.FC = () => {
+export const ReviewTemplate: React.FC = () => {
   // ダミーデータ（口コミありの状態）
   const reviews = [
     {
@@ -38,9 +38,9 @@ export const ReplyTemplate: React.FC = () => {
   const hasReviews = reviews.length > 0;
 
   return (
-    <BaseTemplate 
-      activeTab="auto-reply" 
-      customTabLabels={{ 'auto-reply': '口コミ返信' }}
+    <BaseTemplate
+      activeTab="review"
+      customTabLabels={{ 'review': '口コミ・返信' }}
     >
       <div className="flex flex-col gap-6 h-full pb-10">
         {/* 統計情報エリア */}

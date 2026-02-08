@@ -4,8 +4,8 @@ import React from 'react';
 
 export interface BaseTemplateProps {
   className?: string;
-  activeTab?: 'home' | 'post' | 'report' | 'auto-reply';
-  onTabChange?: (tab: 'home' | 'post' | 'report' | 'auto-reply') => void;
+  activeTab?: 'home' | 'post' | 'report' | 'review';
+  onTabChange?: (tab: 'home' | 'post' | 'report' | 'review') => void;
   customTabLabels?: { [key: string]: string };
   children: React.ReactNode;
 }

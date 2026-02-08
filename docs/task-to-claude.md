@@ -1,37 +1,29 @@
-# Task Definition for Claude
+# Claudeへの実装指示書：ReplyからReviewへの移行
 
-## Objective
-Adjust the Report Tab layout to a single column format as per the latest feedback, while maintaining all existing functional and visual improvements.
+本ドキュメントは、`docs/requirements.md` および `docs/design.md` の要求事項「1. Reply 機能の Review への置き換え」を完遂するための指示書です。
 
-## References
-1. **Review**: `docs/review.md` (Updated 2026-02-06: Worker requested 1-column layout).
+## 1. プロジェクト全体のリファクタリング (Priority: High)
 
-## Scope of Work
+**目的**: プロジェクト内の `Reply` 関連の名称をすべて `Review` に統一し、責務の変更に備える。
 
-### 1. Layout Adjustment
-- **Single Column Layout (`ReportTab.tsx`)**:
-  - **Issue**: The current grid layout (2 columns on tablet/desktop) is deemed "weird" by the reviewer.
-  - **Action**: Change the root container of `ReportTab` to a **single column** layout for all screen sizes. 
-  - **Implementation**: Use `flex flex-col gap-4` or `grid grid-cols-1 gap-4`. Remove all `sm:grid-cols-2` and `sm:col-span-2` classes. All cards (KPI cards, charts, etc.) should take the full width of the container.
+### 1.1 ファイル・ディレクトリの移動とリネーム
+- [ ] `pages/reply.tsx` を `pages/review.tsx` へリネーム。
+- [ ] `components/templates/ReplyTemplate/` を `components/templates/ReviewTemplate/` へディレクトリごとリネーム。
+- [ ] 上記ディレクトリ内の `ReplyTemplate.tsx` を `ReviewTemplate.tsx` へリネーム。
 
-### 2. Maintenance of Previous Improvements
-- Ensure the following remain intact after the layout change:
-  - **MEO Rank History**: Chart -> Keyword List (ascending rank sort) -> Disclaimer order.
-  - **MEO Rank History**: `invertYAxis={true}` and circular plot points.
-  - **Breakdown Charts**: Horizontal layout (Chart Left, List Right) for "Media Breakdown", "Instagram Source", and "Google Search Keywords".
-  - **Typography**: Emphasized numbers in "Review Reply Performance" and correct Tailwind classes for KPI numbers.
-  - **Tooltips**: Tap-to-toggle interaction logic.
+### 1.2 コード内の定義更新
+- [ ] `ReviewTemplate.tsx` 内のコンポーネント名を `ReplyTemplate` から `ReviewTemplate` へ変更。
+- [ ] `components/templates/index.ts` および `ReviewTemplate/index.ts` のエクスポートを修正。
+- [ ] `pages/review.tsx` 内でのインポートおよび使用コンポーネント名を `ReviewTemplate` に更新。
+- [ ] `pages/review.tsx` の `Head` タイトルおよびメタディスクリプション内の "Reply" を "Review" に更新。
 
-## Test Items (Verification Criteria)
+### 1.3 ナビゲーションおよびルーティングの更新
+- [ ] `components/organisms/Header/Header.tsx` におけるタブ定義を更新：
+  - ID: `auto-reply` または `reply` -> `review`
+  - 表示ラベル: 「口コミ・返信」
+- [ ] `Header.tsx` 内の型定義（`activeTab` 等）および `router.push` の遷移先パスを `/review` に更新。
+- [ ] その他、プロジェクト全体で `Reply` ページへのリンクや参照がある箇所をすべて `/review` および `review` ID に書き換える。
 
-### A. Layout & Structure
-- [ ] **Single Column**: All elements are stacked vertically in a single column regardless of screen width.
-- [ ] **Full Width**: Each card/section spans the full width of the parent container (minus padding).
-
-### B. Visual Consistency
-- [ ] **Charts**: Breakdown sections still show the chart and list side-by-side horizontally within their full-width cards.
-- [ ] **Spacing**: Gap between vertical elements is consistent (`gap-4`).
-
-### C. Build & Quality
-- [ ] **Build**: `npm run build` passes without errors.
-- [ ] **Clean Code**: No leftover `col-span` or multi-column grid classes.
+## 2. 整合性確認
+- [ ] 実装後、ビルドエラーが発生しないことを確認。
+- [ ] ブラウザで `/review` にアクセスし、ヘッダーのタブ切り替えが正常に動作することを確認。
