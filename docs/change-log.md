@@ -426,3 +426,59 @@ Reply機能のReviewへの置き換え。プロジェクト全体で `Reply` / `
 1. **タブID変更**: `'auto-reply'` → `'review'` に統一。URLパス `/review` と一致させ、命名の一貫性を確保。
 2. **旧ファイル完全削除**: `pages/reply.tsx`（未使用の古いページ）と `pages/auto-reply.tsx`（ReplyTemplate使用ページ）の両方を削除し、`pages/review.tsx` に一本化。
 3. **型定義の一括更新**: 6ファイルの型ユニオンを変更。TypeScriptコンパイラにより未更新箇所があればビルド時に検出可能。
+
+---
+
+## 2026-02-12
+
+### 概要
+プラン確認・変更画面の改修。契約ステータス管理（解約・自動更新停止）、ミートボールメニュー、条件付き表示ロジックの実装およびテスト作成を完了。
+
+### 詳細
+
+#### Phase 1: コンポーネント改修
+- **[Gemini]** `docs/task-to-claude.md` に実装指示書を作成。`docs/design.md` および `docs/Implementation/PlanConfirmationDetails.md` に基づく。
+- **[Claude]** `components/templates/CurrentFeaturesTemplate/CurrentFeaturesTemplate.tsx` を改修。
+  - `PlanStatus` 型定義（`'active' | 'inactive'`）を追加
+  - `PLAN_DATA` モックデータ定数を追加（ハードコード値を置換）
+  - State管理を導入: `planStatus`, `isAutoRenewal`, `isMenuOpen`
+  - ヘッダーにステータスバッジを追加（契約中: 緑色 / 未契約: グレー）
+  - ミートボールメニュー（`BsThreeDotsVertical`）を追加。「解約」「自動更新を停止」の2項目
+  - 契約情報ブロックの条件付き表示:
+    - `inactive`時: 契約期間・更新日を非表示
+    - `active` かつ `isAutoRenewal === false`時: 「自動更新が設定されていません」を表示
+  - `inactive`時に「契約する」ボタンを表示
+  - ハンドラ関数: `handleCancel`, `handleStopAutoRenewal`, `handleSubscribe`
+  - 未使用インポート（`MdCheckBox`, `MdCheckBoxOutlineBlank`）を削除
+  - プラン変更ボタン文言を「アップグレード」に変更
+
+#### Phase 2: 開発用状態リセットボタン追加
+- **[Claude]** DEV_ONLYブロックを追加。
+  - `[DEV] 自動更新を再開` ボタン: `active` かつ `isAutoRenewal === false` の時に表示
+  - `DEV_ONLY` コメントで囲み、リリース前の検索・削除を容易化
+
+#### Phase 3: テスト実装
+- **[Claude]** `test/CurrentFeaturesTemplate.test.tsx` を新規作成。
+  - 初期表示の確認（3テスト）:
+    - ステータスが「契約中」であること
+    - 次回更新日が表示されていること
+    - 契約期間が表示されていること
+  - メニューの動作確認（1テスト）:
+    - ミートボールアイコンクリックでメニュー表示
+  - 解約フローの確認（3テスト）:
+    - ステータスが「未契約」に変化
+    - 更新日と契約期間が非表示
+    - 「契約する」ボタンが表示
+  - 自動更新停止フローの確認（2テスト）:
+    - 更新日が「自動更新が設定されていません」に変化
+    - ステータスは「契約中」のまま
+
+### 検証結果
+- テスト: ✅ 全9テスト合格
+- TypeScript型チェック: ✅ 実装ファイルにエラーなし（既存の `ReportTemplate.test.tsx` に無関係の型エラー1件あり）
+
+### 技術的な判断
+1. **クライアントサイドState管理**: API未接続のため `useState` で契約状態を管理。将来的なAPI連携時の差し替えが容易。
+2. **モックデータの定数化**: ハードコード値を `PLAN_DATA` 定数に集約し、保守性を向上。
+3. **DEV_ONLYパターン**: 開発用リセットボタンを `DEV_ONLY` コメントブロックで囲み、`grep DEV_ONLY` で一括検索・削除可能にした。
+4. **テスト設計**: 既存テストファイル（`ReviewTemplate.test.tsx`）のパターンに準拠。BaseTemplateとSideMenuをモック化し、コンポーネント単体の動作を検証。
