@@ -201,7 +201,7 @@ export const BillingTemplate: React.FC<BillingTemplateProps> = ({
               </Button>
               <Button
                 onClick={() => setIsEditModalOpen(false)}
-                className="flex-1 bg-[#00A48D] text-white text-[14px] py-2"
+                className="flex-1 bg-[#00A48D] text-blue-400 text-[14px] py-2"
               >
                 保存する
               </Button>

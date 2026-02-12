@@ -543,3 +543,82 @@ Reply機能のReviewへの置き換え。プロジェクト全体で `Reply` / `
 2. **`Intl.NumberFormat` 使用**: 金額フォーマットに `Intl.NumberFormat('ja-JP')` を使用し、ロケール対応の通貨表示を実現。
 3. **モーダルの `readOnly` 入力欄**: API未接続のため入力欄は `readOnly` に設定。将来的なフォーム実装時に `readOnly` を外すだけで対応可能。
 4. **各行PDF出力ボタン**: Figmaに準拠し、履歴一覧の各行に「領収書 / PDF」ボタンを配置。一括出力ではなく行単位の出力UIとした。
+
+---
+
+## 2026-02-12 (続き2)
+
+### 概要
+アカウント情報画面（AccountTemplate）の改修。店舗プロフィール情報・オーナーアカウント設定の閲覧/編集（ミートボールメニュー経由）、通知設定のトグル（排他制御付き即時保存）を実装。Geminiレビュー対応として編集モード・ヘッダーアイコン追加も完了。
+
+### 詳細
+
+#### Phase 1: コンポーネント改修
+- **[Gemini]** `docs/task-to-claude.md` に実装指示書を作成。`docs/requirements.md`、`docs/design.md`、`docs/figma/account.png` に基づく。
+- **[Claude]** `components/templates/AccountTemplate/AccountTemplate.tsx` を全面改修。
+  - 型定義を追加: `AccountData`（profile, owner, notifications）、`NotificationKey`
+  - モックデータを定義: `MOCK_ACCOUNT_DATA`、`NOTIFICATION_LABELS`
+  - State管理:
+    - `profile`, `owner`, `notifications`: 各セクションのデータ管理
+    - `isSaving`: 通知設定の排他制御フラグ
+    - `isEditingProfile`, `isEditingOwner`: 編集モードフラグ
+    - `menuOpenProfile`, `menuOpenOwner`: ミートボールメニュー開閉フラグ
+    - `editProfile`, `editOwner`: 編集用一時State（キャンセル時の復元用）
+  - ヘッダー:
+    - 左: 「＜ 店舗・アカウント設定」戻るボタン（`MdKeyboardArrowLeft` + `router.back()`）
+    - 右: 通知アイコン（`MdNotifications`）+ ハンバーガーメニュー（`MdMenu`）
+  - 店舗プロフィール情報セクション:
+    - ミートボールメニュー（`BsThreeDotsVertical`）→「変更する」で編集モード切替
+    - 表示モード: 店舗名・住所・電話番号を表示
+    - 編集モード: `input` フィールド + 「キャンセル」「保存」ボタン
+    - 保存: `profile` Stateを更新、キャンセル: `editProfile`を元に戻す
+  - オーナーアカウント設定セクション:
+    - 同様のミートボールメニュー → 編集モード切替
+    - 表示モード: 担当者名・メールアドレス・パスワード（`********`固定）
+    - 編集モード: 担当者名・メールアドレスの `input` + パスワード欄（`readOnly`）
+    - 保存/キャンセルの動作はプロフィールと同様
+  - 通知設定セクション:
+    - 3項目のトグルスイッチ: 月次レポート、競合変動アラート、低評価口コミアラート
+    - `role="switch"` + `aria-checked` でアクセシビリティ対応
+    - `isSaving` フラグによる排他制御（`setTimeout` 1秒でAPI模倣）
+    - Optimistic Update パターン
+
+#### Phase 2: テスト実装
+- **[Claude]** `test/AccountTemplate.test.tsx` を新規作成。
+  - レンダリング確認（4テスト）:
+    - ヘッダーに「店舗・アカウント設定」が表示
+    - 店舗プロフィール情報セクションが表示
+    - オーナーアカウント設定セクションが表示
+    - 通知設定セクションが表示
+  - 値の表示確認（6テスト）:
+    - 店舗名「サンプル店舗 渋谷店」が表示
+    - 住所「東京都渋谷区神南1-2-3」が表示
+    - 電話番号「03-1234-5678」が表示
+    - 担当者名「山田 太郎」が表示
+    - メールアドレス「taro.yamada@example.com」が表示
+    - パスワード「********」がマスク表示
+  - トグル動作（3テスト）:
+    - 月次レポートのトグルクリックでOFFに切り替わる（初期ON）
+    - 競合変動アラートのトグルクリックでONに切り替わる（初期OFF）
+    - 通知設定の3項目が全て表示
+  - 戻るボタン（1テスト）:
+    - クリックで `router.back()` が呼ばれる
+
+#### Phase 3: Geminiレビュー対応
+- **[Gemini]** `docs/task-to-claude.md` にレビュー結果を反映。編集モード・ミートボールメニュー・ヘッダーアイコンの追加を指示。
+- **[Claude]** レビュー指摘に基づきコンポーネントを更新。
+  - `profile`/`owner` を `useState` で管理し、編集・保存可能に
+  - `editProfile`/`editOwner` 一時Stateでキャンセル時の復元に対応
+  - ミートボールメニュー（`BsThreeDotsVertical`）を両セクションに追加
+  - ヘッダー右側に `MdNotifications` + `MdMenu` アイコンを追加
+  - 編集モード: `input` フィールド + 「キャンセル」「保存」ボタンの実装
+
+### 検証結果
+- テスト: ✅ 全14テスト合格（レビュー反映後も既存テスト全パス）
+- TypeScript型チェック: ✅ 実装ファイルにエラーなし
+
+### 技術的な判断
+1. **編集用一時State**: `editProfile`/`editOwner` を `profile`/`owner` とは別に保持し、キャンセル時に元の値に復元可能にした。保存時のみ本体Stateを更新する設計。
+2. **ミートボールメニュー**: テキストボタンではなく `BsThreeDotsVertical` アイコンからのドロップダウンメニューを採用。Figmaデザインに準拠し、UIの一貫性を確保。
+3. **通知設定の排他制御**: `isSaving` フラグで連続クリックを抑制。`setTimeout` でAPI呼び出しを模倣し、将来的なバックエンド連携時の差し替えが容易。
+4. **アクセシビリティ**: トグルスイッチに `role="switch"` と `aria-checked` を付与し、スクリーンリーダー対応。`aria-label` でラベルを明示。
