@@ -83,7 +83,7 @@ export const Button: React.FC<ButtonProps> = ({
   type = 'button',
   fullWidth = false,
   disabled = false,
-  onClick = () => alert('clicked!'),
+  onClick = () => alert('※現在開発中です'),
   className,
   style,
 }) => {
