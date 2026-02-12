@@ -5,6 +5,7 @@ import { cn } from '@/utils/cn';
 import { useRouter } from 'next/router';
 import React, { useEffect, useRef, useState } from 'react';
 import { IoMdMenu } from "react-icons/io";
+import { MdKeyboardArrowLeft, MdNotifications, MdMenu } from 'react-icons/md';
 
 export interface HeaderProps {
   className?: string;
@@ -79,14 +80,15 @@ export const Header: React.FC<HeaderProps> = ({
             >
               wyze
             </Text>
-
+            {/* 通知 */}
+            <MdNotifications size={22} className="text-gray-600" /> 
             {/* ハンバーガーメニュー */}
             <Button 
               className="flex flex-col gap-[6px] focus:outline-none border-none"
               onClick={() => setIsMenuOpen(true)}
               aria-label="メニューを開く"
             >
-              <IoMdMenu size={24} color="#FFFAFA" />
+              <IoMdMenu size={24} color="#FFFAFA" />       
             </Button>
           </div>
         </div>
