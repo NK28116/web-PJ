@@ -482,3 +482,64 @@ Reply機能のReviewへの置き換え。プロジェクト全体で `Reply` / `
 2. **モックデータの定数化**: ハードコード値を `PLAN_DATA` 定数に集約し、保守性を向上。
 3. **DEV_ONLYパターン**: 開発用リセットボタンを `DEV_ONLY` コメントブロックで囲み、`grep DEV_ONLY` で一括検索・削除可能にした。
 4. **テスト設計**: 既存テストファイル（`ReviewTemplate.test.tsx`）のパターンに準拠。BaseTemplateとSideMenuをモック化し、コンポーネント単体の動作を検証。
+
+---
+
+## 2026-02-12 (続き)
+
+### 概要
+お支払い情報画面（BillingTemplate）の改修。Figmaデザイン準拠で、クレジットカード情報の表示・編集モーダル（UIのみ）、お支払い履歴の一覧表示、PDF出力ボタン（モック）、次回お支払い表示を実装。
+
+### 詳細
+
+#### Phase 1: コンポーネント改修
+- **[Gemini]** `docs/task-to-claude.md` に実装指示書を作成。`docs/requirements.md`、`docs/design.md`、`docs/figma/Billing.png` に基づく。
+- **[Claude]** `components/templates/BillingTemplate/BillingTemplate.tsx` を全面改修。
+  - 型定義を追加: `PaymentHistory`（id, date, amount）、`CardInfo`（brand, last4, expiry）
+  - モックデータを定義: `MOCK_CARD_INFO`, `MOCK_PAYMENT_HISTORY`（3件）, `MOCK_NEXT_PAYMENT`
+  - `formatCurrency` ヘルパー関数を追加（`Intl.NumberFormat` で `¥33,000` 形式）
+  - State管理: `isEditModalOpen`（カード編集モーダル開閉）
+  - ヘッダー: 「＜ お支払い情報」戻るボタン（`MdKeyboardArrowLeft` + `router.back()`）
+  - クレジットカード情報セクション:
+    - マスクされたカード番号（`**** **** **** 1234`）
+    - 有効期限表示（`**/**`）
+    - 編集アイコン（`MdEdit`）
+    - 「カード情報を変更する」ボタン
+  - お支払い履歴セクション:
+    - `MOCK_PAYMENT_HISTORY` を `map` でリストレンダリング
+    - 各行に日付・金額・「領収書 / PDF」ボタンを配置
+    - PDFボタンクリックで `console.log` 出力（モック）
+  - 次回お支払い表示:
+    - 履歴下部に中央寄せ・グレーテキストで配置
+    - データ不在時は「次回のお支払い予定はありません」を表示
+  - カード編集モーダル（UIのみ）:
+    - カード番号・有効期限・CVC のダミー入力欄（`readOnly`）
+    - 「保存する」「キャンセル」ボタンでモーダル閉じる
+  - 既存のハードコードされた契約情報ブロック・履歴ブロックを全て置換
+
+#### Phase 2: テスト実装
+- **[Claude]** `test/BillingTemplate.test.tsx` を新規作成。
+  - レンダリング確認（5テスト）:
+    - ヘッダーに「お支払い情報」が表示
+    - カード情報セクション（マスク番号）が表示
+    - お支払い履歴3件が表示
+    - 金額がカンマ区切り円マーク付き（`¥33,000`）
+    - 次回お支払い情報が表示
+  - 戻るボタン（1テスト）:
+    - クリックで `router.back()` が呼ばれる
+  - モーダル動作（3テスト）:
+    - 「カード情報を変更する」でモーダルが開く
+    - 「キャンセル」でモーダルが閉じる
+    - 「保存する」でモーダルが閉じる
+  - PDFボタン（1テスト）:
+    - クリックで `console.log` が呼ばれる
+
+### 検証結果
+- テスト: ✅ 全10テスト合格
+- TypeScript型チェック: ✅ 実装ファイルにエラーなし
+
+### 技術的な判断
+1. **Figma準拠のレイアウト**: `docs/figma/Billing.png` に基づき、カード情報→履歴→次回支払いの縦積みレイアウトを採用。
+2. **`Intl.NumberFormat` 使用**: 金額フォーマットに `Intl.NumberFormat('ja-JP')` を使用し、ロケール対応の通貨表示を実現。
+3. **モーダルの `readOnly` 入力欄**: API未接続のため入力欄は `readOnly` に設定。将来的なフォーム実装時に `readOnly` を外すだけで対応可能。
+4. **各行PDF出力ボタン**: Figmaに準拠し、履歴一覧の各行に「領収書 / PDF」ボタンを配置。一括出力ではなく行単位の出力UIとした。
