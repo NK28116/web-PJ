@@ -1,5 +1,7 @@
 import { Text } from '@/atoms/Text';
 import { Button } from '@/components/atoms/Button';
+import type { Notification } from '@/molecules/NotificationItem';
+import { NotificationModal } from '@/organisms/Modal';
 import { SideMenu } from '@/organisms/SideMenu';
 import { cn } from '@/utils/cn';
 import { useRouter } from 'next/router';
@@ -13,6 +15,49 @@ export interface HeaderProps {
   onTabChange?: (tab: 'home' | 'post' | 'report' | 'review') => void;
   customTabLabels?: { [key: string]: string };
 }
+
+const MOCK_NOTIFICATIONS: Notification[] = [
+  {
+    id: '1',
+    storeName: 'Wyze Pizza',
+    content: 'Googleビジネスプロフィールの連携が切れました。再連携をしてください。',
+    receivedAt: new Date(Date.now() - 1 * 60 * 1000),
+    isRead: false,
+    redirectPath: '/home',
+  },
+  {
+    id: '2',
+    storeName: 'Wyze Pizza',
+    content: '新しい口コミ（★4）が届きました。',
+    receivedAt: new Date(Date.now() - 3 * 60 * 60 * 1000),
+    isRead: false,
+    redirectPath: '/review',
+  },
+  {
+    id: '3',
+    storeName: 'Wyze Pizza',
+    content: '11月はGoogleマップ上で3位まで上昇しました。プロフィール閲覧数は先月＋26%向上。',
+    receivedAt: new Date(Date.now() - 24 * 60 * 60 * 1000),
+    isRead: false,
+    redirectPath: '/report',
+  },
+  {
+    id: '4',
+    storeName: 'Wyze Pizza',
+    content: '月次レポートが生成されました。確認してください。',
+    receivedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
+    isRead: true,
+    redirectPath: '/report',
+  },
+  {
+    id: '5',
+    storeName: 'Wyze Pizza',
+    content: '新しい投稿が公開されました。',
+    receivedAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
+    isRead: true,
+    redirectPath: '/post',
+  },
+];
 
 const tabs = [
   { id: 'home' as const, label: 'ホーム' },
@@ -29,8 +74,18 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const router = useRouter();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [notifications, setNotifications] = useState<Notification[]>(MOCK_NOTIFICATIONS);
   const [headerHeight, setHeaderHeight] = useState(0);
   const headerRef = useRef<HTMLDivElement>(null);
+
+  const unreadCount = notifications.filter((n) => !n.isRead).length;
+
+  const handleNotificationConfirm = (id: string) => {
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
+    );
+  };
 
   useEffect(() => {
     if (headerRef.current) {
@@ -80,8 +135,21 @@ export const Header: React.FC<HeaderProps> = ({
             >
               wyze
             </Text>
-            {/* 通知 */}
-            <MdNotifications size={22} className="text-gray-600" /> 
+            {/* 通知アイコン */}
+            <button
+              type="button"
+              onClick={() => setIsModalOpen(true)}
+              className="relative focus:outline-none"
+              aria-label="通知を開く"
+            >
+              <MdNotifications
+                size={22}
+                className={unreadCount > 0 ? 'text-white' : 'text-gray-400'}
+              />
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
+              )}
+            </button>
             {/* ハンバーガーメニュー */}
             <Button 
               className="flex flex-col gap-[6px] focus:outline-none border-none"
@@ -134,6 +202,14 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="absolute bottom-0 left-0 right-0 h-px bg-wyze-primary" />
         </div>
       </div>
+
+      {/* 通知モーダル */}
+      <NotificationModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        notifications={notifications}
+        onConfirm={handleNotificationConfirm}
+      />
 
       {/* サイドメニュー */}
       <SideMenu isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} top={headerHeight}>
