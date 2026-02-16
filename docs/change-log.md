@@ -622,3 +622,57 @@ Reply機能のReviewへの置き換え。プロジェクト全体で `Reply` / `
 2. **ミートボールメニュー**: テキストボタンではなく `BsThreeDotsVertical` アイコンからのドロップダウンメニューを採用。Figmaデザインに準拠し、UIの一貫性を確保。
 3. **通知設定の排他制御**: `isSaving` フラグで連続クリックを抑制。`setTimeout` でAPI呼び出しを模倣し、将来的なバックエンド連携時の差し替えが容易。
 4. **アクセシビリティ**: トグルスイッチに `role="switch"` と `aria-checked` を付与し、スクリーンリーダー対応。`aria-label` でラベルを明示。
+
+---
+
+## 2026-02-16
+
+### 概要
+通知モーダル（NotificationModal）の新規実装。ヘッダーの通知アイコンからモーダルを表示し、未読通知の確認と該当ページへの遷移機能を実装。
+
+### 詳細
+
+#### Phase 1: NotificationItem コンポーネント作成
+- **[Gemini]** `docs/task-to-claude.md` に実装指示書を作成。`docs/requirements.md`、`docs/design.md`、`docs/figma/notify.jpg` に基づく。
+- **[Claude]** `components/molecules/NotificationItem/NotificationItem.tsx` を新規作成。
+  - `Notification` 型定義（id, storeName, content, receivedAt, isRead, redirectPath）
+  - `formatNotificationDate` 日時フォーマット関数:
+    - 1日未満: 「○分前」「○時間前」
+    - 1〜3日: 「○日前」
+    - 3日以上: 「yyyy/mm/dd」
+  - 店舗名・日時・通知本文・「確認する」ボタンを表示
+  - 既読時は背景グレーアウト（`bg-gray-100`）
+  - `redirectPath` バリデーション: `/` で始まり `http` を含まないことを確認
+  - バリデーション失敗時に「確認できませんでした」エラー表示
+- **[Claude]** `components/molecules/NotificationItem/index.ts` を新規作成。
+
+#### Phase 2: NotificationModal コンポーネント作成
+- **[Claude]** `components/organisms/Modal/NotificationModal.tsx` を新規作成。
+  - 半透明グレーのオーバーレイ（クリックで閉じる）
+  - モーダル本体: 画面中央固定、幅・高さ75%
+  - ヘッダーに「お知らせ ○件」を未読件数で表示
+  - 通知0件時は「お知らせはありません」を表示
+  - 内部スクロール（`overflow-y-auto`）対応
+  - 背景スクロール禁止（`body.overflow: hidden`）
+- **[Claude]** `components/organisms/Modal/index.ts` にエクスポートを追加。
+
+#### Phase 3: Header 改修
+- **[Claude]** `components/organisms/Header/Header.tsx` を改修。
+  - State追加: `isModalOpen`（モーダル開閉）、`notifications`（通知データ配列）
+  - モックデータ `MOCK_NOTIFICATIONS`（5件、未読3件/既読2件）を定義
+  - 通知アイコン（`MdNotifications`）を `<button>` でラップ:
+    - 未読ありの場合: 白色アイコン + 赤い未読インジケータードット
+    - 未読なしの場合: グレーアイコン
+  - アイコンクリックで `isModalOpen` を `true` に設定
+  - `handleNotificationConfirm`: 指定IDの通知を既読に更新し未読件数を再計算
+  - `NotificationModal` をSideMenuの前に配置
+
+### 検証結果
+- TypeScript型チェック: ✅ 実装ファイルにエラーなし（既存の `ReportTemplate.test.tsx` に無関係の型エラー1件あり）
+- Next.js build: ✅ 成功
+
+### 技術的な判断
+1. **既存Modalコンポーネントの不使用**: 通知モーダルは幅75%/高さ75%の特殊レイアウトが必要であり、既存の `Modal` コンポーネント（`max-w-lg` 固定）ではなく専用コンポーネントとして実装。
+2. **日時フォーマット関数の配置**: `NotificationItem` と密結合のため、同ファイル内に配置。他コンポーネントでの再利用が必要になった場合に `utils/` へ移動可能。
+3. **モックデータのHeader内配置**: API未接続のため `Header` 内に `MOCK_NOTIFICATIONS` を定義。将来的にAPI連携時はカスタムHookまたはContextに置き換え可能。
+4. **Figmaデザイン準拠**: 通知アイコンの色切替、モーダル内の「お知らせ ○件」表示、店舗名の【】囲み、日時の右寄せ配置をFigmaに合わせて実装。
