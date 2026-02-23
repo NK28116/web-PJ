@@ -10,7 +10,8 @@
       "Bash(npm test:*)",
       "Bash(npx jest --clearCache)",
       "Bash(npx jest:*)",
-      "Bash(npx next build:*)"
+      "Bash(npx next build:*)",
+      "Bash(python3:*)"
     ]
   }
 }

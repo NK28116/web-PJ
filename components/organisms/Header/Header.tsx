@@ -1,7 +1,7 @@
 import { Text } from '@/atoms/Text';
 import { Button } from '@/components/atoms/Button';
 import type { Notification } from '@/molecules/NotificationItem';
-import { NotificationModal } from '@/organisms/Modal';
+import { LogoutModal, NotificationModal } from '@/organisms/Modal';
 import { SideMenu } from '@/organisms/SideMenu';
 import { cn } from '@/utils/cn';
 import { useRouter } from 'next/router';
@@ -75,6 +75,7 @@ export const Header: React.FC<HeaderProps> = ({
   const router = useRouter();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>(MOCK_NOTIFICATIONS);
   const [headerHeight, setHeaderHeight] = useState(0);
   const headerRef = useRef<HTMLDivElement>(null);
@@ -135,29 +136,32 @@ export const Header: React.FC<HeaderProps> = ({
             >
               wyze
             </Text>
-            {/* 通知アイコン */}
-            <button
-              type="button"
-              onClick={() => setIsModalOpen(true)}
-              className="relative focus:outline-none"
-              aria-label="通知を開く"
-            >
-              <MdNotifications
-                size={22}
-                className={unreadCount > 0 ? 'text-white' : 'text-gray-400'}
-              />
-              {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
-              )}
-            </button>
-            {/* ハンバーガーメニュー */}
-            <Button 
-              className="flex flex-col gap-[6px] focus:outline-none border-none"
-              onClick={() => setIsMenuOpen(true)}
-              aria-label="メニューを開く"
-            >
-              <IoMdMenu size={24} color="#FFFAFA" />       
-            </Button>
+            {/* 通知・メニューを右側にまとめて配置 */}
+            <div className="flex items-center gap-4">
+              {/* 通知アイコン */}
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(true)}
+                className="relative focus:outline-none"
+                aria-label="通知を開く"
+              >
+                <MdNotifications
+                  size={22}
+                  className={unreadCount > 0 ? 'text-white' : 'text-gray-400'}
+                />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
+                )}
+              </button>
+              {/* ハンバーガーメニュー */}
+              <Button
+                className="flex flex-col gap-[6px] focus:outline-none border-none"
+                onClick={() => setIsMenuOpen(true)}
+                aria-label="メニューを開く"
+              >
+                <IoMdMenu size={24} color="#FFFAFA" />
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -211,6 +215,12 @@ export const Header: React.FC<HeaderProps> = ({
         onConfirm={handleNotificationConfirm}
       />
 
+      {/* ログアウトモーダル */}
+      <LogoutModal
+        isOpen={isLogoutModalOpen}
+        onClose={() => setIsLogoutModalOpen(false)}
+      />
+
       {/* サイドメニュー */}
       <SideMenu isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} top={headerHeight}>
         <div>
@@ -218,8 +228,18 @@ export const Header: React.FC<HeaderProps> = ({
             <li><a href="/current-features" className="text-lg m-4">プラン確認・変更</a></li>
             <li><a href="/billing" className="text-lg m-4">お支払い情報</a></li>
             <li><a href="/account" className="text-lg m-4">店舗・アカウント情報</a></li>
-            <li><a href="#" className="text-lg m-4">サポート・ヘルプ</a></li>
-            <li><a href="#" className="text-lg m-4">ログアウト</a></li>
+            <li><a href="/help" className="text-lg m-4">サポート・ヘルプ</a></li>
+            <li>
+              <button
+                onClick={() => {
+                  setIsMenuOpen(false);
+                  setIsLogoutModalOpen(true);
+                }}
+                className="text-lg m-4 w-full text-left"
+              >
+                ログアウト
+              </button>
+            </li>
           </ul>
         </div>
       </SideMenu>

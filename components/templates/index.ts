@@ -10,4 +10,6 @@ export { ReviewTemplate } from './ReviewTemplate';
 export { ReportTemplate } from './ReportTemplate';
 export { SplashScreen } from './SplashScreen';
 export type { SplashScreenProps } from './SplashScreen';
+export { LoginTemplate } from './LoginTemplate';
+export { SignUpTemplate } from './SignUpTemplate';
 

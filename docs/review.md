@@ -53,3 +53,16 @@
 ## 4. 結論
 通知モーダル自体の機能・デザイン実装は要件を完全に満たしており、品質は高いです。
 ヘッダー内のアイコン配置修正を行うことで、本機能を完了と判断できます。
+
+## ユーザーレビュー
+
+- 実装された画面の背景色などのスタイルがdocs/figma/login.svgと異なっています
+- ログインを確認するための情報をtest/mockに追加してください
+- 今の所はメールアドレスでのみログインする予定です
+- components/organisms/Modal/LogoutModal.tsx　を押すとログアウトしてcomponents/templates/SplashScreen/SplashScreen.tsxに戻る機能が実装されていません
+- components/organisms/Header/Header.tsxのサポート・ヘルプとログアウトのリンク先が正しくない.ログアウトを押すとcomponents/organisms/Header/Header.tsxが表示される様にして欲しい
+- stash/Login/components/signUpにあった新規登録の情報入力画面がない．figmaのデザインのsvgをdocs/figma/mailAdres**.svgに記したので追加してください
+- 「メール入力」〜「情報入力」は「アカウント情報入力」に包含されます
+- メールアドレス認証を開発段階でローカルで行える様に「認証コードを取得（開発用）」ボタンを作成してください
+- パスワードやニックネームなどinputタグがあるところには「正常系」ボタンと「異常系」ボタンを作って動作確認の手間を減らしてください
+
