@@ -94,8 +94,8 @@ const AccountRow: React.FC<AccountRowProps> = ({
         className={cn(
           'text-[10px] h-8 px-4 rounded',
           isLinked
-            ? 'bg-gray-400 hover:bg-gray-500 text-white'
-            : 'bg-[#006355] hover:bg-[#004d42] text-white'
+            ? 'bg-gray-400 hover:bg-gray-500 text-black'
+            : 'bg-[#006355] hover:bg-[#004d42] text-black'
         )}
         onClick={onToggle}
       >

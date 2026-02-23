@@ -39,14 +39,6 @@ export const LoginTemplate: React.FC = () => {
         Wyze
       </p>
 
-      {/* 新規登録ボタン */}
-      <button
-        onClick={() => router.push('/signup')}
-        className="w-[85%] bg-[#006355] text-white text-sm font-bold py-[10px] rounded-[5px] border border-black mb-6"
-      >
-        新規登録
-      </button>
-
       {/* メールアドレス入力 */}
       <input
         type="email"

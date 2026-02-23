@@ -1,5 +1,6 @@
 import React from 'react';
 import { Text } from '@/atoms/Text';
+import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/utils/cn';
 
 export type ShopStatus = 'pending' | 'linked' | 'error';
@@ -22,8 +23,27 @@ export const ShopListSection: React.FC<ShopListSectionProps> = ({
   shops,
   onShopClick,
 }) => {
+  const { user } = useAuth();
+
   return (
     <section className={cn('space-y-3', className)}>
+      {/* アカウント情報 */}
+      {(user.email || user.wyzeId) && (
+        <div className="border border-gray-300 rounded-lg p-4 bg-gray-50 space-y-1">
+          <Text className="text-[13px] font-bold text-gray-500">アカウント情報</Text>
+          {user.email && (
+            <Text className="text-[13px] text-black">
+              メールアドレス: {user.email}
+            </Text>
+          )}
+          {user.wyzeId && (
+            <Text className="text-[13px] text-black">
+              WyzeID: {user.wyzeId}
+            </Text>
+          )}
+        </div>
+      )}
+
       <Text className="text-[15px] font-normal text-black pl-2">
         店舗一覧
       </Text>
