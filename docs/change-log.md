@@ -1,5 +1,298 @@
 # 変更ログ
 
+## 2026-02-24 (続き6)
+
+### 概要
+SignUpTemplate を5ステップ構造から「3ステップ＋サブステップ」構造に再編。StepIndicatorを3ステップに戻し、Step2内部でサブステップ（メール入力/認証コード/ユーザー情報）を制御。認証コード入力ステップに開発用モックコード自動入力ボタンを追加。
+
+### 詳細
+
+#### Phase 1: StepIndicator を3ステップに戻す
+- **[Claude]** `components/atoms/StepIndicator/index.tsx` を修正。
+  - `STEPS` を5項目から3項目へ変更: `['登録方法選択', 'アカウント情報入力', '登録完了']`
+  - サークルサイズを `w-7 h-7` → `w-8 h-8` に戻す
+  - ラベル幅を `20%` → `33%` に戻す
+  - ラベルフォントサイズを `text-[9px]` → `text-xs` に戻す
+
+#### Phase 2: SignUpTemplate を3ステップ＋サブステップ構造に再編
+- **[Claude]** `components/templates/SignUpTemplate/index.tsx` を全面改修。
+  - **ステート構造変更**: `step` (1|2|3) + `subStep` (1|2|3) の2層管理に変更
+    - Step1: 登録方法選択
+    - Step2 / SubStep1: メールアドレス入力
+    - Step2 / SubStep2: 認証コード入力（6桁）
+    - Step2 / SubStep3: ユーザー情報入力
+    - Step3: 登録完了
+  - **認証コードを4桁→6桁に変更**: `code` ステートを `['','','','','','']` に変更
+  - **開発用機能追加（SubStep2-2）**: 「認証コードを取得（開発用）」ボタンを追加
+    - `MOCK_AUTH_CODE = ['1','2','3','4','5','6']` を自動入力
+    - `// DEV_ONLY` コメントで識別可能
+  - **ナビゲーション修正**: Step1→Step2 遷移時に `subStep` を1にリセット
+  - **コンポーネント命名**: `Step2/Step3` → `SubStep2_1/SubStep2_2/SubStep2_3` + `Step3` に改名
+
+---
+
+## 2026-02-24 (続き5)
+
+### 概要
+新規登録フローを3ステップから5ステップに拡充。認証コード入力ステップとアカウント情報入力ステップを新規追加。
+
+### 詳細
+
+#### Phase 1: useAuth に register メソッドを追加
+- **[Claude]** `hooks/useAuth.ts` を修正。
+  - `register()` 関数を追加: `localStorage.setItem('auth_token', 'mock_token')` でモック登録を実現
+  - 戻り値に `register` を追加
+
+#### Phase 2: StepIndicator を5ステップ対応に更新
+- **[Claude]** `components/atoms/StepIndicator/index.tsx` を修正。
+  - `STEPS` を3項目から5項目へ変更: `['方法選択', 'メール入力', 'コード認証', '情報入力', '登録完了']`
+  - サークルサイズを `w-8 h-8` → `w-7 h-7` に変更（5つ収まるよう微調整）
+  - ラベル幅を `33%` → `20%`（1/5）に変更
+  - ラベルフォントサイズを `text-xs` → `text-[9px]` に変更（5ラベルが収まるよう調整）
+
+#### Phase 3: SignUpTemplate を5ステップフローに拡充
+- **[Claude]** `components/templates/SignUpTemplate/index.tsx` を全面改修。
+  - **追加ステート**: `code`（認証コード4桁配列）、`nickname`、`password`、`passwordConfirm`、`gender`（`'男性'|'女性'|'その他'|''`）、`birthday`
+  - **パスワードバリデーション** (`validatePassword`): 8文字以上、半角小文字・大文字・数字の2種類以上を要求（stashロジックに準拠）
+  - **Step1（登録方法選択）**: メールアドレス登録ボタン + 既存アカウントへのリダイレクトリンク（既存 + 小修正）
+  - **Step2（メールアドレス入力）**: メールアドレス入力 + 「認証メールを送信」ボタン（既存の次へボタンを改名）
+  - **Step3（認証コード入力）** ★新規:
+    - 送信済みメールアドレスの確認表示
+    - 4桁の数字入力ボックス（各1文字）
+    - 「認証」ボタン（全桁入力チェック）
+    - 「認証メールを再送信」「メールアドレスを再設定」リンク
+  - **Step4（アカウント情報入力）** ★新規（特に指摘された欠落部分）:
+    - メールアドレス（表示のみ、`bg-[#444444]`）
+    - パスワード（8文字以上、2種類以上の文字種、表示切替あり）
+    - パスワード再入力（一致チェック）
+    - ニックネーム（必須）
+    - 生年月日（`<input type="date">`）
+    - 性別（男性/女性/その他のトグルボタン）
+    - 「登録する」ボタン（`bg-[#006355]` Figma準拠）
+  - **Step5（登録完了）**: チェックマーク + ニックネーム表示 + 「Wyzeを始める」ボタン（`register()` 呼び出し後 `/home` へ遷移）
+
+### 検証結果
+- テスト: ✅ 全13テスト合格（既存テスト全通過）
+- TypeScript型チェック: ✅ 実装ファイルにエラーなし（`test/ReportTemplate.test.tsx` の既存エラー1件は無関係）
+
+### 技術的な判断
+1. **register() の追加**: `login()` を signup後に呼ぶとMOCK_USERとの照合で失敗するケースがあるため、登録専用の `register()` メソッドを追加。トークンを直接設定し、将来のAPI連携時は差し替え可能な設計。
+2. **Step4 に stash ロジックを移植**: `AuthEmailUserInfo.tsx` のパスワードバリデーション・フォームレイアウトをReact Native → Tailwind CSSに変換。BirthDayPicker・AreaPicker は標準 `<input>` に置き換え（依存ライブラリ不要）。
+3. **StepIndicator のスケールダウン**: 5ステップで横幅に収めるためサークルを `w-7 h-7`、ラベルを `text-[9px]`、マージンを `mx-0.5` に縮小。コンポーネントの使用箇所は SignUpTemplate のみのため破壊的変更なし。
+
+---
+
+## 2026-02-24 (続き4)
+
+### 概要
+サイドメニューの「ログアウト」リンクを `LogoutModal` に接続。クリック時にモーダルが表示されるよう修正。
+
+### 詳細
+
+#### Phase 1: Header へ LogoutModal を統合
+- **[Claude]** `components/organisms/Header/Header.tsx` を修正。
+  - `LogoutModal` を `@/organisms/Modal` からインポートに追加
+  - `isLogoutModalOpen` ステートを追加（初期値: `false`）
+  - サイドメニューの「ログアウト」を `<a href="/logout">` から `<button onClick>` に変更:
+    - クリック時: `setIsMenuOpen(false)` でサイドメニューを閉じ、`setIsLogoutModalOpen(true)` でモーダルを開く
+  - `<LogoutModal isOpen={isLogoutModalOpen} onClose={...} />` をテンプレートに追加
+  - ログアウトボタン押下 → LogoutModal表示 → 「ログアウト」確認 → `useAuth().logout()` 実行 → `/` (SplashScreen) へ遷移 の完全なフローが動作
+
+### 検証結果
+- TypeScript型チェック: ✅ 実装ファイルにエラーなし（`stash/` の既存エラーは無関係）
+
+### 技術的な判断
+1. **サイドメニューを閉じてからモーダルを開く**: `setIsMenuOpen(false)` と `setIsLogoutModalOpen(true)` を同一クリックハンドラ内で実行。サイドメニューとモーダルが重複して表示されない。
+2. **LogoutModal 再利用**: 既存の `LogoutModal` (`components/organisms/Modal/LogoutModal.tsx`) をそのままインポート。内部で `useAuth().logout()` を呼ぶため、`Header` 側の追加ロジックは不要。
+
+---
+
+## 2026-02-24 (続き3)
+
+### 概要
+SplashScreen統合、AuthGuardの修正、ログアウト後のSplashScreen遷移対応、テスト拡充を完了。
+
+### 詳細
+
+#### Phase 1: SplashScreen に onComplete prop を追加
+- **[Claude]** `components/templates/SplashScreen/SplashScreen.tsx` を修正。
+  - `SplashScreenProps` に `onComplete?: () => void` を追加
+  - `useEffect` 内で `onComplete` が提供されている場合はそれを呼び出し、未指定の場合は従来通り `router.push('/home')` に遷移
+
+#### Phase 2: pages/index.tsx をSplashScreen対応に改修
+- **[Claude]** `pages/index.tsx` を改修。
+  - `LoginTemplate` の直接レンダリングから、SplashScreen→LoginTemplate のフロー制御に変更
+  - `showSplash` ステートで表示を切り替え（初期値: `true`）
+  - `handleSplashComplete`: `isAuthenticated()` が真なら `/home` へ遷移、偽なら `showSplash = false` に変更して `LoginTemplate` を表示
+  - ログアウト後に `/` へリダイレクトされると、SplashScreen が表示されるようになった
+
+#### Phase 3: AuthGuard の逆ガード修正
+- **[Claude]** `components/auth/AuthGuard.tsx` を修正。
+  - 変更前: 認証済みユーザーが `PUBLIC_PATHS` (`/`, `/signup`) のいずれかにアクセスすると `/home` へリダイレクト
+  - 変更後: 認証済みユーザーが `/signup` にアクセスした場合のみ `/home` へリダイレクト
+  - `/` はSplashScreenの `onComplete` 内で認証状態を確認して遷移するため、AuthGuardはリダイレクトしない
+
+#### Phase 4: テスト拡充・修正
+- **[Claude]** `test/Auth.test.tsx` を更新。
+  - **セレクタ修正**: プレースホルダー `'メールアドレス'` → `'Wyze ID ,メールアドレス'`（現コンポーネントに合わせて修正）
+  - **ボタン選択修正**: `getByText('新規でアカウント登録')` → `getAllByRole('button', { name: '新規登録' })[0]`
+  - **新規テスト追加** (5件):
+    - 誤った認証情報でログインするとエラーメッセージが表示されること
+    - 認証済みで `/signup` にアクセスすると `/home` へリダイレクトされること
+    - 認証済みで `/` にアクセスするとコンテンツが表示されること（SplashScreenが処理）
+    - ログアウト後に `/` へ遷移すること
+    - SplashScreen: `onComplete` が2秒後に呼ばれること
+    - SplashScreen: `onComplete` 未指定の場合 `/home` へ遷移すること
+  - **変更テスト**: 「認証済みでパブリックページにアクセスすると /home へリダイレクト」を `/signup` 対象に変更（`/` の動作変更に対応）
+  - インポートに `renderHook`, `act` を追加; `SplashScreen`, `useAuth` のインポートを追加
+
+### 検証結果
+- テスト: ✅ 全13テスト合格（既存テストも全通過）
+- TypeScript型チェック: ✅ 実装ファイルにエラーなし
+
+### 技術的な判断
+1. **SplashScreenの責務分離**: `onComplete` コールバックを追加し、SplashScreen自身は遷移先を知らない設計に変更。`pages/index.tsx` が遷移先を決定する責務を担う。
+2. **AuthGuardの範囲限定**: `/` をAuthGuardの逆ガード対象から外すことで、ログアウト後の `/` アクセスでSplashScreenが表示されるようにした。`/signup` のみ認証済みユーザーを弾く設計を維持。
+3. **テストの完全性**: 既存テストのセレクタ不一致（プレースホルダー・ボタンテキスト）を修正し、全テストが現コードと一致するよう統一。
+
+---
+
+## 2026-02-24 (続き2)
+
+### 概要
+認証ロジックの強化。`MOCK_USER` による入力値検証を追加し、正しい資格情報のみログインを許可するよう変更。
+
+### 詳細
+
+#### Phase 1: モックデータ定義
+- **[Gemini]** `docs/task-to-claude.md` にモックデータ定義と認証ロジック変更の指示を追加。
+- **[Claude]** `test/mock/authMockData.ts` を新規作成。
+  - `MOCK_USER = { email: 'test@example.com', password: 'password123' }` を定義
+
+#### Phase 2: useAuth ロジック更新
+- **[Claude]** `hooks/useAuth.ts` を修正。
+  - `MOCK_USER` をインポート
+  - `login()` に `email !== MOCK_USER.email || password !== MOCK_USER.password` のチェックを追加
+  - 不一致の場合 `false` を返してログイン失敗にする（変更前: 非空なら常に成功）
+
+### 検証結果
+- テスト: ✅ 全8テスト合格（既存テストも全通過）
+- TypeScript型チェック: ✅ 実装ファイルにエラーなし
+
+### 技術的な判断
+1. **本番コードへのモックデータ参照**: 設計指示に基づき `hooks/useAuth.ts` から `test/mock/authMockData.ts` を参照する構成を採用。将来的にAPI認証に切り替える際は `useAuth.ts` の検証ロジックのみ差し替え可能。
+
+---
+
+## 2026-02-24 (続き)
+
+### 概要
+ヘッダーアイコンのレイアウト修正。通知アイコンとメニューボタンを右側にまとめて配置。
+
+### 詳細
+
+#### Phase 1: Header レイアウト修正
+- **[Gemini]** `docs/task-to-claude.md` に修正指示を追加。通知アイコンが `justify-between` により中央に寄る問題を指摘。
+- **[Claude]** `components/organisms/Header/Header.tsx` を修正。
+  - 通知ボタン (`MdNotifications` を含む `button`) とメニューボタン (`IoMdMenu` を含む `Button`) を `<div className="flex items-center gap-4">` でラップ
+  - ロゴ（左）とアイコングループ（右）の2要素構成に変更し、右寄せを実現
+
+### 検証結果
+- TypeScript型チェック: ✅ 実装ファイルにエラーなし
+
+### 技術的な判断
+1. **ラッパー追加のみ**: `justify-between` の3要素配置を2要素（ロゴ＋アイコングループ）に変更。既存のスタイルクラスは変更せず、最小限の修正で対応。
+
+---
+
+## 2026-02-24
+
+### 概要
+認証基盤（Authentication System）の構築。AuthGuard、LoginTemplate、SignUpTemplate、StepIndicator、LogoutModal、useAuth hookの新規実装、およびルーティング統合を完了。
+
+### 詳細
+
+#### Phase 1: フック・ガード実装
+- **[Gemini]** `docs/task-to-claude.md` に実装指示書を作成。`docs/design.md` および `stash/Login` 参照ロジックに基づく。
+- **[Claude]** 以下のファイルを新規作成。
+  - `hooks/useAuth.ts`:
+    - `login(email, password)`: 非空バリデーション後 `localStorage.setItem('auth_token', 'mock_token')` を実行
+    - `logout()`: `localStorage.removeItem('auth_token')` 実行後 `/` へリダイレクト
+    - `isAuthenticated()`: トークン有無の真偽値を返す
+  - `components/auth/AuthGuard.tsx`:
+    - `PUBLIC_PATHS` (`/`, `/signup`) はガード対象外
+    - 未認証で保護ページアクセス時 → `router.replace('/')` にリダイレクト
+    - 認証済みでパブリックページアクセス時 → `router.replace('/home')` にリダイレクト
+    - チェック中はスピナー表示（`Spinner` コンポーネント使用）
+
+#### Phase 2: コンポーネント実装
+- **[Claude]** 以下のファイルを新規作成。
+  - `components/atoms/StepIndicator/index.tsx`:
+    - 3ステップ（登録方法選択 / アカウント情報登録 / 登録完了）のインジケーター
+    - アクティブ/完了ステップ: `#F5C518` 塗りつぶし、未到達: `#1A1A1A` 塗りつぶし + `#F5C518` ボーダー
+    - Flexレイアウトによるサークル + 接続ライン構成
+  - `components/templates/LoginTemplate/index.tsx`:
+    - 背景: `#1A1A1A`、ブランドロゴ（Tiro Telugu フォント）
+    - ソーシャルログインボタン（LINE / Apple / Google / Yahoo! - UIのみ）
+    - メールアドレス・パスワード入力フォーム
+    - ログインボタン（`#00A48D` プライマリカラー）
+    - 成功時: `/home` へ遷移、失敗時: エラーメッセージ表示
+    - 新規登録ボタン → `/signup` へ遷移
+  - `components/templates/SignUpTemplate/index.tsx`:
+    - Step 1: 登録方法選択（ソーシャル + メールアドレスボタン、UIのみ）
+    - Step 2: メールアドレス入力・モック認証
+    - Step 3: 完了表示 + 「PlanBを始める」ボタン（`/home` へ遷移）
+    - `StepIndicator` を使用した進捗表示
+  - `components/organisms/Modal/LogoutModal.tsx`:
+    - ログアウト確認メッセージ表示
+    - 「ログアウト」押下で `useAuth().logout()` 実行 → ログイン画面へ遷移
+    - 「キャンセル」でモーダルを閉じる
+    - Figmaデザイン準拠: 220×130px、白背景、`#006355` ボーダー
+
+#### Phase 3: ルーティング統合・ページ更新
+- **[Claude]** 以下のファイルを更新・作成。
+  - `pages/_app.tsx`:
+    - `AuthGuard` を全ページコンポーネントのラッパーとして追加
+    - `router.pathname` を `AuthGuard` に渡してページ判定
+  - `pages/index.tsx`:
+    - `SplashScreen` を `LoginTemplate` に差し替え（ログインページとして機能）
+    - フォントリンク（Tiro Telugu）を追加
+  - `pages/signup.tsx`: **新規作成**
+    - `SignUpTemplate` を使用する新規登録ページ
+
+#### Phase 4: エクスポート更新
+- **[Claude]** 以下のファイルを更新。
+  - `components/atoms/index.ts`: `StepIndicator` エクスポートを追加
+  - `components/organisms/Modal/index.ts`: `LogoutModal` エクスポートを追加
+  - `components/templates/index.ts`: `LoginTemplate`、`SignUpTemplate` エクスポートを追加
+
+#### Phase 5: テスト実装
+- **[Claude]** `test/Auth.test.tsx` を新規作成。
+  - ログインフロー（4テスト）:
+    - 未入力でエラーメッセージ表示
+    - 正しい入力でトークン保存
+    - 正しい入力で `/home` へ遷移
+    - 新規登録ボタンで `/signup` へ遷移
+  - AuthGuard ガード機能（3テスト）:
+    - 未認証で保護ページ → ルートへリダイレクト
+    - 認証済みでパブリックページ → `/home` へリダイレクト
+    - 認証済みで保護ページ → コンテンツ表示
+  - ログアウト（1テスト）:
+    - トークン削除で認証状態が解除されること
+
+### 検証結果
+- テスト: ✅ 全8テスト合格
+- TypeScript型チェック: ✅ 実装ファイルにエラーなし
+- Next.js build: ⚠️ `stash/` ディレクトリの React Native ファイルによるビルドエラーあり（実装とは無関係の既存問題）
+
+### 技術的な判断
+1. **localStorage によるクライアントサイド認証**: 設計書の指定通り `localStorage` の `auth_token` でセッション管理。
+2. **AuthGuard の双方向ガード**: 未認証→保護ページアクセス時はリダイレクト、認証済み→パブリックページアクセス時も `/home` へリダイレクトし、ループを防止。
+3. **`pages/index.tsx` をログインページとして使用**: 設計書の仕様 (`ログインページ /`) に準拠し、旧 `SplashScreen` を `LoginTemplate` に差し替え。
+4. **LogoutModal のサイズ**: `docs/figma/logoutModal.svg`（220×130px）を参照し、コンパクトなモーダルを実装。
+
+---
+
 ## 2025-12-28
 
 ### 概要

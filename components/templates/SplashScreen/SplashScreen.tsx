@@ -5,18 +5,23 @@ import React, { useEffect } from 'react';
 
 export interface SplashScreenProps {
   className?: string;
+  onComplete?: () => void;
 }
 
-export const SplashScreen: React.FC<SplashScreenProps> = ({ className }) => {
+export const SplashScreen: React.FC<SplashScreenProps> = ({ className, onComplete }) => {
   const router = useRouter();
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      router.push('/home');
+      if (onComplete) {
+        onComplete();
+      } else {
+        router.push('/home');
+      }
     }, 2000);
 
     return () => clearTimeout(timer);
-  }, [router]);
+  }, [onComplete, router]);
   return (
     <div
       className={cn(

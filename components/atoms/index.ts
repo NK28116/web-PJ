@@ -5,6 +5,7 @@ export * from './Text';
 export * from './Label';
 export * from './Icon';
 export * from './Spinner';
+export * from './StepIndicator';
 
 
 

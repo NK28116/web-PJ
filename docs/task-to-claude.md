@@ -1,92 +1,84 @@
-# Claudeへの実装指示書：通知モーダル (NotificationModal) の新規実装
+# Claudeへの実装指示書：認証基盤 (Authentication System) の改善と修正
 
-本ドキュメントは、`docs/requirements.md` (要件定義書) および `docs/design.md` (設計書) に基づき、ヘッダーの通知アイコンから表示される通知モーダルを実装するための指示書です。
+本ドキュメントは、これまでの実装に対するユーザーレビュー (`docs/review.md`) に基づき、認証基盤および関連UIの改善を行うための指示書です。
 
-**目的**: Figmaデザイン (`docs/figma/notify.jpg`) に視覚的に完全に一致させ、未読通知の確認と該当ページへの遷移機能を実装すること。
+## 1. コンポーネント実装・修正 (Priority: High)
 
----
+### 1.1 LoginTemplate (ログイン画面)
+**対象ファイル**: `components/templates/LoginTemplate/index.tsx`
+- **スタイル修正**: 背景色、ボタンの色、フォントサイズ、余白等を `docs/figma/login.svg` に厳密に準拠させてください。特に背景色は Figma の指定に従ってください（現在の緑色が異なっている可能性があります）。
+- **機能限定**: ログイン方法は「メールアドレスとパスワード」のみに限定してください（ソーシャルログインボタンはUIのみ、または非表示）。
+- **ログインロジック**: `test/mock/authMockData.ts`（新規作成）から有効なユーザー情報を取得して検証するようにしてください。
 
-## 1. コンポーネント実装 (Priority: High)
+### 1.2 LogoutModal (ログアウトモーダル)
+**対象ファイル**: `components/organisms/Modal/LogoutModal.tsx`
+- **機能修正**: 「ログアウト」ボタン押下時に、`localStorage` をクリアした後、**`components/templates/SplashScreen/SplashScreen.tsx` を表示する画面（ルートパス `/`）へ遷移**するようにしてください。
+  - 現在の実装では `LoginTemplate` が直接表示されている可能性がありますが、ユーザーは「SplashScreenに戻る」挙動を求めています。
 
-### 1.1 Header の改修
-**対象ファイル**: `components/organisms/Header/Header.tsx`
-- **State追加**:
-  - `isModalOpen`: モーダルの表示/非表示フラグ。
-  - `notifications`: 通知データの配列。初期値としてモックデータをセット。
-- **通知アイコン (`MdNotifications`) の更新**:
-  - 未読通知が1件以上ある場合、スタイルを白黒反転（またはFigma指定の強調色）に変更。
-  - アイコンクリック時に `isModalOpen` を `true` に変更。
-- **モーダルの配置**:
-  - `Header` 内（または適切なラップ要素内）に `NotificationModal` を配置し、Propsを渡す。
+### 1.3 SplashScreen と ルーティング (Splash Screen Integration)
+**対象ファイル**: `pages/index.tsx`, `components/templates/SplashScreen/SplashScreen.tsx`
+- **現状**: `pages/index.tsx` が `LoginTemplate` を直接レンダリングしているため、Splash Screen が表示されません。
+- **修正**:
+  - `pages/index.tsx` を改修し、初期表示時に `SplashScreen` コンポーネントを表示するようにしてください。
+  - `SplashScreen` 表示後、一定時間（例: 2秒）経過後に `LoginTemplate` に切り替わる（または遷移する）ロジックを実装してください。
+  - 認証済みの場合は `SplashScreen` 後に `/home` へ遷移してください。
+  - これにより、ログアウト後に `/` へリダイレクトされた際も `SplashScreen` が表示されるようになります。
 
-### 1.2 NotificationModal の新規作成
-**対象ファイル**: `components/organisms/Modal/NotificationModal.tsx`
-- **レイアウト**:
-  - モーダル外（背景）: 半透明グレーのオーバーレイ。クリックで `onClose` を実行。
-  - モーダル本体: 画面中央固定、幅・高さ75%。
-  - 内部スクロール: 通知リストがモーダル高さを超える場合のみ、内部で縦スクロールを有効にする。
-- **表示内容**:
-  - 上部に「お知らせ ○件」を表示（未読件数を計算）。
-  - 通知が1件もない（または全て既読で削除対象外だが表示なしの場合）は「お知らせはありません」を表示。
-  - `notifications` 配列を map し、`NotificationItem` を表示。
-- **背景スクロール禁止**:
-  - モーダル表示時に `body` の `overflow: hidden` を制御する。
+## 2. データ定義 (Mock) (Priority: High)
 
-### 1.3 NotificationItem の新規作成
-**対象ファイル**: `components/molecules/NotificationItem/NotificationItem.tsx`
-- **表示内容**:
-  - 店舗名 (`storeName`)
-  - 通知日時 (`receivedAt` をロジックに基づきフォーマット)
-  - 通知本文 (`content`)
-  - 「確認する」ボタン
-- **スタイリング**:
-  - 既読 (`isRead: true`) の場合、背景をグレーアウトする。
-
----
-
-## 2. ロジック実装 (Priority: High)
-
-### 2.1 日時フォーマットロジック
-- 以下のルールで日時を文字列に変換する関数を実装してください。
-  - 1日未満: 「○分前」または「○時間前」
-  - 1日以上3日未満: 「○日前」
-  - 3日以上: 「yyyy/mm/dd」
-
-### 2.2 通知確認と遷移
-- 「確認する」ボタン押下時の `handleConfirm` を実装してください。
-  - `router.push(redirectPath)` を実行。
-  - **バリデーション**: `redirectPath` が `/` で始まり、`http` を含まないことを確認。
-  - **成功時**: `isRead` を `true` に更新し、未読件数を再計算。
-  - **失敗時**: モーダル内に「確認できませんでした」とエラーメッセージを表示。
-
----
-
-## 3. データ定義 (Mock)
-- 以下の型とモックデータ（5件程度、未読/既読混在）を定義して使用してください。
+**対象ファイル**: `test/mock/authMockData.ts` (新規作成)
+- ログイン検証に使用するテストアカウントデータを定義してください。
 ```typescript
-type Notification = {
-  id: string;
-  storeName: string;
-  content: string;
-  receivedAt: Date;
-  isRead: boolean;
-  redirectPath: string;
+export const MOCK_USER = {
+  email: 'test@example.com',
+  password: 'password123',
 };
 ```
 
----
+## 3. ロジック実装 (Priority: High)
 
-## 4. スタイリングとフォーマット (Priority: Medium)
+### 3.1 認証ロジック (useAuth)
+- **認証**: ログイン時は `MOCK_USER` と一致するかチェックしてください。
+- **メールアドレス認証**: 現時点ではメールアドレスでのログインのみをサポートするようにロジックを構成してください。
 
-- **Figma準拠**: `docs/figma/notify.jpg` に基づき、フォントサイズ、余白、色を忠実に再現してください。
-- **レスポンシブ**: スマートフォン表示のみをターゲットとし、横スクロールを禁止してください。
+## 4. UI改善：ヘッダーアイコンのレイアウト修正 (Priority: Medium)
 
----
+**対象ファイル**: `components/organisms/Header/Header.tsx`
+- **現状の課題**: ロゴ、通知アイコン、メニューボタンが `justify-between` で等間隔に配置されており、通知アイコンが中央に寄ってしまっている。
+- **修正内容**:
+  - 通知アイコン (`MdNotifications` を含む button) とメニューボタン (`IoMdMenu` を含む Button) を `div` 等のラッパーで囲む。
+  - ラッパーに `flex items-center gap-4`（または適切な余白）を適用し、これら2つのアイコンを右側にまとめて配置すること。
+- **サイドメニューのリンク修正**:
+  - 「サポート・ヘルプ」: 適切なリンク先（例: `/support` または外部URL、未定なら `#` のまま）を設定してください。
+  - 「ログアウト」: `href="#"` ではなく、クリック時に `LogoutModal` を表示する `onClick` ハンドラを設定してください（`Header` コンポーネント内に `isLogoutModalOpen` ステートを追加し、制御すること）。
+  - そのため、`LogoutModal` コンポーネントを `Header.tsx` にインポートして使用してください。
 
-## 5. テスト実装 (Priority: Low)
+## 5. デザイン仕様 (Priority: Medium)
 
-**対象ファイル**: `test/NotificationModal.test.tsx` (新規作成)
-1. **モーダル開閉**: 通知アイコンクリックでモーダルが表示され、背景クリックで閉じること。
-2. **未読件数表示**: 正しい未読件数が「お知らせ ○件」として表示されていること。
-3. **既読更新**: 「確認する」クリック後に背景がグレーアウトし、未読件数が減ること。
-4. **バリデーション**: 不正な `redirectPath` の場合に遷移せずエラーが表示されること（必要であればモックで対応）。
+- **Figma準拠**: `docs/figma/` 配下の画像アセットを参照し、マージン、フォントサイズ、配色を再現すること。特にログイン画面の差異を解消すること。
+- **レスポンシブ**: モバイルファーストで実装し、PC表示でも崩れないようにする。
+
+## 6. 新規登録フローの拡充 (Priority: High)
+
+**対象ファイル**: `components/templates/SignUpTemplate/index.tsx`
+- **現状の課題**: 現在の実装は「メール入力 -> 完了」の簡易フローですが、ユーザーレビューにより `stash/Login/components/signUp` に存在した詳細なステップ（情報入力など）の不足が指摘されています。
+- **修正内容**: 
+  - `docs/figma/mailAdress**.svg` シリーズのデザインと `stash/Login/components/signUp` のロジックに基づき、以下の構成で実装してください。
+  - **Step 1: 登録方法選択** (`SignUpWay` / `mailAdress1.svg`): メールアドレス登録ボタン等。
+  - **Step 2: アカウント情報入力** (以下のサブステップを包含するメインステップ):
+    - **2-1: メールアドレス入力** (`AuthEmailInput` / `mailAdress2.svg`)
+    - **2-2: 認証コード入力** (`AuthEmailNumber` / `mailAdress3.svg`): モック認証。
+      - **開発用機能**: 「認証コードを取得（開発用）」ボタンを追加し、クリック時にモックコード（例: "123456"）をアラート表示または自動入力する機能を実装してください。
+    - **2-3: ユーザー情報入力** (`AuthEmailUserInfo` / `mailAdress4.svg`): ユーザー名、パスワード等の詳細入力。**これが欠落していた主要な画面です。**
+  - **Step 3: 登録完了** (`FinishSingUp`): 完了画面。
+- **UI/UX設計**: 
+  - `StepIndicator` は引き続き **3ステップ**（1:登録方法選択 / 2:アカウント情報入力 / 3:完了）を表示し、内部的にサブステップを遷移させてください。
+- **データ管理**: 
+  - 各ステップの入力値を `useState` で管理し、最終ステップで `useAuth` の `login` (または新規作成メソッド) を呼び出して遷移してください。
+
+## 7. テスト実装 (Priority: Low)
+
+**対象ファイル**: `test/Auth.test.tsx` (更新)
+- **ログインフロー**: モックユーザーを使用した成功/失敗パターンのテスト。
+- **ログアウト**: ログアウト後に `/` (Splash Screen) へ遷移することを確認。
+- **SplashScreen**: `/` アクセス時に `SplashScreen` が表示され、その後 `LoginTemplate` (または `/home`) に遷移することを確認。
