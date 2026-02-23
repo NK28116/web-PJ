@@ -56,6 +56,10 @@ export const SignUpTemplate: React.FC = () => {
       setErrorMessage('※6桁の認証コードを入力してください');
       return;
     }
+    if (code.join('') !== MOCK_AUTH_CODE.join('')) {
+      setErrorMessage('認証コードが正しくありません');
+      return;
+    }
     setSubStep(3);
   };
 
@@ -99,7 +103,7 @@ export const SignUpTemplate: React.FC = () => {
   };
 
   const handleFinish = () => {
-    register();
+    register(email, wyzeId);
     router.replace('/home');
   };
 
@@ -219,28 +223,47 @@ interface SubStep2_1Props {
   onSubmit: () => void;
 }
 
-const SubStep2_1: React.FC<SubStep2_1Props> = ({ email, setEmail, errorMessage, onSubmit }) => (
-  <div className="flex flex-col items-center py-6 px-4">
-    <p className="text-white text-sm font-normal w-full mb-1">メールアドレス</p>
-    <input
-      type="email"
-      placeholder="example@example.com"
-      value={email}
-      onChange={(e) => setEmail(e.target.value)}
-      autoCapitalize="none"
-      className="w-full h-10 bg-[#D9D9D9] border border-black rounded-[5px] px-3 mb-1 text-black placeholder-[#707070]"
-    />
-    {errorMessage && (
-      <p className="w-full text-red-400 text-[13px] mb-2">{errorMessage}</p>
-    )}
-    <button
-      onClick={onSubmit}
-      className="w-full bg-[#FFF767] text-[#00A48D] text-base font-bold py-[10px] rounded-[5px] mt-4"
-    >
-      認証メールを送信
-    </button>
-  </div>
-);
+const SubStep2_1: React.FC<SubStep2_1Props> = ({ email, setEmail, errorMessage, onSubmit }) => {
+  const handleFillEmailNormal = () => setEmail('test@example.com');
+  const handleFillEmailAbnormal = () => setEmail('invalid-email');
+
+  return (
+    <div className="flex flex-col items-center py-6 px-4">
+      {/* DEV_ONLY: 開発用ボタン */}
+      <button
+        onClick={handleFillEmailNormal}
+        className="text-yellow-300 text-[11px] underline mt-1 mb-1 border border-yellow-300 rounded px-2 py-1"
+      >
+        正常系メール入力（開発用）
+      </button>
+      <button
+        onClick={handleFillEmailAbnormal}
+        className="text-yellow-300 text-[11px] underline mt-1 mb-1 border border-yellow-300 rounded px-2 py-1"
+      >
+        異常系メール入力（開発用）
+      </button>
+
+      <p className="text-white text-sm font-normal w-full mb-1">メールアドレス</p>
+      <input
+        type="email"
+        placeholder="example@example.com"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        autoCapitalize="none"
+        className="w-full h-10 bg-[#D9D9D9] border border-black rounded-[5px] px-3 mb-1 text-black placeholder-[#707070]"
+      />
+      {errorMessage && (
+        <p className="w-full text-red-400 text-[13px] mb-2">{errorMessage}</p>
+      )}
+      <button
+        onClick={onSubmit}
+        className="w-full bg-[#FFF767] text-[#00A48D] text-base font-bold py-[10px] rounded-[5px] mt-4"
+      >
+        認証メールを送信
+      </button>
+    </div>
+  );
+};
 
 /* ──────────────────────────── SubStep2-2: 認証コード入力 ──────────────────────────── */
 interface SubStep2_2Props {
@@ -275,6 +298,9 @@ const SubStep2_2: React.FC<SubStep2_2Props> = ({
   // DEV_ONLY: モックコードを自動入力するボタン
   const handleFillMockCode = () => {
     setCode([...MOCK_AUTH_CODE]);
+  };
+  const handleFillMockCodeAbnormal = () => {
+    setCode(['0', '0', '0', '0', '0', '0']);
   };
 
   const handleResend = () => {
@@ -331,6 +357,12 @@ const SubStep2_2: React.FC<SubStep2_2Props> = ({
         className="text-yellow-300 text-[11px] underline mt-3 mb-1 border border-yellow-300 rounded px-2 py-1"
       >
         認証コードを取得（開発用）
+      </button>
+      <button
+        onClick={handleFillMockCodeAbnormal}
+        className="text-yellow-300 text-[11px] underline mt-1 mb-1 border border-yellow-300 rounded px-2 py-1"
+      >
+        異常系コード入力（開発用）
       </button>
 
       <button

@@ -1,5 +1,6 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { BaseTemplate } from '@/templates/BaseTemplate';
+import { useAuth } from '@/hooks/useAuth';
 import {
   DashboardSection,
   DashboardStats,
@@ -37,20 +38,13 @@ const LINKED_STATS: DashboardStats = {
   monthOverMonth: '+8%',
 };
 
-const MOCK_SHOPS: Shop[] = [
-  {
-    id: '0001',
-    email: 'wyzesystem○○@gmail.com',
-    status: 'pending',
-    logoText: 'w',
-  },
-];
-
 export const HomeTemplate: React.FC<HomeTemplateProps> = ({
   className,
   activeTab = 'home',
   onTabChange,
 }) => {
+  const { user } = useAuth();
+
   // Account linking state management
   const [linkingState, setLinkingState] = useState<AccountLinkingState>({
     google: false,
@@ -62,6 +56,16 @@ export const HomeTemplate: React.FC<HomeTemplateProps> = ({
 
   // Dashboard stats - changes based on Google linking state
   const stats = linkingState.google ? LINKED_STATS : INITIAL_STATS;
+
+  // Shops list using user info
+  const shops: Shop[] = useMemo(() => [
+    {
+      id: user.wyzeId || '0001',
+      email: user.email || 'wyzesystem○○@gmail.com',
+      status: 'pending',
+      logoText: 'w',
+    },
+  ], [user]);
 
   // Event handlers
   const handleToggleGoogle = useCallback(() => {
@@ -118,7 +122,7 @@ export const HomeTemplate: React.FC<HomeTemplateProps> = ({
 
         {/* Shop List Section */}
         <ShopListSection
-          shops={MOCK_SHOPS}
+          shops={shops}
           onShopClick={handleShopClick}
         />
       </div>
