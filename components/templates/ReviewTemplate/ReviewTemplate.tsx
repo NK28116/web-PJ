@@ -82,20 +82,23 @@ export const ReviewTemplate: React.FC = () => {
         {/* フィルター・ソート */}
         <div className="flex items-center justify-between border-b border-gray-200 pb-3">
             <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2 cursor-pointer">
-                    <Text className="font-medium text-base">すべて</Text>
-                    <svg width="10" height="6" viewBox="0 0 10 6" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M1 1L5 5L9 1" stroke="#333" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                </div>
+                <select className="font-medium text-base outline-none cursor-pointer bg-transparent">
+                  <option>すべて</option>
+                  <option>未返信</option>
+                  <option>返信済み</option>
+                </select>
                 <div className="h-4 w-px bg-gray-300"></div>
                 <Text className="text-gray-500 text-sm">{hasReviews ? reviews.length : 0} 件</Text>
             </div>
+
             <div className="flex items-center gap-2 cursor-pointer border px-3 py-1 rounded bg-white border-gray-200">
-                <Text className="text-xs text-gray-600">返信推奨順</Text>
-                <svg width="10" height="6" viewBox="0 0 10 6" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M1 1L5 5L9 1" stroke="#666" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
+              <select className="text-xs text-gray-600 outline-none cursor-pointer bg-transparent">
+                <option>返信推奨順</option>
+                <option value="asc">古い順</option>
+                <option value="desc">新しい順</option>
+                <option>評価の高い順</option>
+                <option>評価の低い順</option>
+              </select>
             </div>
         </div>
 
@@ -118,7 +121,7 @@ export const ReviewTemplate: React.FC = () => {
                     </div>
                   </div>
                   {review.isNew && (
-                    <span className="bg-red-500 text-[10px] px-2 py-0.5 rounded-full">NEW</span>
+                    <span className="bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-full">NEW</span>
                   )}
                 </div>
                 <Text className="text-sm text-gray-700 mb-3 leading-relaxed">
@@ -128,7 +131,7 @@ export const ReviewTemplate: React.FC = () => {
                   <Button className="text-xs px-3 py-1.5 border border-gray-300 rounded text-gray-600">
                     詳細を見る
                   </Button>
-                  <Button className="text-xs px-3 py-1.5 bg-[#00A48D]  rounded">
+                  <Button className="text-xs px-3 py-1.5 bg-[#00A48D] text-black rounded">
                     返信する
                   </Button>
                 </div>
