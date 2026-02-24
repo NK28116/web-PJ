@@ -1,5 +1,245 @@
 # 変更ログ
 
+## 2026-02-25 (続き5)
+
+### 概要
+`Review` 型に `waitTime` / `noiseLevel` フィールドを追加し、全13件のモックデータに値を設定。
+
+### 詳細
+
+#### reviewMock.ts — waitTime / noiseLevel フィールド追加
+- **[Claude]** `test/mock/reviewMock.ts`
+  - `Review` 型に以下を追加:
+    - `waitTime: number | null` — `null` は「待ち時間なし」を意味する
+    - `noiseLevel: '静か' | 'ふつう' | 'にぎやか'`
+  - 全13件のモックデータに `waitTime` / `noiseLevel` の値を設定
+    - コメント内容に合わせて自然な値を割り当て (例: 30分待ちのレビューは `waitTime: 30`)
+
+---
+
+## 2026-02-25 (続き4)
+
+### 概要
+コメントの省略表示（line-clamp）を整備、長文テストデータを追加。
+
+### 詳細
+
+#### 1.1 ReviewList.tsx — line-clamp を Tailwind クラスに統一
+- **[Claude]** `components/organisms/Review/ReviewList.tsx`
+  - コメント表示: inline style (`WebkitLineClamp: 3`) → `line-clamp-3` Tailwind クラスに変更
+  - カードクリック化・ボタン削除は前回 (続き3) で対応済み
+
+#### 1.1 ReviewDetailModal.tsx — コメント10行制限を追加
+- **[Claude]** `components/organisms/Review/ReviewDetailModal.tsx`
+  - コメント表示の `<Text>` → `<p>` に変更し `line-clamp-10` を追加
+
+#### 1.3 reviewMock.ts — 長文コメントのテストデータ追加
+- **[Claude]** `test/mock/reviewMock.ts`
+  - ID `'13'` / 福田 真理子 / 評価4 / 未返信 のエントリを追加
+  - コメントは15行相当の長文（3行・10行 clamp 動作確認用）
+  - 画像3枚 / サブ評価あり
+
+---
+
+## 2026-02-25 (続き3)
+
+### 概要
+口コミリストのクリック挙動を変更。ボタン削除 → カード全体クリックで詳細モーダルを開く。画像データは前回修正済みのため対応不要。
+
+### 詳細
+
+#### 1.1 ReviewList.tsx — カードクリック化
+- **[Claude]** `components/organisms/Review/ReviewList.tsx`
+  - 「詳細を見る」「返信する」ボタン（アクションセクション）を削除
+  - `Button` インポートを削除
+  - カードルート `div` に `onClick={() => onDetail(review)}` / `cursor-pointer` / `hover:bg-[#efefef]` / `transition-colors` を追加
+  - `onReply` はインターフェース定義を維持（親コンポーネントとの互換性）
+
+#### 1.2 画像データ
+- 前回 (2026-02-25 続き2) で対応済み。全12件で `images: []` なし。
+
+---
+
+## 2026-02-25 (続き2)
+
+### 概要
+詳細モーダルに画像が表示されない問題を修正。`images: []` だった5件のモックデータに画像を設定。
+
+### 詳細
+
+#### 1.1 test/mock/reviewMock.ts — 空画像配列の修正
+- **[Claude]** `test/mock/reviewMock.ts`
+  - 以下5件の `images: []` を修正し、全12件で1枚以上の画像を保持するよう変更
+    | ID | userName | 修正後 images |
+    |---|---|---|
+    | 1 | 佐藤 花子 | `['shopReview.png', 'shopReview2.png']` |
+    | 5 | 伊藤 拓海 | `['shopReview3.png']` |
+    | 7 | 山本 裕子 | `['shopReview4.png', 'shopReview5.png', 'shopReview6.png', 'shopReview.png']` |
+    | 10 | 加藤 律子 | `['shopReview2.png', 'shopReview3.png']` |
+    | 12 | 井上 修一 | `['shopReview5.png', 'shopReview6.png']` |
+
+---
+
+## 2026-02-25 (続き)
+
+### 概要
+ユーザーフィードバック第2弾。口コミリストの画像削除、詳細モーダルのCSS・返信フロー改善、画像ビューアへの前後ナビゲーション追加。
+
+### 詳細
+
+#### 2.1 ReviewList.tsx — 画像セクション削除
+- **[Claude]** `components/organisms/Review/ReviewList.tsx`
+  - 投稿画像表示ブロック（lines 109-138）を削除
+  - 不要になった shopReview 画像インポート・`shopReviewImageMap` を削除
+
+#### 2.2 ReviewDetailModal.tsx — CSS適用・返信フロー改善
+- **[Claude]** `components/organisms/Review/ReviewDetailModal.tsx`
+  - **レイアウト変更**: ボトムシート → センタード固定モーダル (`max-w-[720px]`)
+  - **背景色**: `bg-white` → `bg-[#f3f3f3]`、内部白カード (`bg-white`) でセクション区切り
+  - **画像サイズ**: `w-[30%] aspect-square` → `w-[150px] h-[150px] object-cover`
+  - **星色**: `#f5b301` → `#ffa500`（`StreamlineStar1` の fill/stroke を更新）
+  - **返信フロー**: `mode` prop に加え `isReplying` 内部 state を追加
+    - 詳細モードで「返信する」ボタンをクリックすると `isReplying = true` に切り替わる
+    - 返信フォーム表示時のフッター: 「下書き保存」「返信を投稿する」「閉じる」の3ボタン
+    - 詳細モード時のフッター: 「返信する」（unreplied時）＋「閉じる」
+  - **ボタンスタイル統一**: primary = `bg-[#1aa382] text-white`、secondary = `bg-white border border-[#333]`
+  - 「下書き保存」はローカル state のテキストを保持したままモーダルを閉じる
+
+#### 2.3 pages/review/image/[id].tsx — 前後ナビゲーション追加
+- **[Claude]** `pages/review/image/[id].tsx`
+  - `currentIndex` を `useState` で管理（URL の `index` パラメータで初期化）
+  - `router.replace` で URL を `shallow` 更新（ブラウザ履歴を汚さない）
+  - **矢印ボタン**: 画像左右に前へ/次への丸型ボタン（端では非表示）
+  - **タッチスワイプ**: `onTouchStart` / `onTouchEnd` で水平方向50px以上のスワイプを検知し切り替え
+  - **ドットインジケーター**: クリック可能（任意の枚数にジャンプ）
+  - ヘッダーに現在位置 `N / 合計` を表示
+
+---
+
+## 2026-02-25
+
+### 概要
+ユーザーフィードバックに基づき、ReviewSummary・ReviewList・ReviewDetailModal のデザインを修正。KPIカードの星画像削除、口コミリストの2カラムレイアウト刷新、詳細モーダルへのサブ評価追加。
+
+### 詳細
+
+#### 2.1 ReviewSummary.tsx — 星画像削除
+- **[Claude]** `components/organisms/Review/ReviewSummary.tsx`
+  - rate画像インポート（rate1〜rate5）および `rateImageMap` を全削除
+  - 「総合評価」カードを数値 + "/5.0" テキストのみに変更
+
+#### 2.2 ReviewList.tsx — 2カラムレイアウト刷新
+- **[Claude]** `components/organisms/Review/ReviewList.tsx`
+  - カード全体を `flex gap-6` (Row) に変更
+  - **左側 (review-left)**: スコア (`40px / bold / #d4a000`) + テキスト星 (`18px / #f5b301`) を縦中央揃えで表示
+  - **右側 (review-right)**:
+    - ヘッダー: アバター・名前・日付 + ステータスラベル（未返信: `border red / color red`、返信済み: `border #00A48D`）
+    - コメント: 3行省略 (`-webkit-line-clamp: 3`)
+    - 投稿画像: 最大3枚サムネイル（+X枚オーバーレイ付き）を右側カラム内に配置
+    - アクションボタン: 右寄せ
+  - 旧レイアウト（rate画像インポート、旧ヘッダー構造）を削除
+
+#### 2.3 reviewMock.ts — サブ評価フィールド追加
+- **[Claude]** `test/mock/reviewMock.ts`
+  - `Review` 型に `foodRate`・`atmosphereRate`・`serviceRate` (1〜5) を追加
+  - 12件全エントリにサブ評価値を設定
+
+#### 2.4 ReviewDetailModal.tsx — サブ評価表示・ボタン配置修正
+- **[Claude]** `components/organisms/Review/ReviewDetailModal.tsx`
+  - rate画像インポート・`rateImageMap` を削除
+  - ユーザー情報欄の評価をテキスト星 (★☆) + スコア数値に変更
+  - `StreamlineStar1` SVGコンポーネントをインライン定義（塗りつぶし: 評価数以下は `#f5b301` fill、超過は `#ccc`）
+  - `StarRating` ヘルパーコンポーネントを追加（5個の `StreamlineStar1` を並べる）
+  - 食事・雰囲気・サービスのサブ評価セクションを `bg-gray-50` カード内に追加
+  - フッターに「閉じる」「返信を投稿する」ボタンを横並びで配置（詳細モードでは「閉じる」のみ）
+
+---
+
+## 2026-02-24 (続き8)
+
+### 概要
+口コミ管理機能のレビュー指摘事項を修正。インポートパスエラー修正、未返信タグ文言変更、画像詳細ページ新規作成。
+
+### 詳細
+
+#### 2.1 モジュールインポートパス修正
+- **[Claude]** 以下4ファイルの `'test/mock/reviewMock'` → `'@/test/mock/reviewMock'` に変更
+  - `components/templates/ReviewTemplate/ReviewTemplate.tsx`
+  - `components/organisms/Review/ReviewSummary.tsx`
+  - `components/organisms/Review/ReviewList.tsx`
+  - `components/organisms/Review/ReviewDetailModal.tsx`
+- `@/*` → `./` の tsconfig パス解決を利用
+
+#### 2.2 ステータスタグ文言変更
+- **[Claude]** `components/organisms/Review/ReviewList.tsx`
+  - 未返信バッジのテキストを `NEW` → `未返信` に変更（赤背景維持）
+
+#### 2.3 画像詳細ページ新規作成
+- **[Claude]** `pages/review/image/[id].tsx` を新規作成
+  - `useRouter` で `id`・`index` クエリパラメータを取得
+  - `reviewMockData` から該当口コミを検索し、指定インデックスの画像を全画面表示
+  - 黒背景・中央配置のシンプルなビューア
+  - 「閉じる」ボタンで `router.back()`
+  - 複数画像時はドットインジケーター表示
+
+---
+
+## 2026-02-24 (続き7)
+
+### 概要
+口コミ管理機能（ReviewTemplate）をモック実装。12件のダミーデータ、フィルター・並び替えポップオーバー、詳細・返信モーダルを実装。
+
+### 詳細
+
+#### 新規作成ファイル
+- **[Claude]** `test/mock/reviewMock.ts`
+  - `Review` 型定義（id, userName, rating, comment, images, createdAt, replyStatus, replyText, replyCreatedAt）
+  - 12件のモックデータ（画像なし/1枚/3枚/4枚以上のバリエーションを含む）
+
+- **[Claude]** `components/organisms/Review/ReviewSummary.tsx`
+  - 未返信口コミ数・総合評価・返信率をモックデータから動的算出
+  - 平均返信時間は固定値 "10.4時間"
+  - 総合評価の星画像は `test/mock/rate/` 画像を使用
+
+- **[Claude]** `components/organisms/Review/ReviewFilter.tsx`
+  - 「すべて / 返信済み / 未返信」のカスタムポップオーバードロップダウン
+  - クリック外で自動クローズ
+
+- **[Claude]** `components/organisms/Review/ReviewSort.tsx`
+  - 「返信推奨順 / 新しい順 / 古い順 / 評価の高い順 / 評価の低い順」のカスタムポップオーバー
+
+- **[Claude]** `components/organisms/Review/ReviewList.tsx`
+  - 口コミカード一覧（ユーザー名・評価画像・日付・コメント2行制限・ステータスタグ・アクションボタン）
+  - データ0件時は空状態UI表示
+
+- **[Claude]** `components/organisms/Review/ReviewDetailModal.tsx`
+  - フルスクリーンシート型モーダル（Portal使用）
+  - 詳細モード：コメント全文・画像（最大3枚、+X枚オーバーレイ）・返信内容表示
+  - 返信モード：テキストエリア＋「返信を投稿する」ボタン
+  - 画像タップで `/review/image/[id]?index=N` へルート遷移
+
+- **[Claude]** `components/organisms/Review/index.ts`
+  - Review organisms の一括エクスポート
+
+#### 更新ファイル
+- **[Claude]** `components/templates/ReviewTemplate/ReviewTemplate.tsx`
+  - インライン実装を全て削除し、Review organisms に置き換え
+  - `useState` で reviews・filter・sort・selectedReview を管理
+  - `useMemo` でフィルター＋ソート済みリストを生成
+  - 返信投稿後に対象データの replyStatus を 'replied' に更新
+
+- **[Claude]** `components/organisms/index.ts`
+  - `export * from './Review'` を追加
+
+### ソートロジック（返信推奨順）
+未返信 > 低評価 > 新しい順（三段階比較）
+
+### 画像処理
+- Rate 画像・Shop Review 画像は webpack 静的インポートでモジュール解決
+- `shopReviewImageMap` で filename → StaticImageData のルックアップを実施
+
+---
+
 ## 2026-02-24 (続き6)
 
 ### 概要
