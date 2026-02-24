@@ -15,6 +15,15 @@ export const PostGridItem: React.FC<PostGridItemProps> = ({ post, onClick }) => 
       style={{ backgroundColor: post.bgColor }}
       onClick={onClick}
     >
+      {/* 画像（imageUrlがある場合） */}
+      {post.imageUrl && (
+        <img
+          src={post.imageUrl}
+          alt="投稿画像"
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+      )}
+
       {/* ステータスバッジ */}
       <div
         className={`absolute top-1 right-1 px-1.5 py-0.5 text-[10px] font-bold rounded ${

@@ -6,6 +6,8 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { PostDetailModal } from './PostDetailModal';
 import { PostListItem } from './PostListItem';
 import { PostGridItem } from './PostGridItem';
+import privatePostImg from '../../../test/mock/post/privatePost.png';
+import publicPostImg from '../../../test/mock/post/publicPost.png';
 
 const GridIcon = ({ active }: { active: boolean }) => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -96,6 +98,7 @@ export interface Post {
   username: string;
   status: '表示中' | '非表示';
   isNew?: boolean;
+  imageUrl?: string;
 }
 
 type PostOrder =
@@ -131,6 +134,7 @@ const generateMockPosts = (): Post[] => {
     username: '@wyzesystem_1212',
     status: i % 3 === 0 ? '非表示' : '表示中',
     isNew: i < 3,
+    imageUrl: i % 5 === 0 ? privatePostImg.src : i % 5 === 1 ? publicPostImg.src : undefined,
   }));
 };
 
@@ -148,6 +152,20 @@ export const PostTemplate: React.FC<PostTemplateProps> = () => {
   const [open, setOpen] = useState(false);
   const [order, setOrder] = useState<PostOrder>("postDate");
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all');
+
+  // 投稿更新ハンドラ
+  const handleUpdatePost = useCallback((updatedPost: Post) => {
+    setPosts((prevPosts) =>
+      prevPosts.map((post) => post.id === updatedPost.id ? updatedPost : post)
+    );
+    setSelectedPost(null);
+  }, []);
+
+  // 投稿削除ハンドラ
+  const handleDeletePost = useCallback((postId: number) => {
+    setPosts((prevPosts) => prevPosts.filter((post) => post.id !== postId));
+    setSelectedPost(null);
+  }, []);
 
   // ステータス変更ハンドラ
   const handleStatusChange = useCallback((postId: number) => {
@@ -301,6 +319,8 @@ export const PostTemplate: React.FC<PostTemplateProps> = () => {
         onClose={() => setSelectedPost(null)}
         post={selectedPost}
         onStatusChange={handleStatusChange}
+        onUpdate={handleUpdatePost}
+        onDelete={handleDeletePost}
         formatDate={formatDate}
       />
     </BaseTemplate>
