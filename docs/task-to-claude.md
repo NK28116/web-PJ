@@ -1,89 +1,125 @@
-# Claudeへの実装指示書：認証基盤 (Authentication System) の改善と修正
+# Claudeへの実装指示書：投稿詳細・編集機能の実装
 
-本ドキュメントは、これまでの実装に対するユーザーレビュー (`docs/review.md`) に基づき、認証基盤および関連UIの改善を行うための指示書です。
+本ドキュメントは、`docs/requirements.md` に定義された「投稿を編集」機能を実装するための詳細指示書です。
+現状のコードベース (`components/templates/PostTemplate/`) を解析し、不足しているデータモデルの拡張や具体的なUI挙動を補完しています。
 
-## 1. コンポーネント実装・修正 (Priority: High)
+## 0. 実装方針：モックデータの利用 (Priority: High)
 
-### 1.1 LoginTemplate (ログイン画面)
-**対象ファイル**: `components/templates/LoginTemplate/index.tsx`
-- **スタイル修正**: 背景色、ボタンの色、フォントサイズ、余白等を `docs/figma/login.svg` に厳密に準拠させてください。特に背景色は Figma の指定に従ってください（現在の緑色が異なっている可能性があります）。
-- **機能限定**: ログイン方法は「メールアドレスとパスワード」のみに限定してください（ソーシャルログインボタンはUIのみ、または非表示）。
-- **ログインロジック**: `test/mock/authMockData.ts`（新規作成）から有効なユーザー情報を取得して検証するようにしてください。
+本実装では、API連携は行わず、すべて**モックデータに対する操作**として完結させてください。
+- **データソース**: `PostTemplate.tsx` 内の `useState` で管理されている `posts` 配列を「データベース」と見なして操作してください。
+- **永続化**: 編集や削除の結果は、親コンポーネントの状態（`setPosts`）に反映させることで疑似的に永続化してください。ブラウザのリロードで消えてしまっても問題ありません。
 
-### 1.2 LogoutModal (ログアウトモーダル)
-**対象ファイル**: `components/organisms/Modal/LogoutModal.tsx`
-- **機能修正**: 「ログアウト」ボタン押下時に、`localStorage` をクリアした後、**`components/templates/SplashScreen/SplashScreen.tsx` を表示する画面（ルートパス `/`）へ遷移**するようにしてください。
-  - 現在の実装では `LoginTemplate` が直接表示されている可能性がありますが、ユーザーは「SplashScreenに戻る」挙動を求めています。
+## 1. データモデルの拡張 (Priority: High)
 
-### 1.3 SplashScreen と ルーティング (Splash Screen Integration)
-**対象ファイル**: `pages/index.tsx`, `components/templates/SplashScreen/SplashScreen.tsx`
-- **現状**: `pages/index.tsx` が `LoginTemplate` を直接レンダリングしているため、Splash Screen が表示されません。
-- **修正**:
-  - `pages/index.tsx` を改修し、初期表示時に `SplashScreen` コンポーネントを表示するようにしてください。
-  - `SplashScreen` 表示後、一定時間（例: 2秒）経過後に `LoginTemplate` に切り替わる（または遷移する）ロジックを実装してください。
-  - 認証済みの場合は `SplashScreen` 後に `/home` へ遷移してください。
-  - これにより、ログアウト後に `/` へリダイレクトされた際も `SplashScreen` が表示されるようになります。
+**対象ファイル**: `components/templates/PostTemplate/PostTemplate.tsx` (および型定義箇所)
 
-## 2. データ定義 (Mock) (Priority: High)
+現状の `Post` 型には画像データを保持するフィールドがありません（`bgColor`のみ）。要件「画像エリアの画像を変更できる」を満たすため、モデルを拡張してください。
 
-**対象ファイル**: `test/mock/authMockData.ts` (新規作成)
-- ログイン検証に使用するテストアカウントデータを定義してください。
+- **型定義の変更**:
+  ```typescript
+  export interface Post {
+    // ...既存のプロパティ
+    imageUrl?: string; // 追加: 画像のURL (ローカルプレビュー用blob URL含む)
+  }
+  ```
+- **モックデータの更新**:
+  - 画像アセットの場所: `test/mock/post/`
+    - 利用可能なファイル: `privatePost.png`, `publicPost.png`
+  - `generateMockPosts` 関数を修正し、一部の投稿にこれらの画像パスを設定してください。
+  - **注意**: `test/` ディレクトリ内の画像は Next.js の `public/` 配下ではないため、直接のURL文字列（例: `/test/...`）では表示されない可能性があります。必要に応じて `import` 文でアセットとして読み込むか、表示可能な形式に変換して使用してください。
+  - 画像がない場合は既存通り `bgColor` を使用するフォールバックロジックを維持してください。
+
+## 2. 親コンポーネントの改修 (Priority: High)
+
+**対象ファイル**: `components/templates/PostTemplate/PostTemplate.tsx`
+
+詳細モーダルからデータ更新・削除を受け取るためのハンドラを実装し、状態 (`posts`) を更新するロジックを追加してください。
+
+- **追加ロジック**:
+  - `handleUpdatePost(updatedPost: Post)`: IDが一致する投稿を更新データで置換する。
+  - `handleDeletePost(postId: number)`: IDが一致する投稿をリストから削除し、モーダルを閉じる。
+- **Propsの伝達**:
+  - `PostDetailModal` に上記2つの関数を渡せるようPropsを追加してください。
+
+## 3. PostDetailModal コンポーネントの改修 (Priority: High)
+
+**対象ファイル**: `components/templates/PostTemplate/PostDetailModal.tsx`
+
+要件に基づき、閲覧モードと編集モードの切り替え、および各編集機能を実装してください。
+
+### 3.1 Propsの拡張
 ```typescript
-export const MOCK_USER = {
-  email: 'test@example.com',
-  password: 'password123',
-};
+interface PostDetailModalProps {
+  // ...既存
+  onUpdate: (post: Post) => void; // 追加
+  onDelete: (postId: number) => void; // 追加
+}
 ```
 
-## 3. ロジック実装 (Priority: High)
+### 3.2 内部Stateの管理
+- `isEditing`: boolean - 編集モードかどうか。
+- `editingPost`: Post - 編集中のデータ（一時保存用）。
+- `previewImage`: string | null - 画像変更時のプレビュー用URL。
 
-### 3.1 認証ロジック (useAuth)
-- **認証**: ログイン時は `MOCK_USER` と一致するかチェックしてください。
-- **メールアドレス認証**: 現時点ではメールアドレスでのログインのみをサポートするようにロジックを構成してください。
+### 3.3 UI実装詳細
 
-## 4. UI改善：ヘッダーアイコンのレイアウト修正 (Priority: Medium)
+#### A. 閲覧モード (isEditing === false)
+- 基本的に既存通り。
+- **画像表示**: `post.imageUrl` があれば `img` タグで表示、なければ `bgColor` の `div` を表示。
+- **フッター**: 「投稿を編集」ボタン押下で `isEditing = true` にし、`editingPost` を初期化。
 
-**対象ファイル**: `components/organisms/Header/Header.tsx`
-- **現状の課題**: ロゴ、通知アイコン、メニューボタンが `justify-between` で等間隔に配置されており、通知アイコンが中央に寄ってしまっている。
-- **修正内容**:
-  - 通知アイコン (`MdNotifications` を含む button) とメニューボタン (`IoMdMenu` を含む Button) を `div` 等のラッパーで囲む。
-  - ラッパーに `flex items-center gap-4`（または適切な余白）を適用し、これら2つのアイコンを右側にまとめて配置すること。
-- **サイドメニューのリンク修正**:
-  - 「サポート・ヘルプ」: 適切なリンク先（例: `/support` または外部URL、未定なら `#` のまま）を設定してください。
-  - 「ログアウト」: `href="#"` ではなく、クリック時に `LogoutModal` を表示する `onClick` ハンドラを設定してください（`Header` コンポーネント内に `isLogoutModalOpen` ステートを追加し、制御すること）。
-  - そのため、`LogoutModal` コンポーネントを `Header.tsx` にインポートして使用してください。
+#### B. 編集モード (isEditing === true)
+- **画像エリア**:
+  - クリックまたは「画像を変更」ボタンでファイル選択ダイアログ (`input type="file"`) を起動。
+  - 選択された画像を `URL.createObjectURL` でプレビュー表示。
+- **タイトル**: `<input>` で編集可能にする。
+- **本文**: `<textarea>` (または `rows` を指定したInput) で編集可能にする。
+- **タグ**: `<input>` で文字列として編集可能にする（例: "#タグ1 #タグ2"）。
+- **フッターボタン**:
+  1. **「編集内容を保存する」**:
+     - `editingPost` の内容で `onUpdate` を実行。
+     - 編集モード終了。
+  2. **「編集を一時保存する」** (元の「非表示にする」ボタン位置):
+     - 仕様補完: 投稿のステータスを「非表示」に変更した上で、編集内容を保存 (`onUpdate`) する。
+     - ユーザーへのフィードバック（トースト等）があれば望ましい。
 
-## 5. デザイン仕様 (Priority: Medium)
+#### C. 特殊なボタン挙動と確認フロー
+- **ヘッダーの閉じるボタン (×)**:
+  - **UI変更**: 編集モード中 (`isEditing === true`) は、アイコンを「ゴミ箱」に変更し、色を赤系（例: `text-red-500`）にして削除機能であることを明確にしてください。
+  - **要件**: 編集モード時は「投稿を削除する」機能になる。
+  - **安全策**: 誤操作防止のため、押下時に**「本当にこの投稿を削除しますか？」という確認ダイアログ（ブラウザ標準のconfirm等でも可、できればModal上のオーバーレイ）を表示**し、承認された場合のみ `onDelete` を実行してください。
+- **モーダル外部タップ / 背景クリック**:
+  - **要件**: 「編集をキャンセルしますか？」モーダルを表示。
+  - **実装**: 「はい」で編集破棄して閲覧モードへ（またはモーダル閉じる）、「いいえ」で編集継続。
 
-- **Figma準拠**: `docs/figma/` 配下の画像アセットを参照し、マージン、フォントサイズ、配色を再現すること。特にログイン画面の差異を解消すること。
-- **レスポンシブ**: モバイルファーストで実装し、PC表示でも崩れないようにする。
+## 4. 一覧・グリッド表示の画像対応 (Priority: High)
 
-## 6. 新規登録フローの拡充 (Priority: High)
+**対象ファイル**: 
+- `components/templates/PostTemplate/PostListItem.tsx`
+- `components/templates/PostTemplate/PostGridItem.tsx`
 
-**対象ファイル**: `components/templates/SignUpTemplate/index.tsx`
-- **現状の課題**: 現在の実装は「メール入力 -> 完了」の簡易フローですが、ユーザーレビューにより `stash/Login/components/signUp` に存在した詳細なステップ（情報入力など）の不足が指摘されています。
-- **修正内容**: 
-  - `docs/figma/mailAdress**.svg` シリーズのデザインと `stash/Login/components/signUp` のロジックに基づき、以下の構成で実装してください。
-  - **Step 1: 登録方法選択** (`SignUpWay` / `mailAdress1.svg`): メールアドレス登録ボタン等。
-  - **Step 2: アカウント情報入力** (以下のサブステップを包含するメインステップ):
-    - **2-1: メールアドレス入力** (`AuthEmailInput` / `mailAdress2.svg`)
-    - **2-2: 認証コード入力** (`AuthEmailNumber` / `mailAdress3.svg`): モック認証。
-      - **開発用機能**: 「認証コードを取得（開発用）」ボタンを追加し、クリック時にモックコード（例: "123456"）をアラート表示または自動入力する機能を実装してください。
-      - **開発用入力補助**: 正常系コード/異常系コードを自動入力するボタンを追加してください。
-    - **2-3: ユーザー情報入力** (`AuthEmailUserInfo` / `mailAdress4.svg`): ユーザー名、パスワード等の詳細入力。**これが欠落していた主要な画面です。**
-      - **開発用入力補助**: 正常系データ（有効なパスワード等）/異常系データ（短すぎるパスワード等）を自動入力するボタンを追加してください。
+詳細モーダルと同様に、一覧およびグリッド表示でも `post.imageUrl` を表示するように修正してください。
 
-## 7. デバッグ情報の表示 (Priority: Medium)
+- **実装内容**:
+  - `post.imageUrl` が存在する場合、既存の `bgColor` 指定の `div` 内（または代替として） `img` タグを使用して画像を表示してください。
+  - **スタイリング**:
+    - `object-cover` を使用し、既存の枠線やサイズ（ListItemは `w-[128px] h-[160px]`、GridItemは `aspect-square`）に合わせて適切に拡大縮小・トリミングして表示すること。
+    - 画像がない場合は、既存の `bgColor` による表示をフォールバックとして維持してください。
+  - **非表示ステータスの扱い**:
+    - `isHidden` 時の不透明度（`opacity-60`）やオーバーレイ（`bg-black/30`）が画像に対しても正しく適用されるようにしてください。
 
-**対象ファイル**: `components/organisms/Home/ShopListSection.tsx`
-- **修正内容**: 新規登録またはログインに使用したメールアドレスと、付与されたUUID（モックID）を画面上に表示してください。
-  - `useAuth` フックからユーザー情報を取得できるよう拡張が必要であれば `useAuth` も修正してください。
-  - 表示は開発中のみの暫定的なもので構いませんが、視認できる場所に配置してください。
+## 5. 日本語入力（IME）の不具合修正 (Priority: High)
 
-## 8. テスト実装 (Priority: Low)
-(以下略)
+**対象ファイル**: `components/templates/PostTemplate/PostDetailModal.tsx`
 
-**対象ファイル**: `test/Auth.test.tsx` (更新)
-- **ログインフロー**: モックユーザーを使用した成功/失敗パターンのテスト。
-- **ログアウト**: ログアウト後に `/` (Splash Screen) へ遷移することを確認。
-- **SplashScreen**: `/` アクセス時に `SplashScreen` が表示され、その後 `LoginTemplate` (または `/home`) に遷移することを確認。
+編集モードでの入力時、日本語の変換確定まで文字が表示されない、あるいは入力が消えるといった不具合を修正してください。
+
+- **原因と対策**:
+  - `editingPost` オブジェクト全体を `onChange` ごとに更新すると、コンポーネントの再描画負荷やオブジェクトの再生成により IME の挙動が不安定になることがあります。
+  - **個別ステートの導入**: タイトル、本文、タグの各入力項目について、`useState<string>` を個別に用意してください（例: `editTitle`, `editContent`, `editTags`）。
+  - **入力中の処理**: `onChange` ではこれらの個別ステートのみを更新するようにします。
+  - **保存時の処理**: 「保存する」または「一時保存する」ボタンが押された際に、これらの個別ステートの値を `editingPost` (または `onUpdate` に渡すオブジェクト) にマージして反映させてください。
+
+## 6. 留意事項
+- 画像アップロードはフロントエンドのみのモック実装（Blob URL使用）で構いません。
+- スタイルは既存のTailwind CSSクラスを流用し、デザイン崩れがないようにしてください。

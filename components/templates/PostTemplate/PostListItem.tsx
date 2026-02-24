@@ -24,6 +24,15 @@ export const PostListItem: React.FC<PostListItemProps> = ({ post, onClick, forma
         className="w-[128px] h-[160px] flex-shrink-0 -mt-[1px] ml-[10px] relative"
         style={{ backgroundColor: post.bgColor }}
       >
+        {/* 画像（imageUrlがある場合） */}
+        {post.imageUrl && (
+          <img
+            src={post.imageUrl}
+            alt="投稿画像"
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+        )}
+
         {/* ステータスバッジ */}
         <div
           className={`absolute top-1 right-1 px-1.5 py-0.5 text-[9px] font-bold rounded ${
