@@ -1,5 +1,134 @@
 # 変更ログ
 
+## 2026-02-24 (続き10)
+
+### 概要
+ユーザーレビュー対応。編集モードの日本語入力（IME）不具合を修正。タイトル・本文・タグの入力フィールドを個別Stateで管理し、`onChange` 時のオブジェクト再生成による IME 挙動の不安定化を解消。
+
+### 詳細
+
+#### Phase 1: 個別State導入
+- **[Claude]** `components/templates/PostTemplate/PostDetailModal.tsx` を修正。
+  - `editTitle: string`, `editContent: string`, `editTags: string` の個別Stateを追加
+  - `handleStartEdit`: 編集モード開始時に `post` の各フィールド値で個別Stateを初期化
+  - `handleSave` / `handleSaveHidden`: 保存時に `{ ...editingPost, title: editTitle, content: editContent, tags: editTags }` としてマージして `onUpdate` に渡す
+  - `handleConfirmCancel` / `useEffect(!isOpen)`: 個別Stateを空文字にリセット
+  - 各入力フィールドの `value` / `onChange` を個別Stateに変更:
+    - タイトル `<input>`: `value={editTitle}` / `onChange={(e) => setEditTitle(e.target.value)}`
+    - 本文 `<textarea>`: `value={editContent}` / `onChange={(e) => setEditContent(e.target.value)}`
+    - タグ `<input>`: `value={editTags}` / `onChange={(e) => setEditTags(e.target.value)}`
+
+### 検証結果
+- TypeScript型チェック: ✅ 実装ファイルにエラーなし（`test/ReportTemplate.test.tsx` の既存エラー1件は無関係）
+
+### 技術的な判断
+1. **個別State vs editingPost直接更新**: `editingPost` ごと `setState` すると React がコンポーネント全体を再描画し、IME の変換バッファが破棄される場合がある。個別Stateにすることで各フィールドの再描画を最小化し、IME 変換確定前の文字が消える問題を解消。
+2. **保存時マージ方式**: `editingPost` は画像URLなど他フィールドの保持に引き続き使用し、テキスト3フィールドのみ個別Stateから上書きするスプレッド構文でマージ。
+
+---
+
+## 2026-02-24 (続き9)
+
+### 概要
+ユーザーレビュー対応。一覧（リスト・グリッド）表示に `post.imageUrl` の画像表示を追加。詳細モーダルと同様のフォールバックロジックを各コンポーネントに適用。
+
+### 詳細
+
+#### Phase 1: PostGridItem 画像対応
+- **[Claude]** `components/templates/PostTemplate/PostGridItem.tsx` を修正。
+  - `post.imageUrl` が存在する場合、`<img>` タグを `absolute inset-0 w-full h-full object-cover` で表示
+  - `img` はステータスバッジ・NEWラベル・非表示オーバーレイより前に挿入（DOM順により各バッジが画像の上に重なる）
+  - `bgColor` はコンテナの `backgroundColor` として維持（画像ロード前のフォールバック）
+  - `isHidden` 時の `bg-black/30` オーバーレイが画像にも正しく適用される（`absolute inset-0` が画像の後に配置）
+
+#### Phase 2: PostListItem 画像対応
+- **[Claude]** `components/templates/PostTemplate/PostListItem.tsx` を修正。
+  - サムネイルコンテナ（`w-[128px] h-[160px] relative`）内に `<img>` タグを `absolute inset-0 w-full h-full object-cover` で表示
+  - ステータスバッジ（`absolute top-1 right-1`）はDOM順により画像の上に重なる
+  - `isHidden` 時の `opacity-60` は外側コンテナに適用済みのため、画像にもそのまま反映される
+
+### 検証結果
+- TypeScript型チェック: ✅ 実装ファイルにエラーなし（`test/ReportTemplate.test.tsx` の既存エラー1件は無関係）
+
+### 技術的な判断
+1. **`absolute inset-0` による画像配置**: コンテナのサイズ・`overflow-hidden` をそのまま活用し、画像サイズ指定を別途加えない最小変更。
+2. **DOM順による z-index 管理**: CSSの `z-index` を追加せず、後続要素が前の要素の上に重なる自然なスタッキングコンテキストを利用し、バッジ・オーバーレイが画像の上に表示されることを保証。
+
+---
+
+## 2026-02-24 (続き8)
+
+### 概要
+Geminiレビュー対応。編集モード中のヘッダー閉じるボタンを、×アイコンからゴミ箱アイコン（赤色）に変更し、削除機能であることを視覚的に明示。
+
+### 詳細
+
+#### Phase 1: 閉じるボタンのUI変更
+- **[Gemini]** `docs/task-to-claude.md` にレビュー指摘を追記。編集モード中の×ボタンをゴミ箱アイコンに変更するよう指示。
+- **[Claude]** `components/templates/PostTemplate/PostDetailModal.tsx` を修正。
+  - ヘッダーの閉じるボタンを `isEditing` 条件で分岐
+  - 編集モード (`isEditing === true`): ゴミ箱SVGアイコン（`stroke="#EF4444"` / hover: `bg-red-50`）
+  - 閲覧モード (`isEditing === false`): 既存の×SVGアイコン（変更なし）
+
+### 検証結果
+- TypeScript型チェック: ✅ 実装ファイルにエラーなし（`test/ReportTemplate.test.tsx` の既存エラー1件は無関係）
+
+### 技術的な判断
+1. **アイコン切り替えをJSX条件分岐で実現**: アイコンカラーはSVGの `stroke` 属性で直接指定し、Tailwindクラス汚染を最小化。`isEditing` は既存のStateをそのまま利用。
+
+---
+
+## 2026-02-24 (続き7)
+
+### 概要
+投稿詳細モーダルに編集機能を実装。閲覧モード・編集モードの切り替え、画像変更（Blob URLプレビュー）、テキスト編集、保存・削除フロー（確認ダイアログ付き）を完成。
+
+### 詳細
+
+#### Phase 1: データモデルの拡張
+- **[Claude]** `components/templates/PostTemplate/PostTemplate.tsx` を修正。
+  - `Post` 型に `imageUrl?: string` フィールドを追加
+  - `privatePostImg` / `publicPostImg` を `test/mock/post/` からimport（`StaticImageData.src` を利用）
+  - `generateMockPosts` を修正: `i % 5 === 0` は `privatePost.png`、`i % 5 === 1` は `publicPost.png`、それ以外は `bgColor` フォールバック
+
+#### Phase 2: 親コンポーネントのハンドラ追加
+- **[Claude]** `components/templates/PostTemplate/PostTemplate.tsx` を修正。
+  - `handleUpdatePost(updatedPost: Post)`: IDが一致する投稿を置換し、`setSelectedPost(null)` でモーダルを閉じる
+  - `handleDeletePost(postId: number)`: IDが一致する投稿を削除し、`setSelectedPost(null)` でモーダルを閉じる
+  - `PostDetailModal` に `onUpdate` / `onDelete` をProps伝達
+
+#### Phase 3: PostDetailModal 改修
+- **[Claude]** `components/templates/PostTemplate/PostDetailModal.tsx` を全面改修。
+  - **Props追加**: `onUpdate: (post: Post) => void` / `onDelete: (postId: number) => void`
+  - **内部State追加**:
+    - `isEditing`: 編集モードフラグ
+    - `editingPost`: 編集中の一時データ
+    - `previewImage`: 画像変更プレビュー用Blob URL
+    - `showDeleteConfirm` / `showCancelConfirm`: 確認ダイアログ表示フラグ
+  - **閲覧モード**:
+    - `post.imageUrl` があれば `img` タグ表示、なければ `bgColor` + 黄色い帯フォールバック
+    - 「投稿を編集」ボタンで編集モードへ遷移
+  - **編集モード**:
+    - 画像エリアクリック → `input[type=file]` で選択 → `URL.createObjectURL` でプレビュー
+    - タイトル・本文・タグを `input` / `textarea` で編集可能
+    - 「編集内容を保存する」: `onUpdate` 呼び出し → モーダル閉じる
+    - 「編集を一時保存する」: ステータスを `非表示` に変更して `onUpdate` 呼び出し
+  - **確認ダイアログ（オーバーレイ）**:
+    - ×ボタン（編集モード時）→ 削除確認オーバーレイ → 承認で `onDelete` 実行
+    - 背景クリック（編集モード時）→ キャンセル確認オーバーレイ → 「はい」で編集破棄
+  - `useEffect` でモーダルclose時にすべての編集Stateをリセット
+
+### 検証結果
+- TypeScript型チェック: ✅ 実装ファイルにエラーなし（`test/ReportTemplate.test.tsx` の既存エラー1件は無関係）
+
+### 技術的な判断
+1. **画像import**: `test/mock/post/` は Next.js `public/` 外のため、webpackのアセット処理で `StaticImageData.src` として取得。直接URLでなく `import` で参照することで、ビルド時に適切なパスに解決される。
+2. **確認ダイアログはオーバーレイ方式**: Modal上に `absolute inset-0 z-20` で重ねる設計。外部ライブラリ不要で既存 `Modal` コンポーネントを破壊しない。
+3. **`handleModalClose` ラッパー**: `Modal` の `onClose` prop に、編集状態を考慮したラッパー関数を渡すことで、背景クリックの挙動を編集モード/閲覧モードで分岐。
+4. **`useEffect` によるState初期化**: `isOpen` が `false` になったタイミングで `isEditing`・`editingPost` 等を一括リセット。次回モーダルopen時に常にクリーンな閲覧モードから始まる。
+
+---
+
 ## 2026-02-24 (続き6)
 
 ### 概要
