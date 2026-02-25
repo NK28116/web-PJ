@@ -3,3 +3,4 @@ export type { HeaderProps } from './Header';
 export { Modal } from './Modal';
 export type { ModalProps } from './Modal';
 export * from './Report';
+export * from './Review';
