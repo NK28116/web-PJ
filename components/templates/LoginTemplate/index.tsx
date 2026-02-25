@@ -1,4 +1,5 @@
 import { useAuth } from '@/hooks/useAuth';
+import { MOCK_USER } from '@/test/mock/authMockData';
 import { useRouter } from 'next/router';
 import React, { useState } from 'react';
 
@@ -9,6 +10,13 @@ export const LoginTemplate: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState('');
   const { login } = useAuth();
   const router = useRouter();
+
+  const handleDevLogin = () => {
+    const success = login(MOCK_USER.email, MOCK_USER.password);
+    if (success) {
+      router.push('/home');
+    }
+  };
 
   const handleLogin = () => {
     setErrorMessage('');
@@ -97,6 +105,16 @@ export const LoginTemplate: React.FC = () => {
       >
         新規登録
       </button>
+
+      {/* 開発用ログインボタン（開発環境のみ表示） */}
+      {process.env.NODE_ENV === 'development' && (
+        <button
+          onClick={handleDevLogin}
+          className="w-[85%] bg-gray-800 text-yellow-300 text-sm font-bold py-[10px] rounded-[5px] border border-dashed border-yellow-400 mb-6"
+        >
+          [DEV] 開発用ログイン
+        </button>
+      )}
     </div>
   );
 };
