@@ -10,8 +10,8 @@
  * 検証項目:
  * - ログインフロー: 正しい入力でトークンが保存され遷移すること
  * - 誤り資格情報: ログイン失敗時にエラーメッセージが表示されること
- * - ガード機能: 未認証状態で保護ページにアクセスした際リダイレクトされること
- * - ログアウト: トークンが削除され / (SplashScreen) に戻ること
+ * - ガード機能: 未認証状態で保護ページにアクセスした際 /login へリダイレクトされること
+ * - ログアウト: localStorage が完全クリアされ /login に戻ること
  * - SplashScreen: 2秒後に onComplete が呼ばれること
  */
 
@@ -33,21 +33,32 @@ jest.mock('next/router', () => ({
   }),
 }));
 
+const mockFetch = jest.fn();
+global.fetch = mockFetch;
+
 beforeEach(() => {
   localStorage.clear();
   mockPush.mockClear();
   mockReplace.mockClear();
+  mockFetch.mockClear();
 });
 
 /* ────────────────── LoginTemplate ────────────────── */
 describe('LoginTemplate - ログインフロー', () => {
-  test('メールとパスワードが未入力の場合エラーメッセージが表示されること', () => {
+  test('メールとパスワードが未入力の場合エラーメッセージが表示されること', async () => {
     render(<LoginTemplate />);
     fireEvent.click(screen.getByRole('button', { name: 'ログイン' }));
-    expect(screen.getByText('※未入力の箇所があります')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText('※未入力の箇所があります')).toBeInTheDocument();
+    });
   });
 
-  test('誤った認証情報でログインするとエラーメッセージが表示されること', () => {
+  test('誤った認証情報でログインするとエラーメッセージが表示されること', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      json: async () => ({ error: 'invalid credentials' }),
+    });
+
     render(<LoginTemplate />);
 
     fireEvent.change(screen.getByPlaceholderText('Wyze ID ,メールアドレス'), {
@@ -58,10 +69,20 @@ describe('LoginTemplate - ログインフロー', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: 'ログイン' }));
 
-    expect(screen.getByText('ログインに失敗しました')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText('ログインに失敗しました')).toBeInTheDocument();
+    });
   });
 
-  test('正しい入力でログインするとトークンが保存されること', () => {
+  test('正しい入力でログインするとトークンが保存されること', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        token: 'mock_jwt_token',
+        user: { id: 'user-123', email: 'test@example.com', role: 'user' },
+      }),
+    });
+
     render(<LoginTemplate />);
 
     fireEvent.change(screen.getByPlaceholderText('Wyze ID ,メールアドレス'), {
@@ -72,10 +93,20 @@ describe('LoginTemplate - ログインフロー', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: 'ログイン' }));
 
-    expect(localStorage.getItem('auth_token')).toBe('mock_token');
+    await waitFor(() => {
+      expect(localStorage.getItem('auth_token')).toBe('mock_jwt_token');
+    });
   });
 
-  test('正しい入力でログインすると /home へ遷移すること', () => {
+  test('正しい入力でログインすると /home へ遷移すること', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        token: 'mock_jwt_token',
+        user: { id: 'user-123', email: 'test@example.com', role: 'user' },
+      }),
+    });
+
     render(<LoginTemplate />);
 
     fireEvent.change(screen.getByPlaceholderText('Wyze ID ,メールアドレス'), {
@@ -86,7 +117,40 @@ describe('LoginTemplate - ログインフロー', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: 'ログイン' }));
 
-    expect(mockPush).toHaveBeenCalledWith('/home');
+    await waitFor(() => {
+      expect(mockPush).toHaveBeenCalledWith('/home');
+    });
+  });
+
+  test('ログイン成功時に以前のユーザーデータがクリアされること', async () => {
+    // 前ユーザーのデータを localStorage に設定
+    localStorage.setItem('auth_token', 'old_token');
+    localStorage.setItem('user_email', 'old@example.com');
+    localStorage.setItem('some_cache_key', 'old_cache_data');
+
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        token: 'new_jwt_token',
+        user: { id: 'new-user-id', email: 'new@example.com', role: 'user' },
+      }),
+    });
+
+    render(<LoginTemplate />);
+
+    fireEvent.change(screen.getByPlaceholderText('Wyze ID ,メールアドレス'), {
+      target: { value: 'new@example.com' },
+    });
+    fireEvent.change(screen.getByPlaceholderText('パスワード'), {
+      target: { value: 'password123' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'ログイン' }));
+
+    await waitFor(() => {
+      expect(localStorage.getItem('auth_token')).toBe('new_jwt_token');
+      // 前ユーザーのキャッシュが残っていないこと
+      expect(localStorage.getItem('some_cache_key')).toBeNull();
+    });
   });
 
   test('新規登録ボタンで /signup へ遷移すること', () => {
@@ -99,7 +163,7 @@ describe('LoginTemplate - ログインフロー', () => {
 
 /* ────────────────── AuthGuard ────────────────── */
 describe('AuthGuard - ガード機能', () => {
-  test('未認証状態で保護ページにアクセスするとルートへリダイレクトされること', async () => {
+  test('未認証状態で保護ページにアクセスすると /login へリダイレクトされること', async () => {
     render(
       <AuthGuard pathname="/home">
         <div>ダッシュボード</div>
@@ -107,7 +171,7 @@ describe('AuthGuard - ガード機能', () => {
     );
 
     await waitFor(() => {
-      expect(mockReplace).toHaveBeenCalledWith('/');
+      expect(mockReplace).toHaveBeenCalledWith('/login');
     });
   });
 
@@ -125,7 +189,21 @@ describe('AuthGuard - ガード機能', () => {
     });
   });
 
-  test('認証済みで / にアクセスするとコンテンツが表示されること（SplashScreenが処理）', async () => {
+  test('認証済みで /login にアクセスすると /home へリダイレクトされること', async () => {
+    localStorage.setItem('auth_token', 'mock_token');
+
+    render(
+      <AuthGuard pathname="/login">
+        <div>ログイン</div>
+      </AuthGuard>
+    );
+
+    await waitFor(() => {
+      expect(mockReplace).toHaveBeenCalledWith('/home');
+    });
+  });
+
+  test('認証済みで / にアクセスするとコンテンツが表示されること', async () => {
     localStorage.setItem('auth_token', 'mock_token');
 
     render(
@@ -156,16 +234,10 @@ describe('AuthGuard - ガード機能', () => {
 
 /* ────────────────── Logout ────────────────── */
 describe('Logout - ログアウト', () => {
-  test('ログアウト後にトークンが削除されること', () => {
+  test('ログアウト後に localStorage が完全クリアされること', () => {
     localStorage.setItem('auth_token', 'mock_token');
-    expect(localStorage.getItem('auth_token')).toBe('mock_token');
-
-    localStorage.removeItem('auth_token');
-    expect(localStorage.getItem('auth_token')).toBeNull();
-  });
-
-  test('ログアウト後に / (SplashScreen) へ遷移すること', () => {
-    localStorage.setItem('auth_token', 'mock_token');
+    localStorage.setItem('user_email', 'test@example.com');
+    localStorage.setItem('some_cache', 'cached_data');
 
     const { result } = renderHook(() => useAuth());
     act(() => {
@@ -173,7 +245,20 @@ describe('Logout - ログアウト', () => {
     });
 
     expect(localStorage.getItem('auth_token')).toBeNull();
-    expect(mockPush).toHaveBeenCalledWith('/');
+    expect(localStorage.getItem('user_email')).toBeNull();
+    expect(localStorage.getItem('some_cache')).toBeNull();
+    expect(localStorage.length).toBe(0);
+  });
+
+  test('ログアウト後に /login へ遷移すること', () => {
+    localStorage.setItem('auth_token', 'mock_token');
+
+    const { result } = renderHook(() => useAuth());
+    act(() => {
+      result.current.logout();
+    });
+
+    expect(mockPush).toHaveBeenCalledWith('/login');
   });
 });
 

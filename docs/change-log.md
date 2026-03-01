@@ -1,5 +1,92 @@
 # 変更ログ
 
+## 2026-03-02
+
+### 概要
+認証基盤とデータ分離システムの構築 (`docs/task-to-claude.md` 指示書に基づく)
+
+### 詳細
+
+#### 1. インフラ構築
+
+- **[Claude]** `docker-compose.yml` 新規作成
+  - `db` (PostgreSQL 15): Volume永続化, `pg_isready` ヘルスチェック
+  - `backend` (Go/Gin): DB healthy 待機後に起動 (`depends_on: condition: service_healthy`)
+  - `frontend` (Next.js): backend 依存
+  - 環境変数はすべて `.env` 経由で注入
+
+- **[Claude]** `Dockerfile` 新規作成 (frontend / Multi-stage build)
+- **[Claude]** `backend/Dockerfile` 新規作成 (Go / Multi-stage build、server + seed バイナリ)
+- **[Claude]** `.env.example` 新規作成 (JWT_SECRET 等のサンプル値)
+
+#### 2. データベース設計・マイグレーション
+
+- **[Claude]** `backend/migrations/000001_create_users.up.sql` / `.down.sql`
+  - `users` テーブル: id (UUID), email (UNIQUE), password (bcrypt), role, timestamps
+- **[Claude]** `backend/migrations/000002_create_posts.up.sql` / `.down.sql`
+  - `posts` テーブル: `user_id` 必須 + 外部キー制約 (ON DELETE CASCADE)
+  - `idx_posts_user_id` インデックス付与
+
+#### 3. バックエンド実装 (Go/Gin)
+
+- **[Claude]** `backend/go.mod` 新規作成 (module: `webSystemPJ/backend`)
+- **[Claude]** `backend/internal/config/config.go` — 環境変数ローダー
+- **[Claude]** `backend/internal/models/` — User / Post / Claims 型定義
+- **[Claude]** `backend/internal/repository/` — UserRepository / PostRepository
+  - **スコープ強制**: `GetAll` / `GetByID` は JWT の `user_id` で `WHERE user_id = $1` を強制付与
+  - 他ユーザーの ID を指定しても `nil` 返却 → ハンドラが 404 を返す
+- **[Claude]** `backend/internal/middleware/auth.go` — Bearer Token 検証 + `user_id` をコンテキストに設定
+  - `alg=none` を明示的に拒否
+- **[Claude]** `backend/internal/handlers/auth.go` — `POST /login` (bcrypt 検証 + HS256 JWT 発行)
+- **[Claude]** `backend/internal/handlers/health.go` — `GET /health`
+- **[Claude]** `backend/internal/handlers/post.go` — GET/POST /posts, GET /posts/:id
+- **[Claude]** `backend/cmd/server/main.go` — サーバー起動 + golang-migrate 自動適用
+- **[Claude]** `backend/cmd/seed/main.go` — 初期ユーザー生成コマンド
+  - Admin / User A / User B / dev用 (test@example.com) の4ユーザーとサンプル投稿を投入
+
+#### 4. フロントエンド更新 (Next.js)
+
+- **[Claude]** `hooks/useAuth.ts` 更新
+  - `login()`: モック → 実 API (`POST /login`) 呼び出しに変更 (async化)
+  - `login()` 成功時: `localStorage.clear()` で前ユーザーのデータを完全クリアしてから新規保存
+  - `logout()`: `localStorage.clear()` (完全クリア) → `/login` へリダイレクト
+
+- **[Claude]** `components/auth/AuthGuard.tsx` 更新
+  - `PUBLIC_PATHS` に `/login` を追加
+  - 未認証時のリダイレクト先: `/` → `/login` に変更
+  - `/login` アクセス時も認証済みなら `/home` へリダイレクト
+
+- **[Claude]** `components/templates/LoginTemplate/index.tsx` 更新
+  - `handleLogin` / `handleDevLogin` を async 化 (`await login(...)`)
+
+- **[Claude]** `pages/login.tsx` 新規作成
+  - `LoginTemplate` を表示する専用ログインページ
+
+- **[Claude]** `pages/index.tsx` 更新
+  - SplashScreen 完了後: 未認証 → `/login` へ遷移 (従来はインライン LoginTemplate 表示)
+
+#### 5. テスト
+
+- **[Claude]** `test/Auth.test.tsx` 更新
+  - `global.fetch` モックを追加 (login の API 呼び出し対応)
+  - AuthGuard リダイレクト先を `/` → `/login` に修正
+  - ログアウト後のリダイレクト先を `/` → `/login` に修正
+  - ログイン成功時の localStorage 完全クリアを検証するテスト追加
+- **[Claude]** `backend/internal/handlers/auth_test.go` 新規作成 (ユニットテスト)
+- **[Claude]** `backend/internal/middleware/auth_test.go` 新規作成 (alg=none 拒否を含む)
+- **[Claude]** `backend/test/data_isolation_test.go` 新規作成 (統合テスト / build tag: `integration`)
+  - User A のトークンで User B の投稿 ID を取得しようとして 404 になることを検証
+  - 投稿一覧が自分のデータのみを返すことを検証
+
+#### 6. CI/CD
+
+- **[Claude]** `.github/workflows/ci.yml` 新規作成
+  - `frontend-lint` / `frontend-test`
+  - `backend-lint` (golangci-lint) / `backend-unit-test`
+  - `backend-integration-test`: PostgreSQL 15 service container 付きで統合テスト実行
+
+---
+
 ## 2026-02-25 (続き5)
 
 ### 概要
