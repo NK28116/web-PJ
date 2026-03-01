@@ -1,5 +1,38 @@
 # 変更ログ
 
+## 2026-03-02 (2)
+
+### 概要
+CIエラーの解消と基盤安定化 (`docs/task-to-claude.md` 指示書に基づく)
+
+### 詳細
+
+#### 1. テストエラー修正
+
+- **[Claude]** `test/ReviewTemplate.test.tsx` 更新
+  - `getAllByText('返信する')` アサーションを削除 (ReviewList.tsx のUI改修でボタン削除済みのため)
+  - テストを async 化し、口コミカード (`佐藤 花子`) クリック → `口コミ詳細` モーダル表示を検証するよう修正
+  - `waitFor` を `@testing-library/react` のインポートに追加
+
+- **[Claude]** `components/templates/ReportTemplate/ReportTab.tsx` 更新
+  - `EmptyState` / `isEmpty` のインポート元を `@/organisms/Report` → `@/organisms/Report/shared` に変更 (バレルエクスポートの循環参照回避)
+
+- **[Claude]** `components/templates/ReportTemplate/AiTab.tsx` 更新
+  - `EmptyState` のインポート元を `@/organisms/Report` → `@/organisms/Report/shared` に変更
+
+#### 2. ビルド・リンター修正
+
+- **[Claude]** `.eslintrc.json` 新規作成
+  - `{"extends": ["next/core-web-vitals"]}` を定義
+  - CI上で `next lint` がインタラクティブ設定確認を表示して停止する問題を解消
+
+#### 3. バックエンド依存関係
+
+- **[Claude]** `backend/go mod tidy` 実行
+  - `go.sum` を最新の状態に更新
+
+---
+
 ## 2026-03-02
 
 ### 概要

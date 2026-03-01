@@ -11,7 +11,8 @@
       "Bash(npx jest --clearCache)",
       "Bash(npx jest:*)",
       "Bash(npx next build:*)",
-      "Bash(python3:*)"
+      "Bash(python3:*)",
+      "Bash(go mod:*)"
     ]
   }
 }
