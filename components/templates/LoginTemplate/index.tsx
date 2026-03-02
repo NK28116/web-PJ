@@ -11,14 +11,14 @@ export const LoginTemplate: React.FC = () => {
   const { login } = useAuth();
   const router = useRouter();
 
-  const handleDevLogin = () => {
-    const success = login(MOCK_USER.email, MOCK_USER.password);
+  const handleDevLogin = async () => {
+    const success = await login(MOCK_USER.email, MOCK_USER.password);
     if (success) {
       router.push('/home');
     }
   };
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     setErrorMessage('');
 
     if (!email || !password) {
@@ -26,7 +26,7 @@ export const LoginTemplate: React.FC = () => {
       return;
     }
 
-    const success = login(email, password);
+    const success = await login(email, password);
     if (success) {
       router.push('/home');
     } else {
@@ -56,8 +56,8 @@ export const LoginTemplate: React.FC = () => {
         autoCapitalize="none"
         className="w-[85%] h-10 bg-[#FFFFFF] border border-black rounded-[5px] px-3 mt-[15px] mb-0.5 text-black placeholder-[#00A48D]"
       />
-      
-            {/* パスワード忘れ */}
+
+      {/* パスワード忘れ */}
       <p className="text-[#FFFFFF] text-[13px] mt-6 mb-6 text-center">
         メールアドレスをお忘れの方はこちら
       </p>
@@ -85,7 +85,8 @@ export const LoginTemplate: React.FC = () => {
           {showPassword ? '非表示' : '表示'}
         </button>
       </div>
-            {/* パスワード忘れ */}
+
+      {/* パスワード忘れ */}
       <p className="text-[#FFFFFF] text-[13px] mt-6 mb-6 text-center">
         パスワードをお忘れの方はこちら
       </p>
@@ -97,8 +98,8 @@ export const LoginTemplate: React.FC = () => {
       >
         ログイン
       </button>
-      
-            {/* 新規登録ボタン */}
+
+      {/* 新規登録ボタン */}
       <button
         onClick={() => router.push('/signup')}
         className="w-[85%] bg-[#006355] text-white text-sm font-bold py-[10px] rounded-[5px] border border-black mt-6 mb-6"
