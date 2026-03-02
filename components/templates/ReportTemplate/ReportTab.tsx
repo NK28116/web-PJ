@@ -5,9 +5,8 @@ import {
   DonutChart,
   BarChart,
   LineChart,
-  EmptyState,
-  isEmpty,
 } from '@/organisms/Report';
+import { EmptyState, isEmpty } from '@/organisms/Report/shared';
 import React from 'react';
 import type { ReportData } from '@/test/mock/reportMockData';
 import { tooltips } from '@/test/mock/reportMockData';

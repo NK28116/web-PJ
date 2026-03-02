@@ -9,7 +9,7 @@
  * - components/organisms/Header/Header.tsx
  */
 
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import '@testing-library/jest-dom'
 import { ReviewTemplate } from '../components/templates/ReviewTemplate/ReviewTemplate'
 import { Header } from '../components/organisms/Header/Header'
@@ -312,17 +312,19 @@ describe('ReviewTemplate Component - コンテンツ表示テスト', () => {
    *
    * 検証項目:
    * - 口コミデータが表示されていること
-   * - 返信するボタンが表示されていること
+   * - カードをクリックすると詳細モーダルが開くこと
    */
-  test('should display review list in ReviewTemplate', () => {
+  test('should display review list in ReviewTemplate', async () => {
     render(<ReviewTemplate />)
 
     // ダミーデータの口コミが表示されている
     expect(screen.getByText('佐藤 花子')).toBeInTheDocument()
     expect(screen.getByText('田中 健太')).toBeInTheDocument()
-    
-    // 返信ボタンが表示されている
-    const replyButtons = screen.getAllByText('返信する')
-    expect(replyButtons.length).toBeGreaterThan(0)
+
+    // カードをクリックすると詳細モーダルが開くこと
+    fireEvent.click(screen.getByText('佐藤 花子'))
+    await waitFor(() => {
+      expect(screen.getByText('口コミ詳細')).toBeInTheDocument()
+    })
   })
 })
