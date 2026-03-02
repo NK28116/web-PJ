@@ -10,6 +10,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	"golang.org/x/crypto/bcrypt"
 
 	"webSystemPJ/backend/internal/config"
 	"webSystemPJ/backend/internal/handlers"
@@ -43,8 +44,12 @@ func testConfig() *config.Config {
 func TestLogin_Success(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	// bcrypt hash of "password123"
-	hashedPassword := "$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy"
+	// Generate bcrypt hash of "password123" at test runtime
+	hashed, err := bcrypt.GenerateFromPassword([]byte("password123"), bcrypt.MinCost)
+	if err != nil {
+		t.Fatalf("failed to hash password: %v", err)
+	}
+	hashedPassword := string(hashed)
 
 	mockRepo := &mockUserRepository{
 		user: &models.User{

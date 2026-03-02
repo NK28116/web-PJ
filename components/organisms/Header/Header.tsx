@@ -4,6 +4,7 @@ import type { Notification } from '@/molecules/NotificationItem';
 import { LogoutModal, NotificationModal } from '@/organisms/Modal';
 import { SideMenu } from '@/organisms/SideMenu';
 import { cn } from '@/utils/cn';
+import Link from 'next/link';
 import { useRouter } from 'next/router';
 import React, { useEffect, useRef, useState } from 'react';
 import { IoMdMenu } from "react-icons/io";
@@ -225,9 +226,9 @@ export const Header: React.FC<HeaderProps> = ({
       <SideMenu isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} top={headerHeight}>
         <div>
           <ul className="grid grid-cols-1 divide-y divide-black border-wyze-primary border-2 h-min ">
-            <li><a href="/current-features" className="text-lg m-4">プラン確認・変更</a></li>
-            <li><a href="/billing" className="text-lg m-4">お支払い情報</a></li>
-            <li><a href="/account" className="text-lg m-4">店舗・アカウント情報</a></li>
+            <li><Link href="/current-features" className="text-lg m-4">プラン確認・変更</Link></li>
+            <li><Link href="/billing" className="text-lg m-4">お支払い情報</Link></li>
+            <li><Link href="/account" className="text-lg m-4">店舗・アカウント情報</Link></li>
             <li><a href="/help" className="text-lg m-4">サポート・ヘルプ</a></li>
             <li>
               <button
