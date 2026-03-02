@@ -2,7 +2,7 @@ import { Spinner } from '@/atoms/Spinner';
 import { useRouter } from 'next/router';
 import React, { useEffect, useState } from 'react';
 
-const PUBLIC_PATHS = ['/', '/login', '/signup'];
+const PUBLIC_PATHS = ['/', '/signup'];
 
 interface AuthGuardProps {
   children: React.ReactNode;
@@ -18,8 +18,10 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({ children, pathname }) => {
     const isPublic = PUBLIC_PATHS.includes(pathname);
 
     if (!isPublic && !token) {
-      router.replace('/login');
-    } else if ((pathname === '/signup' || pathname === '/login') && token) {
+      router.replace('/');
+    } else if (pathname === '/signup' && token) {
+      // 認証済みユーザーが /signup にアクセスした場合のみリダイレクト
+      // / (SplashScreen) は onComplete で認証チェックするためリダイレクトしない
       router.replace('/home');
     } else {
       setChecked(true);
