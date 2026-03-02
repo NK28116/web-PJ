@@ -1,12 +1,10 @@
-import { LoginTemplate } from '@/templates/LoginTemplate';
 import { SplashScreen } from '@/templates/SplashScreen';
 import { useAuth } from '@/hooks/useAuth';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
-import React, { useState } from 'react';
+import React from 'react';
 
 export default function IndexPage() {
-  const [showSplash, setShowSplash] = useState(true);
   const { isAuthenticated } = useAuth();
   const router = useRouter();
 
@@ -14,7 +12,7 @@ export default function IndexPage() {
     if (isAuthenticated()) {
       router.push('/home');
     } else {
-      setShowSplash(false);
+      router.push('/login');
     }
   };
 
@@ -36,11 +34,7 @@ export default function IndexPage() {
           rel="stylesheet"
         />
       </Head>
-      {showSplash ? (
-        <SplashScreen onComplete={handleSplashComplete} />
-      ) : (
-        <LoginTemplate />
-      )}
+      <SplashScreen onComplete={handleSplashComplete} />
     </>
   );
 }

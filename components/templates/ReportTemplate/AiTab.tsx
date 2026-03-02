@@ -1,4 +1,4 @@
-import { EmptyState } from '@/organisms/Report';
+import { EmptyState } from '@/organisms/Report/shared';
 
 const AiTab = () => {
   return (

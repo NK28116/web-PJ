@@ -31,6 +31,12 @@ jest.mock('@/organisms/Report', () => ({
   DonutChart: ({ segments }: { segments: Array<{ value: number; color: string }> }) => (
     <div data-testid="donut-chart" data-segments={segments.length} />
   ),
+  BarChart: ({ data }: { data: Array<{ label: string; value: number }> }) => (
+    <div data-testid="bar-chart" data-items={data.length} />
+  ),
+  LineChart: ({ labels }: { labels: string[] }) => (
+    <div data-testid="line-chart" data-labels={labels.length} />
+  ),
 }));
 
 import ReportTab from '../components/templates/ReportTemplate/ReportTab';
