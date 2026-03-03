@@ -1,5 +1,37 @@
 # 変更ログ
 
+## 2026-03-04 (続き2)
+
+### 概要
+`origin/main` とのコンフリクトを解消。バックエンドファイルの復元と `useAuth.ts` の複数ユーザー対応を実施。
+
+### 詳細
+
+#### コンフリクト解消 (Blocker対応)
+- **[Claude]** `docs/task-to-claude.md` — HEAD版（複数アカウント要件）を採用し、コンフリクト解消
+- **[Claude]** `docs/change-log.md` — HEAD版（最新エントリあり）を採用し、コンフリクト解消
+- **[Claude]** `components/templates/LoginTemplate/index.tsx` — HEAD版を採用。`handleDevLoginAs` の `async`/`await` を除去（`useAuth.login` が同期関数のため）
+- **[Claude]** `.github/workflows/ci.yml`, `backend/Dockerfile`, `docker-compose.yml` — modify/delete コンフリクトで我々の版を維持
+
+#### バックエンドファイルの復元
+- **[Claude]** origin/main のリバートコミットにより削除された以下のファイルを `HEAD` から復元:
+  - `backend/cmd/seed/main.go`, `backend/cmd/server/main.go`
+  - `backend/internal/**` (config, handlers, middleware, models, repository)
+  - `backend/migrations/**` (4ファイル)
+  - `backend/test/data_isolation_test.go`
+  - `Dockerfile`, `.env.example`, `.eslintrc.json`, `pages/login.tsx`
+
+#### hooks/useAuth.ts — 複数モックユーザー対応
+- **[Claude]** `hooks/useAuth.ts`
+  - `MOCK_ADMIN`, `MOCK_USER_A`, `MOCK_USER_B` のインポートを追加
+  - `VALID_MOCK_USERS` 配列を定義し、`login()` 関数を `find()` で全モックユーザーと照合する実装に変更
+  - 以前は `MOCK_USER` のみ受け付けていたが、管理者・一般ユーザーA/Bでもログイン可能に
+
+#### 検証
+- `npm test -- --ci --passWithNoTests` にて全 89 テスト PASS を確認
+
+---
+
 ## 2026-03-04 (続き)
 
 ### 概要
