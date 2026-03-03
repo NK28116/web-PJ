@@ -90,15 +90,14 @@ jobs:
           go-version: '1.22'
           cache: true
           cache-dependency-path: backend/go.sum
-      - name: Run migrations
+      - name: Run migrations (down → up)
         env:
           DATABASE_URL: postgres://postgres:postgres@localhost:5432/test_db?sslmode=disable
         run: |
           cd backend
           go mod download
-          go run ./cmd/server/main.go &
-          sleep 5
-          kill %1 || true
+          go run ./cmd/migrate/main.go down || true
+          go run ./cmd/migrate/main.go up
       - name: Run integration tests
         env:
           DATABASE_URL: postgres://postgres:postgres@localhost:5432/test_db?sslmode=disable

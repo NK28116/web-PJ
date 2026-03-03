@@ -1,5 +1,5 @@
 import { useAuth } from '@/hooks/useAuth';
-import { MOCK_USER } from '@/test/mock/authMockData';
+import { MOCK_ADMIN, MOCK_USER, MOCK_USER_A, MOCK_USER_B } from '@/test/mock/authMockData';
 import { useRouter } from 'next/router';
 import React, { useState } from 'react';
 
@@ -13,6 +13,13 @@ export const LoginTemplate: React.FC = () => {
 
   const handleDevLogin = async () => {
     const success = await login(MOCK_USER.email, MOCK_USER.password);
+    if (success) {
+      router.push('/home');
+    }
+  };
+
+  const handleDevLoginAs = async (email: string, password: string) => {
+    const success = await login(email, password);
     if (success) {
       router.push('/home');
     }
@@ -109,12 +116,32 @@ export const LoginTemplate: React.FC = () => {
 
       {/* 開発用ログインボタン（開発環境のみ表示） */}
       {process.env.NODE_ENV === 'development' && (
-        <button
-          onClick={handleDevLogin}
-          className="w-[85%] bg-gray-800 text-yellow-300 text-sm font-bold py-[10px] rounded-[5px] border border-dashed border-yellow-400 mb-6"
-        >
-          [DEV] 開発用ログイン
-        </button>
+        <div className="w-[85%] flex flex-col gap-2 mb-6">
+          <button
+            onClick={handleDevLogin}
+            className="w-full bg-gray-800 text-yellow-300 text-sm font-bold py-[10px] rounded-[5px] border border-dashed border-yellow-400"
+          >
+            [DEV] 開発用ログイン
+          </button>
+          <button
+            onClick={() => handleDevLoginAs(MOCK_ADMIN.email, MOCK_ADMIN.password)}
+            className="w-full bg-gray-800 text-yellow-300 text-sm font-bold py-[10px] rounded-[5px] border border-dashed border-yellow-400"
+          >
+            [DEV] 開発用ログイン(管理者)
+          </button>
+          <button
+            onClick={() => handleDevLoginAs(MOCK_USER_A.email, MOCK_USER_A.password)}
+            className="w-full bg-gray-800 text-yellow-300 text-sm font-bold py-[10px] rounded-[5px] border border-dashed border-yellow-400"
+          >
+            [DEV] 開発用ログイン(一般ユーザーA)
+          </button>
+          <button
+            onClick={() => handleDevLoginAs(MOCK_USER_B.email, MOCK_USER_B.password)}
+            className="w-full bg-gray-800 text-yellow-300 text-sm font-bold py-[10px] rounded-[5px] border border-dashed border-yellow-400"
+          >
+            [DEV] 開発用ログイン(一般ユーザーB)
+          </button>
+        </div>
       )}
     </div>
   );
