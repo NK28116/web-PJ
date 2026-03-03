@@ -10,6 +10,17 @@ import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import React from 'react';
 
+// JSDOM環境でRechartsのResponsiveContainerがサイズ計算できない問題を回避するモック
+jest.mock('recharts', () => {
+  const OriginalModule = jest.requireActual('recharts');
+  return {
+    ...OriginalModule,
+    ResponsiveContainer: ({ children }: { children: React.ReactNode }) => (
+      <div style={{ width: 800, height: 800 }}>{children}</div>
+    ),
+  };
+});
+
 // Textコンポーネントのモック（エイリアスパスを使用）
 jest.mock('@/atoms/Text', () => ({
   Text: ({ children, className }: { children: React.ReactNode; className?: string }) => (
@@ -31,12 +42,16 @@ jest.mock('@/organisms/Report', () => ({
   DonutChart: ({ segments }: { segments: Array<{ value: number; color: string }> }) => (
     <div data-testid="donut-chart" data-segments={segments.length} />
   ),
-  BarChart: ({ data }: { data: Array<{ label: string; value: number }> }) => (
-    <div data-testid="bar-chart" data-items={data.length} />
-  ),
-  LineChart: ({ labels }: { labels: string[] }) => (
-    <div data-testid="line-chart" data-labels={labels.length} />
-  ),
+  BarChart: () => <div data-testid="bar-chart-mock" />,
+  LineChart: () => <div data-testid="line-chart-mock" />,
+  // isEmptyを実際のロジックでモック
+  isEmpty: (obj: any) => {
+    if (obj === null || obj === undefined) return true;
+    if (Array.isArray(obj)) return obj.length === 0;
+    if (typeof obj === 'object') return Object.keys(obj).length === 0;
+    return false;
+  },
+  EmptyState: () => <div data-testid="empty-state" />,
 }));
 
 import ReportTab from '../components/templates/ReportTemplate/ReportTab';
@@ -94,12 +109,12 @@ describe('ReportTab Component - Data Rendering', () => {
     // 統合アクション内訳セクション
     expect(screen.getByText('統合アクション内訳')).toBeInTheDocument();
 
-    // 凡例が表示されること
-    expect(screen.getByText('Google')).toBeInTheDocument();
-    expect(screen.getByText('Instagram')).toBeInTheDocument();
+    // 凡例が表示されること（複数箇所に同テキストが存在するためgetAllByTextを使用）
+    expect(screen.getAllByText('Google').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Instagram').length).toBeGreaterThan(0);
 
     // 各凡例の値が表示されること（同じ値が複数箇所に表示されるためgetAllByTextを使用）
-    expect(screen.getByText('1,400')).toBeInTheDocument();
+    expect(screen.getAllByText('1,400').length).toBeGreaterThan(0);
     expect(screen.getAllByText('1,205').length).toBeGreaterThan(0);
   });
 

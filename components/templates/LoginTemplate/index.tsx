@@ -11,21 +11,21 @@ export const LoginTemplate: React.FC = () => {
   const { login } = useAuth();
   const router = useRouter();
 
-  const handleDevLogin = async () => {
-    const success = await login(MOCK_USER.email, MOCK_USER.password);
+  const handleDevLogin = () => {
+    const success = login(MOCK_USER.email, MOCK_USER.password);
     if (success) {
       router.push('/home');
     }
   };
 
-  const handleDevLoginAs = async (email: string, password: string) => {
-    const success = await login(email, password);
+  const handleDevLoginAs = (email: string, password: string) => {
+    const success = login(email, password);
     if (success) {
       router.push('/home');
     }
   };
 
-  const handleLogin = async () => {
+  const handleLogin = () => {
     setErrorMessage('');
 
     if (!email || !password) {
@@ -33,7 +33,7 @@ export const LoginTemplate: React.FC = () => {
       return;
     }
 
-    const success = await login(email, password);
+    const success = login(email, password);
     if (success) {
       router.push('/home');
     } else {
