@@ -1,10 +1,12 @@
-import { MOCK_USER } from '@/test/mock/authMockData';
+import { MOCK_ADMIN, MOCK_USER, MOCK_USER_A, MOCK_USER_B } from '@/test/mock/authMockData';
 import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
 
 const AUTH_TOKEN_KEY = 'auth_token';
 const USER_EMAIL_KEY = 'user_email';
 const USER_WYZE_ID_KEY = 'user_wyze_id';
+
+const VALID_MOCK_USERS = [MOCK_USER, MOCK_ADMIN, MOCK_USER_A, MOCK_USER_B];
 
 export interface User {
   email: string | null;
@@ -24,11 +26,14 @@ export const useAuth = () => {
 
   const login = (email: string, password: string): boolean => {
     if (!email || !password) return false;
-    if (email !== MOCK_USER.email || password !== MOCK_USER.password) return false;
-    
+    const matched = VALID_MOCK_USERS.find(
+      (u) => u.email === email && u.password === password
+    );
+    if (!matched) return false;
+
     localStorage.setItem(AUTH_TOKEN_KEY, 'mock_token');
     localStorage.setItem(USER_EMAIL_KEY, email);
-    localStorage.setItem(USER_WYZE_ID_KEY, 'mock_user_id'); // ログイン時は固定ID
+    localStorage.setItem(USER_WYZE_ID_KEY, 'mock_user_id');
     setUser({ email, wyzeId: 'mock_user_id' });
     return true;
   };
