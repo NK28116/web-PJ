@@ -1,5 +1,74 @@
 # 変更ログ
 
+## 2026-03-04 (続き)
+
+### 概要
+開発用ログインショートカットを3アカウント分追加。
+
+### 詳細
+
+#### test/mock/authMockData.ts — シードアカウントの認証情報を追加
+- **[Claude]** `test/mock/authMockData.ts`
+  - `MOCK_ADMIN`（admin@example.com / Admin1234!）を追加
+  - `MOCK_USER_A`（usera@example.com / UserA1234!）を追加
+  - `MOCK_USER_B`（userb@example.com / UserB1234!）を追加
+  - `backend/cmd/seed/main.go` のシードデータと一致させるコメントを付与
+
+#### components/templates/LoginTemplate/index.tsx — 開発用ログインボタンを3つ追加
+- **[Claude]** `components/templates/LoginTemplate/index.tsx`
+  - インポートに `MOCK_ADMIN`, `MOCK_USER_A`, `MOCK_USER_B` を追加
+  - `handleDevLoginAs(email, password)` 汎用ヘルパー関数を追加
+  - `process.env.NODE_ENV === 'development'` ブロック内に3ボタンを追加:
+    - `[DEV] 開発用ログイン(管理者)` → admin@example.com
+    - `[DEV] 開発用ログイン(一般ユーザーA)` → usera@example.com
+    - `[DEV] 開発用ログイン(一般ユーザーB)` → userb@example.com
+  - 既存の `[DEV] 開発用ログイン` ボタンと同一スタイル（`bg-gray-800 text-yellow-300 border-dashed border-yellow-400`）
+  - ボタン群を `flex flex-col gap-2` の `div` でまとめて整列
+
+---
+
+## 2026-03-04
+
+### 概要
+複数アカウント環境・基盤要件への対応 (`docs/task-to-claude.md` 指示書に基づく)。
+要件1〜3の実装は確認済み。シード自動実行（seed サービス追加）と CI マイグレーション改善を実装した。
+
+### 詳細
+
+#### 確認のみ（変更なし）
+- **要件1 (複数アカウント・データ分離)**: JWT厳格化・`user_id`フィルタリング・権限管理は実装済み ✅
+- **要件2 (Docker Compose基盤)**: PostgreSQL 15・永続ボリューム・ヘルスチェック・`depends_on: service_healthy` は実装済み ✅
+- **要件2 (開発用ログインボタン)**: `LoginTemplate/index.tsx` にて `NODE_ENV === 'development'` 制御で実装済み ✅
+- **要件3 (golang-migrate)**: サーバー起動時の `runMigrations()` とマイグレーションファイルは実装済み ✅
+
+#### backend/cmd/migrate/main.go — 新規作成
+- **[Claude]** `backend/cmd/migrate/main.go`
+  - `up`/`down` 引数を受け取る専用マイグレーション CLI ツールを作成
+  - CI での down → up サイクルに使用（`go run ./cmd/migrate/main.go down || true && go run ./cmd/migrate/main.go up`）
+  - `golang-migrate` ライブラリを直接使用し、外部ツールのインストール不要
+
+#### backend/Dockerfile — wget と migrate バイナリを追加
+- **[Claude]** `backend/Dockerfile`
+  - `apk add wget` を追加: backend コンテナ healthcheck (`wget http://localhost:8080/health`) に対応
+  - `go build -o /app/migrate ./cmd/migrate` を追加してバイナリをコピー
+
+#### docker-compose.yml — backend healthcheck と seed サービスを追加
+- **[Claude]** `docker-compose.yml`
+  - `backend` サービスに healthcheck を追加: `wget -qO- http://localhost:8080/health`（10s間隔、start_period 15s）
+  - `seed` サービスを新規追加:
+    - `backend: condition: service_healthy` に依存（マイグレーション完了・サーバー起動後にシードを実行）
+    - `command: ["./seed"]` で既存の seed バイナリを実行
+    - `restart: "no"` で1回のみ実行
+
+#### .github/workflows/ci.yml — Run migrations ステップを改善
+- **[Claude]** `.github/workflows/ci.yml`
+  - `backend-integration-test` ジョブの "Run migrations" ステップを修正
+  - **変更前**: `go run ./cmd/server/main.go & sleep 5; kill %1 || true`（`sleep 5` 依存で信頼性が低い）
+  - **変更後**: `go run ./cmd/migrate/main.go down || true` → `go run ./cmd/migrate/main.go up`
+  - down → up サイクルでクリーンな DB 状態を保証してから統合テストを実行
+
+---
+
 ## 2026-03-02 (2)
 
 ### 概要
