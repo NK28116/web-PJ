@@ -8,7 +8,7 @@ interface ReviewListProps {
   onReply: (review: Review) => void;
 }
 
-export const ReviewList: React.FC<ReviewListProps> = ({ reviews, onDetail }) => {
+export const ReviewList: React.FC<ReviewListProps> = ({ reviews, onDetail, onReply }) => {
   if (reviews.length === 0) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center text-center py-12 mt-4 bg-[#F9FAFB] rounded-lg border border-dashed border-gray-300">
@@ -81,6 +81,21 @@ export const ReviewList: React.FC<ReviewListProps> = ({ reviews, onDetail }) => 
             <p className="text-sm leading-[1.6] text-[#333] line-clamp-3">
               {review.comment}
             </p>
+
+            {/* 返信ボタン */}
+            {review.replyStatus === 'unreplied' && (
+              <div className="flex justify-end mt-2">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onReply(review);
+                  }}
+                  className="bg-blue-500 text-white px-4 py-1 rounded hover:bg-blue-600"
+                >
+                  返信する
+                </button>
+              </div>
+            )}
           </div>
         </div>
       ))}
