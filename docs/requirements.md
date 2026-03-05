@@ -1,221 +1,93 @@
-# 要件
+# プロジェクト要件定義書 (Wyze System)
 
-components/templates/ReviewTemplate/ReviewTemplate.tsx
+## 1. モノレポ構成 (Directory Structure)
+フロントエンドとバックエンドを一元管理し、開発効率と型定義の共有（将来的な検討）を最適化する。
 
----
-
-## 機能要件
-
-本実装はモックアップ完成を目的とする。
-外部API接続は行わない。
-
----
-
-### 1. 上部サマリー表示（モック算出）
-
-表示項目：
-
-- 未返信口コミ数
-- 総合評価（★画像＋数値）
-- 返信率（%）
-- 平均返信時間（時間）
-
-算出方法：
-
-- すべてモックデータから算出
-- 平均返信時間は固定値（例：10.4時間）としてよい
-
----
-
-### 2. フィルター機能
-
-種別：
-
-- 全て
-- 返信済み
-- 未返信
-
-仕様：
-
-- 画面内ポップオーバー表示
-- 背景暗転なし
-- 選択時にリストを再描画
-- 他モーダルと同時表示しない
-
----
-
-### 3. 並び順
-
-種別：
-
-- 返信推奨順
-- 新しい順
-- 古い順
-- 評価の高い順
-- 評価の低い順
-
-仕様：
-
-- 画面内ポップオーバー表示
-- ローカルデータを並び替える
-
-返信推奨順ロジック（モック固定）：
-
-1. 未返信を上位
-2. 評価の低い順
-3. 投稿日が新しい順
-
----
-
-### 4. 口コミリスト表示
-
-表示内容：
-
-- ユーザー名
-- 投稿日
-- 評価（画像表示）
-- コメント冒頭（2行まで）
-- ステータスタグ（未返信：赤 / 返信済み：緑）
-
-評価表示仕様：
-
-- rating は 1〜5 の整数のみ
-- 小数は扱わない
-- 表示は画像で行う
-
-使用画像：
-test/mock/rate/
-- rate1st.png
-- rate2nd.png
-- rate3rd.png
-- rate4th.png
-- rate5th.png
-
-一覧・詳細で同一画像を使用する
-
-#### 3.4 複数アカウント開発用アカウントログインボタン
-
-seedで作ったアカウントでのログインを楽にできる様に開発用ログインボタンを作る
-
-- 管理者アカウント
-- 一般ユーザーA
-- 一般ユーザーB
-
----
-
-### 5. 口コミ詳細モーダル
-
-- フルスクリーンモーダル
-- 背景暗転あり
-- 閉じるボタンあり
-
-表示内容：
-
-- ユーザー名
-- 投稿日
-- 評価画像
-- コメント全文
-- 画像一覧（横スクロール可）
-
----
-
-### 6. 画像タップ
-
-- ルート遷移とする（例：/review/image/[id]）
-- モーダルは使用しない
-- ブラウザバックで口コミ詳細へ戻る
-
----
-
-### 7. 返信機能（モック）
-
-口コミ詳細内に返信入力欄を表示。
-
-機能：
-
-- テキスト入力
-- 下書き保存（ローカルstate保持）
-- 「返信を投稿する」ボタン
-
-投稿仕様：
-
-- ローカルデータの replyStatus を 'replied' に変更
-- replyText を保存
-- 投稿後は一覧に戻る
-- ステータス表示を即時更新
-
----
-
-## 非機能要件
-
-### UI
-
-- 見た目は docs/figma/review*.svg に一致させる
-- モーダル表示時は背景半透明暗転
-- モーダル内部はスクロール可能
-- モーダル多重ネストは禁止
-
----
-
-## データ仕様（モック）
-
-```ts
-type Review = {
-  id: string
-  userName: string
-  rating: 1 | 2 | 3 | 4 | 5
-  comment: string
-  images: string[]
-  createdAt: string
-  replyStatus: 'replied' | 'unreplied'
-  replyText?: string
-  replyCreatedAt?: string
-}
+```text
+/ (root)
+├── frontend/             # Next.js (TypeScript)
+│   ├── components/       # UI Components
+│   ├── pages/            # Pages Router (API Routes含む)
+│   └── package.json
+├── backend/              # Go (Gin)
+│   ├── cmd/
+│   │   ├── server/       # APIサーバーエントリーポイント
+│   │   └── migrate/      # golang-migrateによるDB移行ツール
+│   ├── internal/         # ビジネスロジック, Repository, Models
+│   ├── migrations/       # SQLマイグレーションファイル (*.sql)
+│   └── go.mod
+├── docs/                 # 要件・設計ドキュメント
+├── docker-compose.yml    # ローカル開発環境 (DB, Backend, Frontend)
+└── .github/workflows/    # CI/CD (Path-based trigger対応)
 ```
 
-データは test/mock/reviewMock.ts に定義する。
-- モック口コミ件数は12件固定とする
+---
 
-### 口コミリスト表示（追記）
+## 2. 環境変数・シークレット管理 (Strict Secret Management)
+機密情報の漏洩を防止するため、以下の分類と管理手法を徹底する。
 
-- ページングは実装しない
-- 無限スクロールは実装しない
-- すべてのモックデータを一括表示する
+### 2.1 分類基準
+| 分類 | 内容 | 管理手法 |
+| :--- | :--- | :--- |
+| **Public Config** | 環境名、ベースURL等 | `.env` (Local) / Cloud Run Env |
+| **Secret Info** | DBパスワード、APIキー、OAuth Secret等 | **Secret Manager (GCP)** / `.env` (Local) |
+| **Public API Keys** | Frontend用公開APIキー | `NEXT_PUBLIC_` プレフィックスを付与 |
 
-### 口コミ詳細内の画像表示仕様
+### 2.2 変数管理ルール
+1.  **Local/Docker**: `.env` を各ディレクトリ配下に作成（**Git管理禁止**）。`.env.example` を提供する。
+2.  **GCP**: **Secret Manager** で一元管理。Cloud Run デプロイ時に環境変数としてマウントする。
+3.  **主要変数リスト**:
+    - `DATABASE_URL` (Secret): DB接続文字列
+    - `JWT_SECRET` (Secret): 認証署名用
+    - `GOOGLE_CLIENT_ID/SECRET` (Secret有): GBP連携用
+    - `INSTAGRAM_CLIENT_ID/SECRET` (Secret有): Instagram連携用
+    - `STRIPE_SECRET_KEY/WEBHOOK_SECRET` (Secret): 決済基盤用
 
-- 画像は最大3枚まで横並びで表示する
-- 4枚以上ある場合は、3枚目の右下に「+X枚」と表示する
-  （X = 総枚数 - 3）
-- 画像をタップすると画像単体画面へ遷移する
-- モックデータには画像3枚以上の口コミを含める
+---
 
-### デモ安定仕様
+## 3. 事業・機能要件
 
-- モックデータは固定値とする（ランダム生成禁止）
-- ページリロードで初期状態に戻る
-- エラー状態は実装しない
-- ローディング表示は実装しない
+### 3.1 外部プラットフォーム連携 (基本事業)
+SNS・店舗情報の取得と投稿を核とする価値提供。
+- **Instagram連携 (Graph API)**: 投稿・写真・動画の取得、フィード投稿の予約・実行、インサイト分析。
+- **Google Business Profile (GBP) 連携**: 口コミ取得・返信、店舗写真（内観・外観）の管理・投稿、MEO順位追跡。
+- **共通基盤**: OAuthアクセストークンの暗号化保存と自動リフレッシュ。
 
-- 返信投稿後は口コミ詳細モーダルを閉じる
-- 一覧表示で即時ステータス更新を反映する
+### 3.2 課金・サブスクリプション (Stripe連携)
+- **Stripe Checkout**: 自前でカード情報を保持せず、安全な決済ページへ委譲。
+- **Webhook同期**: 支払成功・失敗、解約、プラン変更を即座に内部DBの権限フラグに反映。
+- **カスタマーポータル**: ユーザー自身によるプラン変更、解約、領収書発行を可能にする。
 
-### 口コミ画像仕様
+---
 
-使用画像ディレクトリ：
-test/mock/shop-review/
+## 4. DB構築・検証ステップ (Local → Docker → Cloud)
 
-- 画像は上記ディレクトリ内のファイルのみ使用する
-- 外部画像URLは使用しない
+### STEP 1: ローカルDB (Host OS)
+- **環境**: ホストOS上の PostgreSQL 16
+- **確認**: `backend/migrations` のSQLが `up` 可能であり、Go APIからCRUDが動作すること。
 
-画像構成：
+### STEP 2: Docker環境 (Container)
+- **環境**: `docker-compose.yml` で `db` と `backend` を同時起動。
+- **確認**: `docker-compose up` だけでDB起動・マイグレーション・API起動が完結すること。
 
-- モック口コミ総数は12件固定
-- 画像なしの口コミを含める
-- 画像1枚の口コミを含める
-- 画像3枚の口コミを含める
-- 画像4枚以上の口コミを含める
+### STEP 3: クラウドDB (GCP Cloud SQL)
+- **環境**: GCP Cloud SQL (PostgreSQL 16) / Private IP構成。
+- **確認**: Cloud RunからSecret Managerの情報を使い、Cloud SQL Connector経由で接続できること。
 
-4枚以上ある場合：
-- 画面上は最大3枚まで表示
-- 3枚目右下に「+X枚」と表示する
+---
+
+## 5. インフラ・CI/CD 要件
+
+### 5.1 モノレポ対応 CI/CD (GitHub Actions)
+- **Path-based Trigger**: 変更されたディレクトリ（frontend/backend）のみビルド・テストを実行。
+- **CDフロー**: Dockerビルド & Push → Cloud Run デプロイ → DBマイグレーション実行。
+- **シークレット注入**: デプロイ時に `--set-secrets` フラグで Cloud Run と Secret Manager を紐付ける。
+
+---
+
+## 6. 非機能要件
+- **セキュリティ**: 
+  - DBのPublic IP無効化、VPC経由の接続。
+  - OAuthトークンのDB内暗号化保存。
+- **コスト抑制**: Staging環境月額 $20以下（最小インスタンス0設定、DB最小構成）。
+- **パフォーマンス**: APIレスポンス 500ms以内（外部API通信時間を除く）。
