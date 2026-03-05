@@ -1,18 +1,19 @@
-FROM golang:1.22-alpine AS builder
-WORKDIR /build
-COPY go.mod ./
-RUN go mod download
-COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build -o /app/server ./cmd/server
-RUN CGO_ENABLED=0 GOOS=linux go build -o /app/seed ./cmd/seed
-RUN CGO_ENABLED=0 GOOS=linux go build -o /app/migrate ./cmd/migrate
-
-FROM alpine:3.19
-RUN apk --no-cache add ca-certificates wget
+FROM node:20-alpine AS base
 WORKDIR /app
-COPY --from=builder /app/server .
-COPY --from=builder /app/seed .
-COPY --from=builder /app/migrate .
-COPY --from=builder /build/migrations ./migrations
-EXPOSE 8080
-CMD ["./server"]
+COPY package*.json ./
+RUN npm ci
+
+FROM base AS builder
+COPY . .
+RUN mkdir -p public
+RUN npm run build
+
+FROM node:20-alpine AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/package*.json ./
+RUN npm ci --only=production
+EXPOSE 3000
+CMD ["npm", "start"]
