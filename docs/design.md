@@ -1,46 +1,86 @@
 # 設計書 (Design Document)
 
-## 1. 基本設計 (Basic Design)
+## 1. モノレポ基盤 & ローカルDB構築 (Phase 1 & 2)
+- **要求**: 開発効率の最大化と、本番環境に近いローカル開発環境の提供（`docs/requirements.md` 1, 4項）
 
-### 1.1 概要と目的
-`docs/requirements.md` に基づき、アプリケーションの認証基盤（ログイン・サインアップ・ログアウト・セッション管理）を実装する。
-既存の React Native 資産 (`stash/Login`) を Next.js/Tailwind CSS 環境に最適化して移植し、フロントエンド完結型の認証フローを実現する。
+### 基本設計
+- **実装方針・概要**: Next.js (frontend) と Go (backend) を一つのリポジトリで管理し、Docker を用いて PostgreSQL 16 を含む一貫した環境を構築する。
+- **技術・アーキテクチャ**:
+  - Frontend: Next.js (TypeScript), Tailwind CSS
+  - Backend: Go (Gin), golang-migrate
+  - Infra: Docker Compose (db, backend, frontend)
+- **異常系・リスク**: Dockerコンテナ間通信の失敗、マイグレーションの不整合。
 
-### 1.2 アーキテクチャ方針
-- **Client-Side Auth**: 認証状態は `localStorage` の `auth_token` で管理する。
-- **Routing Security**: `AuthGuard` により、未認証ユーザーの保護リソースへのアクセスを制限する。
-- **UI Modernization**: モバイルアプリ特有のピッカーやステップ表示を、Web 標準かつレスポンシブな UI へ変換する。
+### 詳細設計
+- **実装の概要**: モノレポ構造の雛形作成、Docker設定ファイルの記述、JWT認証の初期実装。
+- **コミットメッセージ**: `feat: setup monorepo foundation with docker and postgres`
+- **行数目安**: 150~200行程度 (Size: L)
 
-### 1.3 コンポーネント構成
+---
 
-| コンポーネント名 | 種類 | 配置場所 | 責務 |
-| :--- | :--- | :--- | :--- |
-| `AuthGuard` | Wrapper | `components/auth/AuthGuard` | アプリケーション全体の認証状態を監視し、ルーティング制限を行う。 |
-| `LoginTemplate` | Template | `components/templates/LoginTemplate` | ログインフォームの管理とモック認証。 |
-| `SignUpTemplate` | Template | `components/templates/SignUpTemplate` | ステップ形式の新規登録フローの管理。 |
-| `StepIndicator` | Atom/Molecule | `components/atoms/StepIndicator` | サインアップの進捗状況を視覚的に表示するバー。 |
-| `LogoutModal` | Organism | `components/organisms/Modal` | ログアウト確認とセッション破棄。 |
+## 2. GCPインフラ & CI/CD パイプライン (Phase 3 & 4)
+- **要求**: 安全なデプロイフローと、機密情報の適切な管理（`docs/requirements.md` 2, 5項）
 
-## 2. 詳細設計 (Detailed Design)
+### 基本設計
+- **実装方針・概要**: GitHub Actions を利用し、特定のパスへの変更時に Cloud Run への自動デプロイを行う。機密情報は Secret Manager で一元管理する。
+- **技術・アーキテクチャ**:
+  - CI/CD: GitHub Actions (Path-based trigger)
+  - Cloud: Cloud Run, Artifact Registry, Cloud SQL (Private IP)
+  - Security: GCP Secret Manager
+- **異常系・リスク**: デプロイ時のシークレット注入失敗、VPCネットワーク接続エラー。
 
-### 2.1 認証・セッション管理
-- **ログイン成功条件**: メールアドレスとパスワードが非空であること。
-- **永続化**: `localStorage.setItem('auth_token', ...)`
-- **ログアウト**: `localStorage.removeItem('auth_token')`
+### 詳細設計
+- **実装の概要**: CI/CD ワークフローの YAML 作成、GCP サービスアカウント設定、Secret Manager 連携コードの実装。
+- **コミットメッセージ**: `ci: add github actions for cloud run and secret manager integration`
+- **行数目安**: 100~150行程度 (Size: M)
 
-### 2.2 サインアップ・ステップ管理
-- **Step 1**: 登録方法の選択（LINE, Google 等 - UIのみ）
-- **Step 2**: メールアドレス入力・認証（モック）
-- **Step 3**: 登録完了表示
-- **UI置換**:
-    - `CustomWheelPicker` は標準の `<select>` または入力フィールドに置き換える。
-    - ステップバーは `flex` レイアウトを用いたインジケーターとして実装する。
+---
 
-### 2.3 ルーティングガードロジック
-- `pages/_app.tsx` で `AuthGuard` を使用。
-- ログイン/サインアップページ以外の全ページでトークンの存在を必須とする。
+## 3. 外部プラットフォーム連携 (Phase 5)
+- **要求**: Instagram および Google Business Profile とのデータ連携（`docs/requirements.md` 3.1項）
 
-### 2.4 デザイン仕様
-- **カラーパレット**: 背景 `#1A1A1A`、プライマリ `#00A48D`。
-- **ログイン画面**: `docs/figma/login.svg` に準拠。
-- **ログアウトモーダル**: `docs/figma/logoutModal.svg` に準拠。
+### 基本設計
+- **実装方針・概要**: OAuth 認可フローを構築し、各プラットフォームの API (Graph API, Google My Business API) を叩く共通基盤を実装する。
+- **技術・アーキテクチャ**:
+  - Auth: OAuth 2.0 (Authorization Code Flow)
+  - Encryption: AES-256 によるトークン暗号化保存
+- **異常系・リスク**: アクセストークンの期限切れ、レートリミット到達、API仕様変更。
+
+### 詳細設計
+- **実装の概要**: 各プラットフォーム用の OAuth ハンドラー作成、暗号化/復号化ユーティリティの実装、モックAPIによる疎通確認。
+- **コミットメッセージ**: `feat: implement oauth base and platform integration for instagram/google`
+- **行数目安**: 150~200行程度 (Size: L)
+
+---
+
+## 4. 課金・サブスクリプション基盤 (Phase 6)
+- **要求**: Stripe を用いた決済フローと契約管理の自動化（`docs/requirements.md` 3.2項）
+
+### 基本設計
+- **実装方針・概要**: Stripe Checkout をフロントエンドから呼び出し、サーバー側で Webhook を受信してユーザーの権限状態を更新する。
+- **技術・アーキテクチャ**:
+  - Payment: Stripe Checkout, Stripe Webhook
+  - State: DBによるプラン・フラグ管理
+- **異常系・リスク**: Webhook 受信失敗による契約状態の不整合、二重決済。
+
+### 詳細設計
+- **実装の概要**: Stripe 連携用の API エンドポイント作成、Webhook シグネチャ検証の実装、契約状態更新ロジックの実装。
+- **コミットメッセージ**: `feat: integrate stripe checkout and webhook for subscription management`
+- **行数目安**: 150~200行程度 (Size: L)
+
+---
+
+## 5. 認証・UI設計 (Phase 1 & 7)
+- **要求**: セキュアな認証画面と直感的なサインアップフローの提供（`docs/design.md` 1, 2項）
+
+### 基本設計
+- **実装方針・概要**: 既存資産を Next.js 向けに最適化し、レスポンシブな Tailwind CSS ベースの UI を構築する。
+- **技術・アーキテクチャ**:
+  - UI: Headless UI, Heroicons
+  - Logic: React Hook Form, Zod (バリデーション)
+- **異常系・リスク**: フォームバリデーション漏れ、セッションハイジャック。
+
+### 詳細設計
+- **実装の概要**: ログイン画面・サインアップステップの実装、AuthGuard によるルーティング制限の適用。
+- **コミットメッセージ**: `feat: implement responsive login and step-by-step signup UI`
+- **行数目安**: 150~200行程度 (Size: L)
