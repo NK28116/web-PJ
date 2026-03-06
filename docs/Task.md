@@ -1,6 +1,6 @@
 # プロジェクトタスクリスト (Wyze System)
 
-各タスクを行う前に`backend-GCP`からブランチを切って完了したらマージを繰返し
+各タスクを行う前に`backend-GCP`からブランチを切って(例: `feature/task`)完了したらbackend-GCPにマージを繰返す
 
 ## Phase 1: モノレポ基盤 & ローカルDB構築 (STEP 1)
 - [ ] モノレポ構造の確定
