@@ -1,10 +1,12 @@
-# Claudeへの実装指示書: 複数アカウント環境の構築と基盤要件の対応
+# Claudeへの実装指示書 (Task to Claude)
 
 本ドキュメントは、`docs/design.md` に基づき、各タスクの具体的な実装手順を Claude へ指示するためのものです。
-レビュー結果は `docs/review.md`に書かれています
+
 ---
 
-## 5. 実装完了後の作業 (Priority: Required)
+## Task 1: モノレポ基盤 & ローカルDB構築 (Phase 1 & 2)
+- **ステータス**: [ ] Pending
+- **設計参照**: `docs/design.md` 1項
 
 ### 実装指示
 1.  **ディレクトリ構造の作成**:
