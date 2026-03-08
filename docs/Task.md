@@ -3,26 +3,26 @@
 各タスクを行う前に`backend-GCP`からブランチを切って完了したらマージを繰返し
 
 ## Phase 1: モノレポ基盤 & ローカルDB構築 (STEP 1)
-- [ ] モノレポ構造の確定
-  - [ ] `frontend/` (Next.js) の疎通確認
-  - [ ] `backend/` (Go) のパッケージ構造整理
-- [ ] ローカルDB (Host OS) 構築
-  - [ ] PostgreSQL 16 インストール & 起動
-  - [ ] `backend/migrations` のSQL作成 (User, Auth)
-  - [ ] `golang-migrate` によるスキーマ反映確認
-- [ ] バックエンド基盤実装
-  - [ ] JWT認証ロジック実装
-  - [ ] ローカルDBへのCRUD API実装
-  - [ ] `.env.example` の作成 (Backend/Frontend)
+- [x] モノレポ構造の確定
+  - [x] `frontend/` (Next.js) の疎通確認
+  - [x] `backend/` (Go) のパッケージ構造整理
+- [x] ローカルDB (Host OS) 構築
+  - [x] PostgreSQL 16 インストール & 起動
+  - [x] `backend/migrations` のSQL作成 (User, Auth)
+  - [x] `golang-migrate` によるスキーマ反映確認
+- [x] バックエンド基盤実装
+  - [x] JWT認証ロジック実装
+  - [x] ローカルDBへのCRUD API実装
+  - [x] `.env.example` の作成 (Backend/Frontend)
 
 ## Phase 2: Docker環境構築 (STEP 2)
-- [ ] Docker化
-  - [ ] Backend: マルチステージビルド対応 Dockerfile 作成
-  - [ ] Frontend: Dockerfile 作成 (Optional)
-- [ ] `docker-compose.yml` 構築
-  - [ ] `db` (Postgres) / `backend` / `frontend` の連携設定
-  - [ ] コンテナ間ネットワークによる接続確認
-  - [ ] コンテナ起動時の自動マイグレーション設定
+- [x] Docker化
+  - [x] Backend: マルチステージビルド対応 Dockerfile 作成
+  - [x] Frontend: Dockerfile 作成 (Optional)
+- [x] `docker-compose.yml` 構築
+  - [x] `db` (Postgres) / `backend` / `frontend` の連携設定
+  - [x] コンテナ間ネットワークによる接続確認
+  - [x] コンテナ起動時の自動マイグレーション設定
 
 ## Phase 3: GCPインフラ & クラウドDB構築 (STEP 3)
 - [ ] GCPプロジェクト準備
@@ -39,8 +39,8 @@
 
 ## Phase 4: CI/CD パイプライン (GitHub Actions)
 - [ ] CI設定 (Path-based)
-  - [ ] Backend: Lint / Test / Build
-  - [ ] Frontend: Lint / Build
+  - [x] Backend: Lint / Test / Build
+  - [x] Frontend: Lint / Build
 - [ ] CD設定 (Staging)
   - [ ] Artifact Registry への Push 自動化
   - [ ] Cloud Run への自動デプロイ
