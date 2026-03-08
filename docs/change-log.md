@@ -1,5 +1,48 @@
 # 変更ログ
 
+## 2026-03-07
+
+### 概要
+Task 1 (モノレポ基盤 & ローカルDB構築) の不足実装追加、単体テスト作成・実行、手動テストの問題調査・対応。
+
+### 詳細
+
+#### backend/internal/handlers/auth.go — ユーザ登録エンドポイントを追加
+- **[Claude]** `Register` ハンドラを新規追加
+  - `POST /register` で email/password を受け取り、bcrypt でハッシュ化してユーザ作成
+  - メール重複時は 409 Conflict を返す
+  - 作成成功時は JWT トークンとユーザ情報を 201 Created で返す
+  - `loginResponse` 型を再利用し、既存の `Login` ハンドラと整合
+
+#### backend/cmd/server/main.go — /register ルートを登録
+- **[Claude]** `r.POST("/register", handlers.Register(cfg, userRepo))` を追加
+
+#### docker-compose.yml — PostgreSQL バージョンを 16 に更新
+- **[Claude]** `postgres:15` → `postgres:16` に変更（設計書 1項 の仕様に準拠）
+
+#### backend/internal/handlers/auth_test.go — Task 1 テスト観点のテストケース追加
+- **[Claude]** `flexibleMockUserRepository` を追加（FindByEmail / Create で独立したレスポンスを返すモック）
+- **[Claude]** 以下のテストケースを新規追加（全 PASS）:
+  - `TestHealth` — `/health` が 200 OK を返すか
+  - `TestRegister_Success` — 正常登録で 201 Created + JWT が返るか
+  - `TestRegister_DuplicateEmail` — 重複メールで 409 Conflict が返るか
+  - `TestRegister_InvalidRequest_ShortPassword` — 8文字未満パスワードで 400 Bad Request となるか
+  - `TestRegister_InvalidRequest_NoEmail` — email 欠落で 400 Bad Request となるか
+- **結果**: 単体テスト 13 / 13 PASS (`handlers` + `middleware`)
+
+#### 手動テスト — 問題調査・対応
+- **[Claude]** `POST /register → 404` の原因を特定: ルート追加前の古いイメージでコンテナが稼働していた
+  - `docker compose build --no-cache backend` + `docker compose up -d --no-deps backend` でリビルド・再起動
+  - 再確認: 201 Created + JWT 返却を確認
+- **[Claude]** `psql role "user" does not exist` の原因を特定: コマンドが誤ったユーザ名 (`-U user`) / DB名 (`-d db_name`) を使用
+  - 正しい接続情報は `.env.example` 記載の `POSTGRES_USER=postgres` / `POSTGRES_DB=webSystemDB`
+  - 再確認: PostgreSQL 16.13 起動・`users` / `posts` テーブルの自動作成を確認
+
+#### docs/testResult.md — テスト結果レポート新規作成
+- **[Claude]** 単体テスト 13 件の結果・手動テスト 5 件の結果・問題対応内容を記載
+
+---
+
 ## 2026-03-04 (続き2)
 
 ### 概要
