@@ -40,6 +40,7 @@ func main() {
 	r.Use(corsMiddleware())
 
 	r.GET("/health", handlers.Health)
+	r.POST("/register", handlers.Register(cfg, userRepo))
 	r.POST("/login", handlers.Login(cfg, userRepo))
 
 	protected := r.Group("/")
