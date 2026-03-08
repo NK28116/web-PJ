@@ -1,137 +1,46 @@
-# Claudeへの実装指示書 (Task to Claude)
+# Claudeへの実装指示書: Phase 3 GCPインフラ & クラウドDB構築
 
-本ドキュメントは、`docs/design.md` に基づき、各タスクの具体的な実装手順を Claude へ指示するためのものです。
+本フェーズでは、ローカル開発環境（Docker）から、GCP上のマネージド環境への移行準備および初回のデプロイ検証を行います。
+セキュリティとスケーラビリティを考慮し、Cloud SQL、Secret Manager、Cloud Run を組み合わせた構成を構築してください。
+
+## 1. GCPプロジェクト準備と Artifact Registry (Priority: High)
+- **プロジェクト設定**: `gcloud` コマンドを用いて、プロジェクトの作成（または既存の指定プロジェクトの確認）、請求設定の有効化、必要なAPI（Cloud Run, Cloud SQL Admin, Secret Manager）の有効化手順を整理してください。
+  - 本番環境 :https://console.cloud.google.com/welcome/new?authuser=6&hl=ja&project=wyze-system-2025&organizationId=0
+  - ステージング環境 :  https://console.cloud.google.com/welcome/new?authuser=6&hl=ja&project=wyze-system-2025-staging
+- **Artifact Registry**: バックエンド（Go）のDockerイメージを格納するためのリポジトリを作成してください。
+  - リポジトリ名: `web-system-pj` (またはプロジェクト名に準ずる)
+  - リージョン: `us-central1` (always freeを使用するため)
+
+## 2. Cloud SQL (PostgreSQL 16) の構築 (Priority: Highest)
+- **インスタンス作成**: 最小構成（db-f1-micro等）で Cloud SQL インスタンスを作成してください。
+  - バージョン: PostgreSQL 16
+  - ネットワーク: **Private IP** を優先し、外部からの直接アクセスを遮断してください。
+  - 接続方法: **Cloud SQL Auth Proxy / Connector** を介した接続を前提とし、認証情報の管理を徹底してください。
+- **データベース作成**: `wyze_db` (または適切な名前) のデータベースおよびアプリケーション用ユーザーを作成してください。
+
+## 3. Secret Manager による機密情報管理 (Priority: High)
+- **環境変数の登録**: 以下の機密情報を Secret Manager に登録し、Cloud Run から安全に参照できる構成にしてください。
+  - `DATABASE_URL`: `postgres://user:password@/dbname?host=/cloudsql/project:region:instance` 形式
+  - `JWT_SECRET`: 32文字以上のランダム文字列
+- **サービスアカウントの権限**: Cloud Run の実行用サービスアカウントに対して、Secret Manager の「シークレット参照者」ロールを付与してください。
+
+## 4. Cloud Run へのバックエンドデプロイ (Priority: Medium)
+- **Dockerfile の最適化**: `backend/Dockerfile` がマルチステージビルドに対応していることを確認し、Cloud Run 用の軽量なイメージをビルドしてください。
+- **デプロイコマンド**: `gcloud run deploy` コマンドを作成し、以下の設定を反映させてください。
+  - リージョン: `asia-northeast1`
+  - 環境変数のソース: Secret Manager をマウントまたは環境変数として注入
+  - VPCコネクタ: Cloud SQL (Private IP) への通信が必要な場合、サーバーレスVPCアクセスを構成してください。
+- **疎通確認**: デプロイされたエンドポイントの `/health` にアクセスし、200 OK が返ることを確認してください。
+
+---
+**セキュリティおよび運用の注意事項**:
+- Cloud SQL のパスワードや JWT_SECRET をソースコードや CI のログに出力しないでください。
+- 踏み台サーバー（Bastion）や Cloud SQL Auth Proxy を用いて、ローカルから Cloud SQL への接続（マイグレーション実行用）を確保する方法を提示してください。
+- コスト削減のため、開発環境では Cloud SQL の自動停止設定や、Cloud Run の最小インスタンス数 0 を検討してください。
 
 ---
 
-## Task 1: モノレポ基盤 & ローカルDB構築 (Phase 1 & 2)
-- **ステータス**: [ ] Pending
-- **設計参照**: `docs/design.md` 1項
+## 5. 実装・構築完了後の作業 (Priority: Required)
 
-### 実装指示
-1.  **ディレクトリ構造の作成**:
-    - ルートディレクトリに `frontend/` (Next.js) と `backend/` (Go) を作成。
-    - `backend/` 内に `cmd/server`, `internal/`, `migrations/` の構造を構築。
-2.  **Docker環境の構築**:
-    - `docker-compose.yml` を作成し、`db` (PostgreSQL 16), `backend`, `frontend` のサービスを定義。
-    - `backend` は `golang-migrate` による自動マイグレーションを含むマルチステージビルドを設定。
-3.  **バックエンド初期実装**:
-    - Gin を使用した基本的な API サーバーの構築。
-    - JWT 認証のミドルウェアと、ユーザ登録/ログインの初期エンドポイントを実装。
-4.  **データベース接続**:
-    - Go から PostgreSQL への接続、および `migrations/` 配下の SQL 実行を確認。
-
-### テスト観点
-- [ ] **API疎通**: `/health` エンドポイントが `200 OK` を返すか。
-- [ ] **認証ロジック**: 正しい資格情報で JWT が発行され、不正な情報で `401 Unauthorized` となるか。
-- [ ] **マイグレーション**: `docker-compose up` 時にテーブルが自動作成されるか。
-- [ ] **バリデーション**: 重複するメールアドレスでの登録が `409 Conflict` で拒否されるか。
-
-### レビュー対応・追加指示
-- (ここにレビュー結果や修正依頼を追記してください)
-
----
-
-## Task 2: GCPインフラ & CI/CD パイプライン (Phase 3 & 4)
-- **ステータス**: [ ] Pending
-- **設計参照**: `docs/design.md` 2項
-
-### 実装指示
-1.  **GitHub Actions の作成**:
-    - `.github/workflows/ci.yml` (Lint/Test) と `cd.yml` (Deploy) を作成。
-    - `frontend/` または `backend/` への変更を検知するパスベーストリガーを設定。
-2.  **GCPデプロイ設定**:
-    - Docker イメージを Artifact Registry へ Push するステップを追加。
-    - `gcloud` コマンドを使用して Cloud Run へデプロイするステップを追加。
-3.  **Secret Manager 連携**:
-    - デプロイ時に Secret Manager から環境変数をマウントする設定 (`--set-secrets`) を YAML に記述。
-4.  **マイグレーション自動化**:
-    - デプロイ成功後に、Cloud Run のジョブ等を利用して DB マイグレーションを実行する仕組みを構築。
-
-### テスト観点
-- [ ] **パスベーストリガー**: `frontend/` のみの変更で `backend` のビルドが走らないか。
-- [ ] **デプロイ成功**: Cloud Run の URL にアクセスして正常に動作するか。
-- [ ] **環境変数**: Secret Manager から注入された値（DATABASE_URL等）が正しく読み込まれているか。
-- [ ] **セキュリティ**: `gcloud` コマンドで使用するサービスアカウントの権限が最小限か。
-
-### レビュー対応・追加指示
-- (ここにレビュー結果や修正依頼を追記してください)
-
----
-
-## Task 3: 外部プラットフォーム連携 (Phase 5)
-- **ステータス**: [ ] Pending
-- **設計参照**: `docs/design.md` 3項
-
-### 実装指示
-1.  **OAuth基盤の実装**:
-    - Google および Meta (Instagram) の OAuth 2.0 認可コードフローを実装。
-    - コールバック URL のハンドリングと、アクセストークンの取得。
-2.  **トークン保存のセキュリティ**:
-    - 取得したトークンを AES-256 等で暗号化し、DB の `user_tokens` テーブルへ保存するロジックを実装。
-3.  **API クライアントの実装**:
-    - Instagram Graph API: 投稿取得、予約投稿のスケジューラ。
-    - Google Business Profile: 口コミ一覧取得、返信投稿エンドポイント。
-4.  **リフレッシュトークン対応**:
-    - 有効期限切れを検知し、自動でリフレッシュするバックグラウンド処理またはミドルウェアの実装。
-
-### テスト観点
-- [ ] **OAuthフロー**: 認可画面から戻った際に正しいトークンが保存されるか。
-- [ ] **暗号化**: DB 内のトークンが平文ではなく、正しく暗号化されているか。
-- [ ] **リフレッシュ**: 期限切れトークンを使用する際、自動的にリフレッシュが走りリトライされるか。
-- [ ] **エラー処理**: 外部 API のレートリミットや権限不足時のハンドリングが適切か。
-
-### レビュー対応・追加指示
-- (ここにレビュー結果や修正依頼を追記してください)
-
----
-
-## Task 4: 課金・サブスクリプション基盤 (Phase 6)
-- **ステータス**: [ ] Pending
-- **設計参照**: `docs/design.md` 4項
-
-### 実装指示
-1.  **Stripe Checkout 連携**:
-    - フロントエンドにプラン選択画面を作成し、Stripe の決済セッションを開始する API を backend に実装。
-2.  **Webhook ハンドラーの実装**:
-    - `/api/webhooks/stripe` エンドポイントを作成。
-    - Stripe の署名検証を行い、`checkout.session.completed` などのイベントを適切に処理。
-3.  **DBの状態同期**:
-    - 決済成功時にユーザーの `subscription_status` を更新し、機能制限を解除するロジックを実装。
-4.  **カスタマーポータル**:
-    - ユーザーが自身のサブスクリプションを管理するためのポータル画面への遷移機能を実装。
-
-### テスト観点
-- [ ] **決済成功**: 決済完了後、即座に DB のステータスが `active` に更新されるか。
-- [ ] **Webhook署名**: 無効な署名を持つ Webhook リクエストが `400 Bad Request` で拒否されるか。
-- [ ] **機能制限**: 非課金ユーザーが課金専用機能（予約投稿等）を叩いた際に制限されるか。
-- [ ] **解約処理**: Stripe ポータルで解約した際、Webhook 経由でステータスが `canceled` になるか。
-
-### レビュー対応・追加指示
-- (ここにレビュー結果や修正依頼を追記してください)
-
----
-
-## Task 5: 認証・UI設計 (Phase 1 & 7)
-- **ステータス**: [ ] Pending
-- **設計参照**: `docs/design.md` 5項
-
-### 実装指示
-1.  **UIコンポーネントの実装**:
-    - `docs/figma/` 配下のデザインに基づき、Tailwind CSS を使用してログイン・サインアップ画面を構築。
-    - `StepIndicator` を含む、複数ステップの登録フローの実装。
-2.  **フロントエンド認証ロジック**:
-    - `localStorage` での JWT トークン管理と、`AuthGuard` によるページ遷移制限。
-3.  **バリデーション**:
-    - `React Hook Form` と `Zod` を使用した、クライアントサイド・サーバーサイド両面での入力検証。
-4.  **最終検証（Staging）**:
-    - 複数アカウントでの同時ログイン、データの分離（マルチテナント）が正しく動作することを確認。
-
-### テスト観点
-- [ ] **AuthGuard**: 未認証状態で `/home` にアクセスした際、`/login` へリダイレクトされるか。
-- [ ] **フォーム**: 無効な形式のメールアドレスや、短すぎるパスワードが送信前に弾かれるか。
-- [ ] **レスポンシブ**: iPhone SE 等の小画面でレイアウトが崩れず、ボタンが押しやすいか。
-- [ ] **口コミ機能**: フィルター、ソート、返信投稿後のリスト更新が期待通りか。
-
-### レビュー対応・追加指示
-- (ここにレビュー結果や修正依頼を追記してください)
+- インフラ構築手順や、デプロイに使用したコマンド、環境変数のリストを `docs/architecture.md` または `docs/ci-cd.md` に追記・更新してください。
+- `docs/change-log.md` を更新し、今回のインフラ構築内容を記録してください。

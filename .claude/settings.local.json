@@ -12,10 +12,9 @@
       "Bash(npx jest:*)",
       "Bash(npx next build:*)",
       "Bash(python3:*)",
-      "Bash(go build:*)",
-      "Bash(go test:*)",
-      "Bash(docker compose:*)",
-      "Bash(curl:*)"
+      "WebFetch(domain:developers.facebook.com)",
+      "WebSearch",
+      "WebFetch(domain:developers.google.com)"
     ]
   }
 }
