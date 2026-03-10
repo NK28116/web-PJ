@@ -30,6 +30,49 @@ graph TD
   - **コスト効率**: リクエストが発生したときのみコンピューティングリソースが消費されるため、アイドル時間帯のコストが発生しません。
   - **運用負荷の軽減**: サーバーのプロビジョニング、OSのパッチ適用、セキュリティ管理といったインフラ運用業務が不要になります。
 
+## GCP ステージング環境構成 (wyze-develop-staging)
+
+### インフラ構成図
+```mermaid
+graph TD
+    Client[クライアント] -->|HTTPS| CR[Cloud Run<br/>backend service<br/>us-east1]
+
+    subgraph "GCP: wyze-develop-staging"
+        CR -->|VPC Connector<br/>vpc-con-us-east1<br/>10.8.0.0/28| VPC[default VPC]
+        VPC -->|Private Service Access<br/>VPC Peering| SQL[(Cloud SQL<br/>PostgreSQL 16<br/>wyze-staging-db<br/>db-f1-micro<br/>10.26.0.3)]
+        SM[Secret Manager<br/>DATABASE_URL<br/>JWT_SECRET] -.->|mount| CR
+        AR[Artifact Registry<br/>web-system-pj<br/>us-east1] -.->|image pull| CR
+    end
+```
+
+### リソース一覧
+
+| リソース | 名前 | リージョン | スペック |
+|---------|------|-----------|---------|
+| Cloud SQL | `wyze-staging-db` | `us-east1-b` | PostgreSQL 16, `db-f1-micro`, Private IP only |
+| Cloud Run | `backend` | `us-east1` | 256Mi, max 2 instances |
+| VPC Connector | `vpc-con-us-east1` | `us-east1` | e2-micro, 2-3 instances, `10.8.0.0/28` |
+| Artifact Registry | `web-system-pj` | `us-east1` | Docker format |
+| Secret Manager | `DATABASE_URL`, `JWT_SECRET` | global | — |
+
+### 接続フロー
+1. Cloud Run サービスがリクエストを受信
+2. VPC Connector (`vpc-con-us-east1`) 経由で default VPC に接続
+3. Private Service Access (VPC Peering) 経由で Cloud SQL に到達
+4. Cloud SQL Proxy (Cloud Run の `--add-cloudsql-instances` による自動接続) で Unix Socket 経由で DB 接続
+5. 環境変数 (`DATABASE_URL`, `JWT_SECRET`) は Secret Manager からマウント
+
+### 本番環境への移行時の申し送り事項
+- Cloud SQL を `db-f1-micro` → `db-custom-*` にティア変更
+- Cloud Run の `--max-instances`, `--memory`, `--cpu` を本番負荷に合わせて調整
+- Cloud SQL の高可用性 (`--availability-type=regional`) を有効化
+- CI/CD パイプライン (GitHub Actions) で CD 部分を構築し、自動デプロイを実現
+- フロントエンド (Next.js) のデプロイ先を決定（Vercel or Cloud Run）
+- CORS 設定をフロントエンドのドメインに限定
+- カスタムドメイン + Cloud Load Balancing の検討
+
+---
+
 ## 技術スタック
 
 #### フロントエンド
