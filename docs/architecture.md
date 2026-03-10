@@ -62,13 +62,27 @@ graph TD
 4. Cloud SQL Proxy (Cloud Run の `--add-cloudsql-instances` による自動接続) で Unix Socket 経由で DB 接続
 5. 環境変数 (`DATABASE_URL`, `JWT_SECRET`) は Secret Manager からマウント
 
+### CORS 設定
+
+ファイル: `backend/internal/middleware/cors.go`
+
+| 許可オリジン | 用途 |
+|-------------|------|
+| `http://localhost:3000` | ローカル開発 |
+| `https://*.vercel.app` | Vercel プレビュー/ステージング |
+| `https://wyze-system.com` | 本番環境 (将来) |
+
+- `AllowCredentials: true` (将来のクッキーベース認証を見据えて)
+- 許可メソッド: `GET, POST, PUT, DELETE, OPTIONS, PATCH`
+- 許可ヘッダー: `Origin, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization`
+- 許可されないオリジンには CORS ヘッダーを返さない（ブラウザがブロック）
+
 ### 本番環境への移行時の申し送り事項
 - Cloud SQL を `db-f1-micro` → `db-custom-*` にティア変更
 - Cloud Run の `--max-instances`, `--memory`, `--cpu` を本番負荷に合わせて調整
 - Cloud SQL の高可用性 (`--availability-type=regional`) を有効化
-- CI/CD パイプライン (GitHub Actions) で CD 部分を構築し、自動デプロイを実現
 - フロントエンド (Next.js) のデプロイ先を決定（Vercel or Cloud Run）
-- CORS 設定をフロントエンドのドメインに限定
+- CORS の `allowedOrigins` に本番ドメインを追加し、不要なオリジンを削除
 - カスタムドメイン + Cloud Load Balancing の検討
 
 ---

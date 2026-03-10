@@ -60,23 +60,28 @@ Your current project is [wyze-develop-staging].  You can change this setting by 
   - [x] `/health` 疎通確認 — `200 OK {"status":"ok"}`
 
 ## Phase 4: CI/CD パイプライン (GitHub Actions)
-- [ ] CI設定 (Path-based)
+- [x] CI設定 (Path-based)
   - [x] Backend: Lint / Test / Build
   - [x] Frontend: Lint / Build
-- [ ] CD設定 (Staging)
-  - [ ] Artifact Registry への Push 自動化
-  - [ ] Cloud Run への自動デプロイ
-  - [ ] デプロイフロー内でのマイグレーション自動実行
+- [x] CD設定 (Staging)
+  - [x] `.github/workflows/cd-staging.yml` 作成 (develop push → 自動デプロイ)
+  - [x] Artifact Registry への Push 自動化 (commit SHA + latest タグ)
+  - [x] Cloud SQL Proxy + `cmd/migrate` によるマイグレーション自動実行
+  - [x] Cloud Run への自動デプロイ (既存設定維持)
+  - [x] デプロイ後ヘルスチェック
+  - [x] デプロイ用SA作成 (`github-actions-deploy`) & 最小権限付与
+  - [ ] GitHub Secrets 登録 (`GCP_SA_KEY`, `DATABASE_URL_TCP`) — マスター作業
 
 ## Phase 5: 外部API連携 (Instagram / Google)
+instagramとGoogle Business Profileは今後の拡充を見据えた実装やドキュメントを作成する
 - [ ] OAuth基盤実装
   - [ ] Google Cloud Console / Meta for Developers アプリ登録
   - [ ] 認証フロー (Callback処理) 実装
   - [ ] アクセストークンの暗号化保存ロジック
-- [ ] Instagram連携実装
+- [ ] **Instagram連携実装**
   - [ ] 投稿・メディア取得API
   - [ ] 予約投稿・実行ロジック
-- [ ] Google Business Profile連携実装
+- [ ] **Google Business Profile連携実装**
   - [ ] 口コミ取得・返信API
   - [ ] 店舗写真管理API
 
