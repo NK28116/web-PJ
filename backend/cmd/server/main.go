@@ -3,7 +3,6 @@ package main
 import (
 	"database/sql"
 	"log"
-	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-migrate/migrate/v4"
@@ -37,7 +36,7 @@ func main() {
 
 	gin.SetMode(cfg.GinMode)
 	r := gin.Default()
-	r.Use(corsMiddleware())
+	r.Use(middleware.CORS())
 
 	r.GET("/health", handlers.Health)
 	r.POST("/register", handlers.Register(cfg, userRepo))
@@ -74,15 +73,3 @@ func runMigrations(db *sql.DB) {
 	log.Println("migrations applied")
 }
 
-func corsMiddleware() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.Header("Access-Control-Allow-Origin", "*")
-		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		c.Header("Access-Control-Allow-Headers", "Content-Type, Authorization")
-		if c.Request.Method == http.MethodOptions {
-			c.AbortWithStatus(http.StatusNoContent)
-			return
-		}
-		c.Next()
-	}
-}

@@ -1,38 +1,41 @@
-# Claudeへの実装指示書: Phase 4 CI/CD パイプライン (CD部分) の構築
+# Claudeへの実装指示書: Phase 4 CI/CD パイプライン (CD部分) の構築 & CORS設定
 
-本フェーズでは、GitHub の `develop` ブランチへのプッシュをトリガーに、**ステージング環境（wyze-develop-staging）** へアプリケーションを自動デプロイするパイプラインを構築します。
+本フェーズでは、GitHub の `develop` ブランチへのプッシュをトリガーに、**ステージング環境（wyze-develop-staging）** へアプリケーションを自動デプロイするパイプラインを完遂させ、フロントエンドからの接続を許可する設定を行います。
 
-## 1. GitHub Actions による自動デプロイ設定 (Priority: Highest)
-- **ワークフローの作成**: `.github/workflows/cd-staging.yml` を作成してください。
-- **実行トリガー**: `develop` ブランチへの `push`（または PR のマージ）をトリガーとしてください。
-- **デプロイフロー**:
-  1.  **Checkout**: ソースコードの取得。
-  2.  **Google Auth**: GCP への認証。サービスアカウントキー（`GCP_SA_KEY`）を GitHub Secrets に登録する手順をユーザーに提示してください。
-  3.  **Build & Push**: `backend/Dockerfile` を用いて Docker イメージをビルドし、既に作成済みの Artifact Registry (`us-east1-docker.pkg.dev/wyze-develop-staging/web-system-pj/backend`) へプッシュ。
-  4.  **Deploy to Cloud Run**: プッシュしたイメージを用いて `backend` サービスを更新。既存の設定（VPCコネクタ、Secret Manager のマウント）を維持したままデプロイされるようにしてください。
+## 1. バックエンドへの CORS 設定の導入 (Priority: Highest)
+- **ミドルウェアの実装**: `backend/internal/middleware/cors.go` を作成し、ブラウザからのクロスオリジンリクエストを適切に処理できるようにしてください。
+- **許可するオリジン (Allow Origins)**: 
+  - `http://localhost:3000` (ローカル開発)
+  - `https://*.vercel.app` (Vercel プレビュー/ステージング環境)
+  - `https://wyze-system.com` (将来の本番環境、必要に応じて)
+- **設定内容**: 
+  - メソッド: `GET, POST, PUT, DELETE, OPTIONS, PATCH`
+  - ヘッダー: `Origin, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization`
+  - `AllowCredentials: true` (将来のクッキーベース認証を見据えて)
+- **統合**: `backend/internal/handlers/auth.go` 等で Gin エンジンを初期化する際に、このミドルウェアをグローバルに適用してください。
 
-## 2. データベースマイグレーションの自動化 (Priority: High)
-- **マイグレーションの実行**: デプロイが成功する前に、最新のスキーマを反映させる必要があります。
-- **推奨方法**: Cloud Run Job を使用するか、GitHub Actions 内で `cloud-sql-proxy` を起動し、`go run ./cmd/migrate/main.go up` を実行するステップを追加してください。
-- **安全性**: マイグレーションが失敗した場合は、デプロイ（Cloud Run の更新）を中断し、エラーを通知するように構成してください。
+## 2. GitHub Actions による自動デプロイ設定の最終調整 (Priority: High)
+- **ワークフローの修正/確認**: `.github/workflows/cd-staging.yml` において、以下のステップが正しく動作することを確認してください。
+  - `cloud-sql-proxy` を使用したマイグレーション実行ステップ。
+  - `latest` タグと `github.sha` タグの両方を用いたイメージのプッシュ。
+  - デプロイ成功後の `/health` エンドポイントへの自動疎通確認。
 
-## 3. 環境変数とシークレットの整理 (Priority: Medium)
-- **GitHub Secrets**: 以下の値を GitHub リポジトリの Secrets に登録する手順をドキュメント化し、ユーザーに案内してください。
-  - `GCP_PROJECT_ID`: `wyze-develop-staging`
-  - `GCP_SA_KEY`: デプロイ権限を持つサービスアカウントの JSON キー
-- **デプロイ時の引数**: `gcloud run deploy` コマンドにおいて、Secret Manager (`DATABASE_URL`, `JWT_SECRET`) を参照する設定が正しく引き継がれることを確認してください。
+## 3. GitHub Secrets 登録の案内作成 (Priority: Medium)
+- **ユーザーへの通知**: 以下のシークレットを GitHub リポジトリの `Settings > Secrets and variables > Actions` に登録するよう、具体的な手順（値の形式例を含む）を提示してください。
+  1.  `GCP_SA_KEY`: デプロイ用サービスアカウントの JSON キー。
+  2.  `DATABASE_URL_TCP`: マイグレーション用。 `postgres://user:password@localhost:5432/wyze_db?sslmode=disable` 形式。
+- **重要**: `GCP_SA_KEY` に必要な権限（Cloud Run 開発者、Artifact Registry 書き込み、Cloud SQL クライアント等）の付与手順も併せて説明してください。
 
-## 4. フロントエンド（Next.js）の暫定デプロイ準備 (Priority: Medium)
-- **API URL の更新**: フロントエンドの環境変数 `NEXT_PUBLIC_API_URL` に、今回確定した Cloud Run の URL (`https://backend-611370943102.us-east1.run.app`) を設定する準備をしてください。
-- **CORS 設定の確認**: バックエンド側で、Vercel のデプロイ先ドメインを許可するロジックが含まれているか再確認してください。
+## 4. デプロイ後の最終疎通確認 (Priority: Required)
+- 自動デプロイ成功後、Cloud Run のコンソールまたはログを確認し、CORS ミドルウェアが読み込まれていること、および外部からの `/health` アクセスがログに記録されていることを確認してください。
 
 ---
 **セキュリティおよび運用の注意事項**:
-- サービスアカウントには、必要最小限の権限（`Cloud Run Developer`, `Artifact Registry Writer`, `Storage Object Viewer`, `Secret Manager Accessor` 等）を付与する手順を示してください。
-- デプロイ成功後、GitHub の PR または Slack 等に通知を送る設定を検討してください。
+- CORS の許可ドメインに `*` (ワイルドカード) を使用しないでください。必ず具体的なドメインを指定してください。
+- マイグレーションで使用する `DATABASE_URL_TCP` は GitHub Runner 内のローカル接続用であるため、`sslmode=disable` で問題ありませんが、Cloud Run の本番用環境変数は常にセキュアに保ってください。
 
 ---
 
 ## 5. 実装・構築完了後の作業 (Priority: Required)
-- 作成した GitHub Actions の内容を `docs/ci-cd.md` に追記し、デプロイフローを図解してください。
-- `docs/change-log.md` を更新し、CI/CD パイプラインの自動化が完了したことを記録してください。
+- CORS の設定方針と、GitHub Actions のデプロイフローを `docs/architecture.md` および `docs/ci-cd.md` に追記してください。
+- `docs/change-log.md` を更新し、CORS 対応および CD 自動化が完了したことを記録してください。
