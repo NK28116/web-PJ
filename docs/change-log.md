@@ -1,5 +1,103 @@
 # 変更ログ
 
+## 2026-03-10 (Phase 5: OAuth基盤)
+
+### 概要
+Phase 5: 外部API連携の OAuth 2.0 基盤を実装。Google Business Profile と Instagram Graph API の認可フロー、トークンの AES-256-GCM 暗号化保存、自動リフレッシュ、フロントエンドの連携ボタンを構築。
+
+### 詳細
+
+#### 1. DB マイグレーション
+- **[Claude]** `backend/migrations/000003_create_external_accounts.up.sql` 新規作成
+  - `external_accounts` テーブル (UUID PK, user_id FK, provider, encrypted tokens, expires_at)
+  - UNIQUE制約 `(user_id, provider)` で1ユーザー1プロバイダー1レコード
+
+#### 2. AES-256-GCM 暗号化
+- **[Claude]** `backend/internal/utils/crypto.go` 新規作成
+  - `Encrypt()` / `Decrypt()` — nonce を先頭に付与する方式
+  - 暗号化キーは Secret Manager の `ENCRYPTION_KEY` (32バイト hex)
+
+#### 3. OAuth エンドポイント (4つ)
+- **[Claude]** `backend/internal/handlers/oauth.go` 新規作成
+  - `GET /api/auth/google/login` — Google 認可画面へリダイレクト
+  - `GET /api/auth/google/callback` — 認可コード→トークン交換→暗号化保存→フロントエンドリダイレクト
+  - `GET /api/auth/instagram/login` — Facebook 認可画面へリダイレクト
+  - `GET /api/auth/instagram/callback` — 短期トークン→長期トークン (60日) 交換→暗号化保存
+  - CSRF 対策: `state` パラメータの cookie 保存 & 検証
+  - ユーザー識別: JWT を cookie 経由で受け渡し
+
+#### 4. 連携状態 API
+- **[Claude]** `GET /api/link-status` (認証必須) — `{google: bool, instagram: bool}` を返す
+- **[Claude]** `DELETE /api/unlink/:provider` (認証必須) — 連携解除
+
+#### 5. トークン自動リフレッシュ
+- **[Claude]** `backend/internal/service/token_refresh.go` 新規作成
+  - `RefreshTokenIfNeeded()` — 有効期限5分前に自動更新
+  - Google: `refresh_token` による標準 OAuth リフレッシュ
+  - Instagram: `ig_refresh_token` グラントタイプによる長期トークン更新
+
+#### 6. Config 拡張
+- **[Claude]** `backend/internal/config/config.go` — 以下を追加:
+  - `ENCRYPTION_KEY`, `GOOGLE_CLIENT_ID/SECRET`, `INSTAGRAM_CLIENT_ID/SECRET`
+  - `GOOGLE_REDIRECT_URL`, `INSTAGRAM_REDIRECT_URL`, `FRONTEND_URL`
+
+#### 7. フロントエンド連携
+- **[Claude]** `frontend/hooks/useAccountLink.ts` 新規作成
+  - `fetchLinkStatus()` — バックエンドから連携状態取得
+  - `toggleGoogle()` / `toggleInstagram()` — 連携/解除の切り替え
+  - OAuth 認可画面への遷移 (JWTをクエリパラメータで受け渡し)
+- **[Claude]** `frontend/components/templates/HomeTemplate/HomeTemplate.tsx` 更新
+  - `useAccountLink` hook を統合し、モック状態管理を実API呼び出しに置換
+  - `router.query.linked` によるコールバック後の自動 refetch
+
+#### 8. GCP リソース
+- **[Claude]** Secret Manager に `ENCRYPTION_KEY` を登録、Cloud Run SA に権限付与
+
+#### 9. ドキュメント更新
+- **[Claude]** `docs/03_data_design.md` — ER図に `EXTERNAL_ACCOUNT` 追加、テーブル定義 2.8 追加
+- **[Claude]** `docs/Task.md` — Phase 5-1 タスク更新
+- **[Claude]** `docs/change-log.md` — 本エントリ
+
+### マスター作業が必要な項目
+1. **Google Cloud Console** で OAuth 同意画面を構成し、クライアントID/シークレットを取得
+2. **Meta for Developers** で Facebook アプリを作成し、Instagram Basic Display を有効化
+3. 取得した認証情報を Secret Manager に登録:
+   - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`
+   - `INSTAGRAM_CLIENT_ID`, `INSTAGRAM_CLIENT_SECRET`
+4. Cloud Run デプロイ時に上記シークレットをマウント
+
+### 新規追加ファイル
+- `backend/migrations/000003_create_external_accounts.up.sql`
+- `backend/migrations/000003_create_external_accounts.down.sql`
+- `backend/internal/utils/crypto.go`
+- `backend/internal/models/external_account.go`
+- `backend/internal/repository/external_account.go`
+- `backend/internal/handlers/oauth.go`
+- `backend/internal/handlers/jwt_helper.go`
+- `backend/internal/service/token_refresh.go`
+- `frontend/hooks/useAccountLink.ts`
+
+### 変更ファイル
+- `backend/internal/config/config.go` — OAuth/暗号化キー設定追加
+- `backend/cmd/server/main.go` — OAuth/連携ルート追加
+- `backend/go.mod` — `golang.org/x/oauth2` 追加
+- `frontend/components/templates/HomeTemplate/HomeTemplate.tsx` — useAccountLink 統合
+- `docs/03_data_design.md` — external_accounts テーブル追加
+- `docs/Task.md` — Phase 5-1 更新
+- `docs/change-log.md` — 本エントリ
+
+### 新規 API エンドポイント
+| メソッド | パス | 認証 | 説明 |
+|---------|------|------|------|
+| GET | `/api/auth/google/login` | 不要 | Google OAuth 開始 |
+| GET | `/api/auth/google/callback` | cookie | Google コールバック |
+| GET | `/api/auth/instagram/login` | 不要 | Instagram OAuth 開始 |
+| GET | `/api/auth/instagram/callback` | cookie | Instagram コールバック |
+| GET | `/api/link-status` | Bearer | 連携状態取得 |
+| DELETE | `/api/unlink/:provider` | Bearer | 連携解除 |
+
+---
+
 ## 2026-03-07
 
 ### 概要

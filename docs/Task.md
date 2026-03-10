@@ -74,16 +74,66 @@ Your current project is [wyze-develop-staging].  You can change this setting by 
 
 ## Phase 5: 外部API連携 (Instagram / Google)
 instagramとGoogle Business Profileは今後の拡充を見据えた実装やドキュメントを作成する
-- [ ] OAuth基盤実装
-  - [ ] Google Cloud Console / Meta for Developers アプリ登録
-  - [ ] 認証フロー (Callback処理) 実装
-  - [ ] アクセストークンの暗号化保存ロジック
+
+### 5-1. OAuth基盤実装
+- [x] OAuth基盤実装
+  - [ ] Google Cloud Console / Meta for Developers アプリ登録 — マスター作業
+  - [x] 認証フロー (Callback処理) 実装
+    - [x] `GET /api/auth/google/login` & `/callback`
+    - [x] `GET /api/auth/instagram/login` & `/callback`
+    - [x] state パラメータによる CSRF 対策
+    - [x] Instagram 短期→長期トークン交換
+  - [x] アクセストークンの暗号化保存ロジック (AES-256-GCM)
+  - [x] `external_accounts` テーブル マイグレーション作成
+  - [x] トークン自動リフレッシュサービス (`service/token_refresh.go`)
+  - [x] 連携状態API (`GET /api/link-status`, `DELETE /api/unlink/:provider`)
+  - [x] フロントエンド連携ボタン (`useAccountLink` hook)
+  - [x] `ENCRYPTION_KEY` Secret Manager 登録
+
+### 5-2 実績運用レポートに用いるAPI
+以下を実現するAPI
+
+参考:docs/figma/report.png
+- 統合アクション総数
+  - Googleマップ経由で、電話・ルート検索・サイト閲覧のいずれかを行った、来店意欲の高いユーザーの総数。
+- 統合アクション内訳
+  - G※Googleは「電話・経路案内・HP移動」、Instagramは「アクションボタン・リンククリック」の合計値を算出しています。
+- 来店誘導率
+  - ※閲覧した人のうち、実際に予約や経路案内などのアクションを起こした人の割合です。この数値が高いほど、魅力的な店舗情報を発信できています。
+- 統合アクション内訳詳細
+  - ※各アクションは、Googleマップ上でボタンがタップされた回数を集計しています。
+- 曜日・時間帯傾向
+  - ※このデータは、過去1ヶ月間にユーザーがあなたのお店を調べたタイミングの傾向を示しています。
+- 統合プロフィール閲覧総数
+  - Google マップでの店舗表示回数とInstagramプロフィール閲覧の総数。
+- Google検索ワード内訳
+  - 直接検索
+    - 店名を知っている既存客やSNSを見て検索
+  - 間接検索
+    - ジャンルで検索
+  - ブランド検索
+    - 他店や関連ブランドの検索で表示
+- Instagram遷移元分析
+  - フィード投稿
+  - リール動画
+  - ストーリーズ
+  - その他（タグ等）
+- MEO順位推移
+- 口コミ返信パフォーマンス
+  - 返信率
+  - 平均返信時間
+- 口コミ平均評価
+  - 前月比
+  - 星（評価）の内訳
+
+#### 使用するAPI
 - [ ] **Instagram連携実装**
   - [ ] 投稿・メディア取得API
   - [ ] 予約投稿・実行ロジック
 - [ ] **Google Business Profile連携実装**
   - [ ] 口コミ取得・返信API
   - [ ] 店舗写真管理API
+
 
 ## Phase 6: 課金基盤 (Stripe)
 - [ ] Stripe基盤実装

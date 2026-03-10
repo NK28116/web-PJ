@@ -33,6 +33,7 @@ func main() {
 
 	userRepo := repository.NewUserRepository(db)
 	postRepo := repository.NewPostRepository(db)
+	extAcctRepo := repository.NewExternalAccountRepository(db)
 
 	gin.SetMode(cfg.GinMode)
 	r := gin.Default()
@@ -42,12 +43,25 @@ func main() {
 	r.POST("/register", handlers.Register(cfg, userRepo))
 	r.POST("/login", handlers.Login(cfg, userRepo))
 
+	// OAuth routes (認証不要 — ブラウザリダイレクト経由)
+	auth := r.Group("/api/auth")
+	{
+		auth.GET("/google/login", handlers.GoogleLogin(cfg))
+		auth.GET("/google/callback", handlers.GoogleCallback(cfg, extAcctRepo))
+		auth.GET("/instagram/login", handlers.InstagramLogin(cfg))
+		auth.GET("/instagram/callback", handlers.InstagramCallback(cfg, extAcctRepo))
+	}
+
 	protected := r.Group("/")
 	protected.Use(middleware.Auth(cfg))
 	{
 		protected.GET("/posts", handlers.GetPosts(postRepo))
 		protected.GET("/posts/:id", handlers.GetPost(postRepo))
 		protected.POST("/posts", handlers.CreatePost(postRepo))
+
+		// 連携状態API
+		protected.GET("/api/link-status", handlers.GetLinkStatus(extAcctRepo))
+		protected.DELETE("/api/unlink/:provider", handlers.UnlinkAccount(extAcctRepo))
 	}
 
 	log.Printf("server starting on :%s", cfg.Port)
