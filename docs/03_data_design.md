@@ -11,8 +11,22 @@ erDiagram
     SUBSCRIPTION }o--|| PLAN : belongs_to
     USER ||--o{ NOTIFICATION : receives
     USER ||--o{ REPLY : writes
+    USER ||--o{ EXTERNAL_ACCOUNT : links
     REVIEW ||--o{ REPLY : has
-    
+
+    EXTERNAL_ACCOUNT {
+        uuid id PK
+        uuid user_id FK
+        string provider
+        string provider_user_id
+        bytea encrypted_access_token
+        bytea encrypted_refresh_token
+        datetime token_expires_at
+        string scopes
+        datetime created_at
+        datetime updated_at
+    }
+
     USER {
         string id PK
         string email
@@ -208,6 +222,40 @@ GoogleMapから取得する店につけられた口コミデータ
 | is_read | BOOLEAN | NO | FALSE | 既読フラグ |
 | link_url | VARCHAR(500) | YES | NULL | 遷移先URL |
 | created_at | TIMESTAMP | NO | CURRENT_TIMESTAMP | 作成日時 |
+
+### 2.8 external_accounts テーブル
+
+#### 概要
+
+外部サービス (Google / Instagram) との OAuth 連携情報。トークンは AES-256-GCM で暗号化して保存。
+
+#### カラム定義
+
+| カラム名 | 型 | NULL | デフォルト | 説明 |
+|----------|-----|------|-----------|------|
+| id | UUID | NO | gen_random_uuid() | 外部アカウントID (主キー) |
+| user_id | UUID | NO | - | ユーザーID (外部キー, users.id) |
+| provider | VARCHAR(20) | NO | - | プロバイダー名 ('google' or 'instagram') |
+| provider_user_id | VARCHAR(255) | YES | NULL | プロバイダー側のユーザーID |
+| encrypted_access_token | BYTEA | YES | NULL | AES-256-GCM 暗号化済みアクセストークン |
+| encrypted_refresh_token | BYTEA | YES | NULL | AES-256-GCM 暗号化済みリフレッシュトークン |
+| token_expires_at | TIMESTAMP WITH TIME ZONE | YES | NULL | トークン有効期限 |
+| scopes | TEXT | YES | NULL | 認可スコープ (カンマ区切り) |
+| created_at | TIMESTAMP WITH TIME ZONE | NO | NOW() | 作成日時 |
+| updated_at | TIMESTAMP WITH TIME ZONE | NO | NOW() | 更新日時 |
+
+#### インデックス
+
+- PRIMARY KEY: `id`
+- UNIQUE: `(user_id, provider)` — 1ユーザー1プロバイダーにつき1レコード
+- INDEX: `user_id`
+
+#### 暗号化方式
+
+- アルゴリズム: AES-256-GCM
+- 暗号化キー: Secret Manager の `ENCRYPTION_KEY` (32バイト hex)
+- nonce: 暗号文の先頭12バイトに付与
+- トークンは絶対にフロントエンドに返さない
 
 ---
 
