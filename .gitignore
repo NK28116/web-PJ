@@ -36,6 +36,7 @@ next-env.d.ts
 .cursor/*
 .vscode/*
 .swc/*
+.claude/settings.local.json
 
 package-lock.json
 *storybook.log
