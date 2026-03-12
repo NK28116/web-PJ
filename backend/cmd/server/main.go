@@ -14,6 +14,7 @@ import (
 	"webSystemPJ/backend/internal/handlers"
 	"webSystemPJ/backend/internal/middleware"
 	"webSystemPJ/backend/internal/repository"
+	"webSystemPJ/backend/internal/service"
 )
 
 func main() {
@@ -34,6 +35,10 @@ func main() {
 	userRepo := repository.NewUserRepository(db)
 	postRepo := repository.NewPostRepository(db)
 	extAcctRepo := repository.NewExternalAccountRepository(db)
+
+	// サービス初期化
+	googleSvc := service.NewGoogleService(cfg, extAcctRepo, nil)
+	instagramSvc := service.NewInstagramService(cfg, extAcctRepo, nil)
 
 	gin.SetMode(cfg.GinMode)
 	r := gin.Default()
@@ -62,6 +67,20 @@ func main() {
 		// 連携状態API
 		protected.GET("/api/link-status", handlers.GetLinkStatus(extAcctRepo))
 		protected.DELETE("/api/unlink/:provider", handlers.UnlinkAccount(extAcctRepo))
+
+		// レポートAPI
+		protected.GET("/api/reports/summary", handlers.GetReportSummary(googleSvc, instagramSvc))
+		protected.GET("/api/reports/google", handlers.GetGoogleReport(googleSvc))
+		protected.GET("/api/reports/instagram", handlers.GetInstagramReport(instagramSvc))
+
+		// Google Business Profile API
+		protected.GET("/api/google/reviews", handlers.GetGoogleReviews(googleSvc))
+		protected.POST("/api/google/reviews/:id/reply", handlers.ReplyGoogleReview(googleSvc))
+		protected.GET("/api/google/locations", handlers.GetGoogleLocations(googleSvc))
+
+		// Instagram API
+		protected.GET("/api/instagram/media", handlers.GetInstagramMedia(instagramSvc))
+		protected.POST("/api/instagram/media", handlers.CreateInstagramMedia(instagramSvc))
 	}
 
 	log.Printf("server starting on :%s", cfg.Port)
