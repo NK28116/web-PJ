@@ -127,12 +127,17 @@ instagramとGoogle Business Profileは今後の拡充を見据えた実装やド
   - 星（評価）の内訳
 
 #### 使用するAPI
-- [ ] **Instagram連携実装**
-  - [ ] 投稿・メディア取得API
-  - [ ] 予約投稿・実行ロジック
-- [ ] **Google Business Profile連携実装**
-  - [ ] 口コミ取得・返信API
-  - [ ] 店舗写真管理API
+- [x] **Instagram連携実装**
+  - [x] 投稿・メディア取得API (`GET /api/instagram/media`)
+  - [x] 投稿作成API (`POST /api/instagram/media`)
+  - [x] インサイト取得API (`GET /api/reports/instagram`)
+- [x] **Google Business Profile連携実装**
+  - [x] 口コミ取得API (`GET /api/google/reviews`)
+  - [x] 口コミ返信API (`POST /api/google/reviews/:id/reply`)
+  - [x] 店舗一覧API (`GET /api/google/locations`)
+  - [x] インサイト取得API (`GET /api/reports/google`)
+  - [x] 統合サマリーAPI (`GET /api/reports/summary`)
+- [ ] 店舗写真管理API (未実装)
 
 
 ## Phase 6: 課金基盤 (Stripe)

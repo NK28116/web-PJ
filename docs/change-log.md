@@ -1,5 +1,81 @@
 # 変更ログ
 
+## 2026-03-12 (Phase 5-2: 実績運用レポート & 外部API連携拡充)
+
+### 概要
+Google Business Profile (GBP) および Instagram Graph API と連携する実績運用レポート取得・リソース管理機能を実装。
+
+### 詳細
+
+#### 1. モデル定義
+- **[Claude]** `backend/internal/models/report.go` 新規作成
+  - レポート系: `ReportSummary`, `GoogleReport`, `InstagramReport`
+  - Google系: `GoogleActionDetail`, `SearchKeyword`, `ReviewStats`, `ReplyPerformance`, `GoogleReview`, `GoogleLocation`
+  - Instagram系: `InstagramSources`, `InstagramMediaItem`
+  - 共通: `ReportPeriod`, `MetricWithChange`, `PercentWithChange`, `RatingWithChange`
+  - リクエスト: `ReviewReplyRequest`, `InstagramMediaCreateRequest`
+
+#### 2. サービス層 (外部API呼び出し)
+- **[Claude]** `backend/internal/service/google_service.go` 新規作成
+  - `FetchInsights()` — GBP Performance API でメトリクス取得 (電話/経路/Web閲覧)
+  - `FetchReviews()` — GBP v4 API で口コミ一覧取得
+  - `ReplyToReview()` — 口コミへの返信 (PUT)
+  - `FetchLocations()` — GBP Account Management API で店舗一覧取得
+  - 検索キーワード取得 (searchkeywords/impressions/monthly)
+  - 口コミ統計・返信パフォーマンスの集計ロジック
+- **[Claude]** `backend/internal/service/instagram_service.go` 新規作成
+  - `FetchInsights()` — IG Graph API でインサイト取得 (impressions/reach/profile_views/website_clicks)
+  - `FetchMedia()` — 投稿一覧取得 (media_type/caption/like_count/comments_count)
+  - `CreateMedia()` — コンテナ作成→公開の2ステップ投稿フロー
+- 共通: `HTTPClient` インターフェースでテスト時モック可能、nil repo ガード付き
+
+#### 3. ハンドラー層 (8エンドポイント)
+- **[Claude]** `backend/internal/handlers/report.go` 新規作成
+  - `GET /api/reports/summary` — Google+Instagram統合サマリー (並列取得、panic recover付き)
+  - `GET /api/reports/google` — GBP詳細レポート
+  - `GET /api/reports/instagram` — Instagram詳細レポート
+  - 期間パラメータ: `?start=2026-01-01&end=2026-01-31` (デフォルト: 過去30日)
+- **[Claude]** `backend/internal/handlers/google.go` 新規作成
+  - `GET /api/google/reviews` — 口コミ一覧
+  - `POST /api/google/reviews/:id/reply` — 口コミ返信
+  - `GET /api/google/locations` — 管理対象店舗一覧
+- **[Claude]** `backend/internal/handlers/instagram.go` 新規作成
+  - `GET /api/instagram/media` — 投稿一覧
+  - `POST /api/instagram/media` — 投稿作成
+
+#### 4. ルーティング
+- **[Claude]** `backend/cmd/server/main.go` 変更
+  - `service` パッケージ import 追加
+  - `GoogleService`, `InstagramService` 初期化
+  - `protected` グループに8エンドポイント登録
+
+#### 5. テスト
+- **[Claude]** `backend/internal/handlers/report_test.go` 新規作成
+  - `TestGetGoogleReport_NoLink` — 未連携時のエラーレスポンス検証
+  - `TestGetInstagramMedia_NoLink` — 未連携時のエラーレスポンス検証
+  - `TestCreateInstagramMedia_BadRequest` — バリデーションエラー検証
+  - `TestReplyGoogleReview_BadRequest` — バリデーションエラー検証
+  - `TestGetReportSummary_HandlerExists` — 統合サマリーの構造検証 (並列処理のエラーハンドリング含む)
+  - `TestParsePeriod_Defaults` — 期間パラメータのデフォルト値検証
+  - mockHTTPClient によるHTTPクライアントモック化
+  - 全15テスト (既存9 + 新規6) パス
+
+### 使用API一覧
+| サービス | エンドポイント | 用途 |
+|---------|-------------|------|
+| GBP Performance API | `locations:fetchMultiDailyMetricsTimeSeries` | アクション指標 |
+| GBP v4 API | `locations/-/reviews` | 口コミ取得 |
+| GBP v4 API | `reviews/{id}/reply` | 口コミ返信 |
+| GBP Account Mgmt | `accounts` | アカウント一覧 |
+| GBP Business Info | `accounts/{id}/locations` | 店舗一覧 |
+| GBP Performance | `searchkeywords/impressions/monthly` | 検索ワード |
+| IG Graph API | `/{ig-user-id}/insights` | インサイト |
+| IG Graph API | `/{ig-user-id}/media` | 投稿一覧 |
+| IG Graph API | `/{ig-user-id}/media` (POST) | コンテナ作成 |
+| IG Graph API | `/{ig-user-id}/media_publish` | 投稿公開 |
+
+---
+
 ## 2026-03-10 (Phase 5: OAuth基盤)
 
 ### 概要

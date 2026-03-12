@@ -109,6 +109,33 @@ graph TD
 
 ---
 
+## 5. 外部API初回同期 (Initial Sync)
+
+OAuth 連携完了後、外部サービスから「どの管理対象を Wyze に取り込むか」を特定・選択し、初回データを同期するための API 群。
+
+### 5.1 Instagram 初回同期フロー
+Instagram ビジネスアカウントを特定し、プロフィール情報を取得する。
+
+#### 使用するAPI
+| カテゴリ | メソッド | エンドポイント | 役割 |
+| :--- | :--- | :--- | :--- |
+| **FBページ一覧** | `GET` | `/me/accounts` | ユーザーが管理権限を持つ Facebook ページ一覧を取得 |
+| **IGアカウント特定** | `GET` | `/{page-id}?fields=instagram_business_account` | ページに紐付く Instagram ビジネスアカウント ID を特定 |
+| **プロフィール取得** | `GET` | `/{ig-user-id}?fields=username,name,profile_picture_url` | ユーザー名、アイコン画像を Wyze の店舗プロフィールに反映 |
+
+### 5.2 Google Business Profile 初回同期フロー（店舗インポート）
+「ホーム / 店舗一覧 / ビジネスプロファイルからインポート」のロジックに基づき、管理対象の店舗を選択・登録する。
+
+#### 使用するAPI
+| カテゴリ | メソッド | エンドポイント | 役割 |
+| :--- | :--- | :--- | :--- |
+| **アカウント一覧** | `GET` | `https://mybusinessaccountmanagement.googleapis.com/v1/accounts` | Google アカウントに紐付く「ビジネスアカウント」の一覧取得 |
+| **店舗(Location)一覧** | `GET` | `https://mybusinessbusinessinformation.googleapis.com/v1/accounts/{acc-id}/locations` | 指定アカウント配下の店舗一覧を取得（インポート選択用） |
+| **店舗詳細同期** | `GET` | `https://mybusinessbusinessinformation.googleapis.com/v1/locations/{loc-id}` | 選択された店舗の名称、住所、電話番号、カテゴリを Wyze に取り込む |
+| **初回口コミ取得** | `GET` | `https://mybusiness.googleapis.com/v4/accounts/{acc-id}/locations/{loc-id}/reviews` | 連携直後の最新口コミ（10〜20件）を初期データとして同期 |
+
+---
+
 ## Instagram Graph API
 
 本システム（Wyze System）で使用する Instagram API の設計。
