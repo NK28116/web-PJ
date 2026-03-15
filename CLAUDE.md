@@ -4,7 +4,42 @@
 
 ---
 
-## 最新の実装 (2026-03-16) — Phase 9 v5: Dockerfile バージョン統一 & frontend/public 作成 & ENV 形式修正
+## 最新の実装 (2026-03-16) — Phase 9 v6: GCP IAM ロール追加付与
+
+### フェーズ / タスク
+**Phase 9 v6: CD Staging 実行に必要な IAM ロールを SA に付与 (task-to-claude.md 準拠)**
+
+### 実装した変更（GCP IAM）
+
+対象 SA: `github-actions-deploy@wyze-develop-staging.iam.gserviceaccount.com`
+
+| ロール | 付与目的 | 状態 |
+|---|---|---|
+| `roles/artifactregistry.writer` | Docker イメージ push | ✅ 前回付与済み |
+| `roles/run.admin` | Cloud Run デプロイ | ✅ 今回付与 |
+| `roles/cloudsql.viewer` | Cloud SQL インスタンス参照 | ✅ 今回付与 |
+| `roles/cloudsql.client` | Cloud SQL Proxy 接続 | ✅ 今回付与 |
+| `roles/iam.serviceAccountUser` | SA 権限でのサービス実行 | ✅ 今回付与 |
+
+**付与コマンド:**
+```bash
+gcloud projects add-iam-policy-binding wyze-develop-staging \
+  --member="serviceAccount:github-actions-deploy@wyze-develop-staging.iam.gserviceaccount.com" \
+  --role="<role>" --condition=None
+```
+
+---
+
+### 完了定義 (Definition of Done) 確認
+
+1. ✅ `roles/run.admin` → Cloud Run デプロイ権限エラー解消見込み
+2. ✅ `roles/cloudsql.client` + `roles/cloudsql.viewer` → Cloud SQL 403 エラー解消見込み
+3. ✅ `roles/iam.serviceAccountUser` → SA 実行権限エラー解消見込み
+4. ✅ `GCP_SA_KEY` / `DATABASE_URL_TCP` GitHub Secrets 登録済み
+
+---
+
+## 過去の実装 (2026-03-16) — Phase 9 v5: Dockerfile バージョン統一 & frontend/public 作成 & ENV 形式修正
 
 ### フェーズ / タスク
 **Phase 9 v5: backend/Dockerfile Go バージョン統一、frontend/Dockerfile 修正、public ディレクトリ作成 (task-to-claude.md 準拠)**

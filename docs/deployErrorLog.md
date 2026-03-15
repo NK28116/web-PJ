@@ -350,6 +350,30 @@ Process completed with exit code
  Error: Process completed with exit code 1.
  ##[debug]Finishing: Run migrations
  
+---
+
+Run curl -o cloud-sql-proxy https://storage.googleapis.com/cloud-sql-connectors/cloud-sql-proxy/v2.14.3/cloud-sql-proxy.linux.amd64
+##[debug]/usr/bin/bash -e /home/runner/work/_temp/5cfbd64f-56a6-404a-89a1-ba3da9887807.sh
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
+100 31.8M  100 31.8M    0     0  63.7M      0 --:--:-- --:--:-- --:--:-- 63.8M
+2026/03/15 17:23:00 Authorizing with Application Default Credentials
+2026/03/15 17:23:00 [wyze-develop-staging:us-east1:wyze-staging-db] Listening on 127.0.0.1:5432
+2026/03/15 17:23:00 The proxy has started successfully and is ready for new connections!
+go: downloading github.com/golang-migrate/migrate/v4 v4.17.0
+go: downloading github.com/lib/pq v1.10.9
+go: downloading github.com/hashicorp/go-multierror v1.1.1
+go: downloading go.uber.org/atomic v1.7.0
+go: downloading github.com/hashicorp/errwrap v1.1.0
+2026/03/15 17:23:17 [wyze-develop-staging:us-east1:wyze-staging-db] Accepted connection from 127.0.0.1:39240
+2026/03/15 17:23:18 [wyze-develop-staging:us-east1:wyze-staging-db] failed to connect to instance: failed to get instance: Refresh error: failed to get instance metadata (connection name = "wyze-develop-staging:us-east1:wyze-staging-db"): googleapi: Error 403: boss::NOT_AUTHORIZED: Not authorized to access resource. Possibly missing permission cloudsql.instances.get on resource instances/wyze-staging-db., forbidden
+2026/03/15 17:23:18 ping: read tcp 127.0.0.1:39240->127.0.0.1:5432: read: connection reset by peer
+exit status 1
+Error: Process completed with exit code 1.
+
+---
+ 
 
 ### Build &Deploy FrontEnd
 Authenticate to Google Cloud (Service Account)
@@ -471,3 +495,11 @@ Dockerfile:21
 ERROR: failed to build: failed to solve: failed to compute cache key: failed to calculate checksum of ref d09189cb-1d3f-4984-a57a-14f8dab86177::y4gawhx1sja497r4os1ymdl34: "/app/public": not found
 Error: Process completed with exit code 1.
 ##[debug]Finishing: Build and push frontend image
+
+---
+
+Run gcloud run deploy frontend \
+##[debug]/usr/bin/bash -e /home/runner/work/_temp/b33e5681-abc8-40d6-9967-76dae0791eec.sh
+ERROR: (gcloud.run.deploy) PERMISSION_DENIED: Permission 'run.services.get' denied on resource 'namespaces/wyze-develop-staging/services/frontend' (or resource may not exist). This command is authenticated as github-actions-deploy@wyze-develop-staging.iam.gserviceaccount.com using the credentials in /home/runner/work/web-PJ/web-PJ/gha-creds-9a6951c93f9dae95.json, specified by the [auth/credential_file_override] property.
+Error: Process completed with exit code 1.
+##[debug]Finishing: Deploy Frontend to Cloud Run
