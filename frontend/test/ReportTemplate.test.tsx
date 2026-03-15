@@ -10,6 +10,15 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import '@testing-library/jest-dom'
 import { ReportTemplate } from '../components/templates/ReportTemplate/ReportTemplate'
 
+// useReport / useInstagramMedia のモック（ローディング状態を回避）
+jest.mock('../hooks/useReport', () => ({
+  useReport: () => ({ data: {}, loading: false, error: null, refetch: jest.fn() }),
+}))
+
+jest.mock('../hooks/useInstagramMedia', () => ({
+  useInstagramMedia: () => ({ media: [], loading: false, error: null, refetch: jest.fn() }),
+}))
+
 // BaseTemplateのモック
 jest.mock('../components/templates/BaseTemplate', () => ({
   BaseTemplate: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,

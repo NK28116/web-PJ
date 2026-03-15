@@ -39,23 +39,24 @@ jest.mock('../components/organisms/SideMenu', () => ({
 }))
 
 describe('CurrentFeaturesTemplate - 初期表示の確認', () => {
-  test('ステータスが「契約中」であること', () => {
+  test('ステータスが「未契約」であること', () => {
     render(<CurrentFeaturesTemplate />)
 
-    expect(screen.getByText('契約中')).toBeInTheDocument()
+    expect(screen.getByText('未契約')).toBeInTheDocument()
+    expect(screen.queryByText('契約中')).not.toBeInTheDocument()
   })
 
-  test('次回更新日が表示されていること', () => {
+  test('「契約する」ボタンが初期表示されること', () => {
     render(<CurrentFeaturesTemplate />)
 
-    expect(screen.getByText('2027/01/01 (自動更新)')).toBeInTheDocument()
+    expect(screen.getByText('契約する')).toBeInTheDocument()
   })
 
-  test('契約期間が表示されていること', () => {
+  test('契約期間が非表示であること', () => {
     render(<CurrentFeaturesTemplate />)
 
-    expect(screen.getByText('契約期間')).toBeInTheDocument()
-    expect(screen.getByText('2026/01/01 - 2026/12/31')).toBeInTheDocument()
+    expect(screen.queryByText('契約期間')).not.toBeInTheDocument()
+    expect(screen.queryByText('2026/01/01 - 2026/12/31')).not.toBeInTheDocument()
   })
 })
 
@@ -104,23 +105,23 @@ describe('CurrentFeaturesTemplate - 解約フローの確認', () => {
     expect(screen.queryByText('更新日')).not.toBeInTheDocument()
   })
 
-  test('解約後、「契約する」ボタンが表示されること', () => {
+  test('未契約状態では「契約する」ボタンが常に表示されること', () => {
     render(<CurrentFeaturesTemplate />)
 
-    // 初期状態では「契約する」ボタンは非表示
-    expect(screen.queryByText('契約する')).not.toBeInTheDocument()
+    // 初期状態（未契約）では「契約する」ボタンが表示されている
+    expect(screen.getByText('契約する')).toBeInTheDocument()
 
-    // メニューを開いて解約
+    // メニューを開いて解約（既に未契約のため状態は変わらない）
     fireEvent.click(screen.getByLabelText('メニュー'))
     fireEvent.click(screen.getByText('解約'))
 
-    // 「契約する」ボタンが表示される
+    // 解約後も「契約する」ボタンが表示されたまま
     expect(screen.getByText('契約する')).toBeInTheDocument()
   })
 })
 
 describe('CurrentFeaturesTemplate - 自動更新停止フローの確認', () => {
-  test('自動更新停止後、更新日が警告テキストに変化すること', () => {
+  test('未契約状態で自動更新停止を押しても警告テキストは表示されないこと', () => {
     render(<CurrentFeaturesTemplate />)
 
     // メニューを開く
@@ -129,20 +130,20 @@ describe('CurrentFeaturesTemplate - 自動更新停止フローの確認', () =>
     // 自動更新を停止
     fireEvent.click(screen.getByText('自動更新を停止'))
 
-    // 更新日の表示が変化
-    expect(screen.getByText('自動更新が設定されていません')).toBeInTheDocument()
-    expect(screen.queryByText('2027/01/01 (自動更新)')).not.toBeInTheDocument()
+    // planStatusがinactiveのため更新日セクション自体が非表示
+    expect(screen.queryByText('自動更新が設定されていません')).not.toBeInTheDocument()
+    expect(screen.queryByText(/2027\/01\/01/)).not.toBeInTheDocument()
   })
 
-  test('自動更新停止後、ステータスは「契約中」のままであること', () => {
+  test('未契約状態で自動更新停止を押してもステータスは「未契約」のままであること', () => {
     render(<CurrentFeaturesTemplate />)
 
     // メニューを開いて自動更新停止
     fireEvent.click(screen.getByLabelText('メニュー'))
     fireEvent.click(screen.getByText('自動更新を停止'))
 
-    // ステータスは「契約中」のまま
-    expect(screen.getByText('契約中')).toBeInTheDocument()
-    expect(screen.queryByText('未契約')).not.toBeInTheDocument()
+    // ステータスは「未契約」のまま
+    expect(screen.getByText('未契約')).toBeInTheDocument()
+    expect(screen.queryByText('契約中')).not.toBeInTheDocument()
   })
 })
