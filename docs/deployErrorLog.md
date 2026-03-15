@@ -91,19 +91,90 @@ Process completed with exit code
 
  ## CI 
  ### Backend Lint 
+ 
  0s
  Run cd backend && golangci-lint run ./...
  Error: can't load config: the Go language version (go1.23) used to build golangci-lint is lower than the targeted Go version (1.25.0)
  Failed executing command with error: can't load config: the Go language version (go1.23) used to build golangci-lint is lower than the targeted Go version (1.25.0)
  Error: Process completed with exit code 3.
  
+ ---
+ 
+ #[debug]Evaluating condition for step: 'Run lint'
+ ##[debug]Evaluating: success()
+ ##[debug]Evaluating success:
+ ##[debug]=> true
+ ##[debug]Result: true
+ ##[debug]Starting: Run lint
+ ##[debug]Loading inputs
+ ##[debug]Loading env
+ Run cd backend && golangci-lint run ./...
+ ##[debug]/usr/bin/bash -e /home/runner/work/_temp/5cd1430c-21b5-43d5-8ebf-7ea61ce2b084.sh
+ ##[debug]Dropping file value '/home/runner/work/web-PJ/web-PJ/internal/service/google_service.go'. Path does not exist
+ Error: internal/service/google_service.go:510:6: func `parseDate` is unused (unused)
+ func parseDate(y, m, d int) time.Time {
+      ^
+ Error: Process completed with exit code 1.
+ ##[debug]Finishing: Run lint
+ 
+ ---
+ 
  ## CD stgaing
  ### Builds Migarate &Deploy BackEnd
  Authenticate to Google Cloud (Service Account)
  google-github-actions/auth failed with: the GitHub Action workflow must specify exactly one of "workload_identity_provider" or "credentials_json"! If you are specifying input values via GitHub secrets, ensure the secret is being injected into the environment. By default, secrets are not passed to workflows triggered from forks, including Dependabot.
+ 
+ 
+ ---
+ 
+ ##[debug]Evaluating condition for step: 'Authenticate to Google Cloud (Service Account)'
+ ##[debug]Evaluating: success()
+ ##[debug]Evaluating success:
+ ##[debug]=> true
+ ##[debug]Result: true
+ ##[debug]Starting: Authenticate to Google Cloud (Service Account)
+ ##[debug]Register post job cleanup for action: google-github-actions/auth@v2
+ ##[debug]Loading inputs
+ ##[debug]Evaluating: secrets.GCP_SA_KEY
+ ##[debug]Evaluating Index:
+ ##[debug]..Evaluating secrets:
+ ##[debug]..=> Object
+ ##[debug]..Evaluating String:
+ ##[debug]..=> 'GCP_SA_KEY'
+ ##[debug]=> null
+ ##[debug]Result: null
+ ##[debug]Loading env
+ Run google-github-actions/auth@v2
+ Error: google-github-actions/auth failed with: the GitHub Action workflow must specify exactly one of "workload_identity_provider" or "credentials_json"! If you are specifying input values via GitHub secrets, ensure the secret is being injected into the environment. By default, secrets are not passed to workflows triggered from forks, including Dependabot.
+ ##[debug]Node Action run completed with exit code 1
+ ##[debug]Finishing: Authenticate to Google Cloud (Service Account)
 
 ### Build &Deploy FrontEnd
 Authenticate to Google Cloud (Service Account)
 google-github-actions/auth failed with: the GitHub Action workflow must specify exactly one of "workload_identity_provider" or "credentials_json"! If you are specifying input values via GitHub secrets, ensure the secret is being injected into the environment. By default, secrets are not passed to workflows triggered from forks, including Dependabot.
 Complete job
 Node.js 20 actions are deprecated. The following actions are running on Node.js 20 and may not work as expected: actions/checkout@v4, google-github-actions/auth@v2. Actions will be forced to run with Node.js 24 by default starting June 2nd, 2026. Please check if updated versions of these actions are available that support Node.js 24. To opt into Node.js 24 now, set the FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true environment variable on the runner or in your workflow file. Once Node.js 24 becomes the default, you can temporarily opt out by setting ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+
+----
+
+##[debug]Evaluating condition for step: 'Authenticate to Google Cloud (Service Account)'
+##[debug]Evaluating: success()
+##[debug]Evaluating success:
+##[debug]=> true
+##[debug]Result: true
+##[debug]Starting: Authenticate to Google Cloud (Service Account)
+##[debug]Register post job cleanup for action: google-github-actions/auth@v2
+##[debug]Loading inputs
+##[debug]Evaluating: secrets.GCP_SA_KEY
+##[debug]Evaluating Index:
+##[debug]..Evaluating secrets:
+##[debug]..=> Object
+##[debug]..Evaluating String:
+##[debug]..=> 'GCP_SA_KEY'
+##[debug]=> null
+##[debug]Result: null
+##[debug]Loading env
+Run google-github-actions/auth@v2
+Error: google-github-actions/auth failed with: the GitHub Action workflow must specify exactly one of "workload_identity_provider" or "credentials_json"! If you are specifying input values via GitHub secrets, ensure the secret is being injected into the environment. By default, secrets are not passed to workflows triggered from forks, including Dependabot.
+##[debug]Node Action run completed with exit code 1
+##[debug]Finishing: Authenticate to Google Cloud (Service Account)

@@ -199,6 +199,41 @@ GOTOOLCHAIN=go1.23.0 go build ./...  # ビルド成功
 
 ---
 
+## 実装 (2026-03-16) — Phase 9 v3: Lint エラー解消（parseDate 削除）
+
+### フェーズ / タスク
+**Phase 9 v3: golangci-lint `unused` エラー解消 (task-to-claude.md 準拠)**
+
+### 実装した変更
+
+#### `backend/internal/service/google_service.go`
+```diff
+-func parseDate(y, m, d int) time.Time {
+-	return time.Date(y, time.Month(m), d, 0, 0, 0, 0, time.UTC)
+-}
+```
+
+**理由:** `parseDate` 関数が定義されているが、ファイル内・プロジェクト全体で一切呼び出されていないため削除。
+`golangci-lint` の `unused` チェックで `google_service.go:510:6: func parseDate is unused` が報告されていた。
+
+### 確認済み（変更不要）
+
+| 確認内容 | 状態 |
+|---|---|
+| `auth.go` の `jwt` インポート | ✅ `"github.com/golang-jwt/jwt/v5"` で正しい（パッケージ名 `jwt` が自動適用） |
+| `stripe_service.go` の Stripe 構造体参照 | ✅ `stripe.CheckoutSessionParams` / `portalsession` / `checkout/session` で正しい |
+| `data_isolation_test.go` の `GoogleCallback` 引数 | ✅ 3引数 `(cfg, extAcctRepo, userRepo)` で定義と一致 |
+| `cd-staging.yml` の `GCP_SA_KEY` 記述 | ✅ `credentials_json: ${{ secrets.GCP_SA_KEY }}` でタイポなし |
+
+### 完了定義 (Definition of Done) 確認
+
+1. ✅ `go build ./...` エラーなし（Go 1.23 toolchain）
+2. ✅ `go build -tags=integration ./test/...` コンパイル成功
+3. ✅ フロントエンドテスト 87/87 パス
+4. ⚠️ `GCP_SA_KEY` は GitHub Secrets に手動登録が必要（コード側は正しい）
+
+---
+
 ## 過去の実装履歴
 
 ### Phase 8: ステージング検証 & 実機連携 (2026-03-15)
