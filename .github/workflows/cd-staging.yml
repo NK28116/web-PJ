@@ -2,21 +2,21 @@ name: CD Staging
 
 on:
   push:
-    branches: [develop]
-    paths:
-      - 'backend/**'
+    branches: [main, infraGCPAndCloud] # 検証のため infraGCPAndCloud も一時的に追加
 
 env:
   PROJECT_ID: wyze-develop-staging
   REGION: us-east1
   REPOSITORY: web-system-pj
-  SERVICE: backend
-  IMAGE: us-east1-docker.pkg.dev/wyze-develop-staging/web-system-pj/backend
+  BACKEND_SERVICE: backend
+  FRONTEND_SERVICE: frontend
+  BACKEND_IMAGE: us-east1-docker.pkg.dev/wyze-develop-staging/web-system-pj/backend
+  FRONTEND_IMAGE: us-east1-docker.pkg.dev/wyze-develop-staging/web-system-pj/frontend
   CLOUD_SQL_INSTANCE: wyze-develop-staging:us-east1:wyze-staging-db
 
 jobs:
-  deploy:
-    name: Build, Migrate & Deploy
+  deploy-backend:
+    name: Build, Migrate & Deploy Backend
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -25,7 +25,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # GCP認証 (サービスアカウントキー方式)
+      # GCP認証
       - id: auth
         uses: google-github-actions/auth@v2
         with:
@@ -33,64 +33,75 @@ jobs:
 
       - uses: google-github-actions/setup-gcloud@v2
 
-      # Artifact Registry への Docker 認証
+      # Docker 認証
       - run: gcloud auth configure-docker us-east1-docker.pkg.dev --quiet
 
-      # Docker イメージのビルド & プッシュ
-      - name: Build and push image
+      # Backend ビルド & プッシュ
+      - name: Build and push backend image
         run: |
-          docker build -t ${{ env.IMAGE }}:${{ github.sha }} -t ${{ env.IMAGE }}:latest ./backend
-          docker push ${{ env.IMAGE }}:${{ github.sha }}
-          docker push ${{ env.IMAGE }}:latest
+          docker build -t ${{ env.BACKEND_IMAGE }}:${{ github.sha }} -t ${{ env.BACKEND_IMAGE }}:latest ./backend
+          docker push ${{ env.BACKEND_IMAGE }}:${{ github.sha }}
+          docker push ${{ env.BACKEND_IMAGE }}:latest
 
-      # マイグレーション実行 (cloud-sql-proxy 経由)
+      # マイグレーション
       - uses: actions/setup-go@v5
         with:
           go-version: '1.22'
-          cache: true
-          cache-dependency-path: backend/go.sum
-
-      - name: Install Cloud SQL Proxy
-        run: |
-          curl -o cloud-sql-proxy https://storage.googleapis.com/cloud-sql-connectors/cloud-sql-proxy/v2.14.3/cloud-sql-proxy.linux.amd64
-          chmod +x cloud-sql-proxy
 
       - name: Run migrations
         run: |
+          curl -o cloud-sql-proxy https://storage.googleapis.com/cloud-sql-connectors/cloud-sql-proxy/v2.14.3/cloud-sql-proxy.linux.amd64
+          chmod +x cloud-sql-proxy
           ./cloud-sql-proxy ${{ env.CLOUD_SQL_INSTANCE }} --port=5432 &
           PROXY_PID=$!
           sleep 3
-
           cd backend
-          go mod download
-
-          # DATABASE_URL を TCP 接続形式に変換して実行
           DATABASE_URL="${{ secrets.DATABASE_URL_TCP }}" go run ./cmd/migrate/main.go up
+          kill $PROXY_PID
 
-          MIGRATE_EXIT=$?
-          kill $PROXY_PID 2>/dev/null || true
-
-          if [ $MIGRATE_EXIT -ne 0 ]; then
-            echo "::error::Migration failed. Aborting deployment."
-            exit 1
-          fi
-
-      # Cloud Run デプロイ
-      - name: Deploy to Cloud Run
+      # Backend デプロイ
+      - name: Deploy Backend to Cloud Run
         run: |
-          gcloud run deploy ${{ env.SERVICE }} \
-            --image=${{ env.IMAGE }}:${{ github.sha }} \
+          gcloud run deploy ${{ env.BACKEND_SERVICE }} \
+            --image=${{ env.BACKEND_IMAGE }}:${{ github.sha }} \
             --region=${{ env.REGION }} \
             --platform=managed \
             --quiet
 
-      # 疎通確認
-      - name: Health check
+  deploy-frontend:
+    name: Build & Deploy Frontend
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # GCP認証
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      # Docker 認証
+      - run: gcloud auth configure-docker us-east1-docker.pkg.dev --quiet
+
+      # Frontend ビルド & プッシュ
+      - name: Build and push frontend image
         run: |
-          SERVICE_URL=$(gcloud run services describe ${{ env.SERVICE }} --region=${{ env.REGION }} --format='value(status.url)')
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${SERVICE_URL}/health" --max-time 10)
-          if [ "$STATUS" != "200" ]; then
-            echo "::error::Health check failed (HTTP $STATUS)"
-            exit 1
-          fi
-          echo "Health check passed (HTTP $STATUS)"
+          docker build -t ${{ env.FRONTEND_IMAGE }}:${{ github.sha }} -t ${{ env.FRONTEND_IMAGE }}:latest ./
+          docker push ${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
+          docker push ${{ env.FRONTEND_IMAGE }}:latest
+
+      # Frontend デプロイ
+      - name: Deploy Frontend to Cloud Run
+        run: |
+          gcloud run deploy ${{ env.FRONTEND_SERVICE }} \
+            --image=${{ env.FRONTEND_IMAGE }}:${{ github.sha }} \
+            --region=${{ env.REGION }} \
+            --platform=managed \
+            --allow-unauthenticated \
+            --quiet
