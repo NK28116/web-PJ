@@ -1,14 +1,12 @@
 import { Text } from '@/components/atoms/Text';
+import { Spinner } from '@/atoms/Spinner';
 import { BaseTemplate } from '@/components/templates/BaseTemplate';
-import { operationalReportData } from '@/test/mock/reportMockData';
+import { useReport } from '@/hooks/useReport';
 import React, { useEffect, useRef, useState } from 'react';
 import { IoIosArrowDown } from 'react-icons/io';
 import AiTab from './AiTab';
 import ReportTab from './ReportTab';
 
-/**
- * 期間選択モーダルコンポーネント
- */
 const PeriodSelector: React.FC<{
   value: string;
   onChange: (value: string) => void;
@@ -48,9 +46,7 @@ const PeriodSelector: React.FC<{
 
       {isOpen && (
         <div className="absolute top-full right-0 mt-3 w-40 bg-white rounded-lg shadow-xl z-50 border border-gray-100">
-          {/* 吹き出しの三角 */}
           <div className="absolute -top-2 right-6 w-4 h-4 bg-white transform rotate-45 border-t border-l border-gray-100" />
-
           <div className="relative py-2 bg-white rounded-lg">
             {options.map((option) => (
               <div
@@ -114,11 +110,11 @@ const getDateRange = (period: string): string => {
 export const ReportTemplate: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'report' | 'ai'>('report');
   const [selectedPeriod, setSelectedPeriod] = useState('lastMonth');
+  const { data, loading, error } = useReport(selectedPeriod);
 
   return (
     <BaseTemplate activeTab="report">
       <div className="flex flex-col gap-6 pb-20 bg-[#F5F5F5] min-h-screen">
-        {/* タブ・期間選択 */}
         <div className="bg-white sticky top-0 z-10 shadow-sm">
           <div className="px-4 pt-4 pb-0 flex items-center justify-between border-b border-gray-200 ">
             <div className="flex gap-6 items-center w-full">
@@ -154,8 +150,17 @@ export const ReportTemplate: React.FC = () => {
           </div>
         </div>
 
-        {/* タブコンテンツの表示 */}
-        {activeTab === 'report' && <ReportTab data={operationalReportData} />}
+        {activeTab === 'report' && (
+          loading ? (
+            <div className="flex items-center justify-center h-64"><Spinner /></div>
+          ) : error ? (
+            <div className="flex items-center justify-center h-64">
+              <Text className="text-red-500">{error}</Text>
+            </div>
+          ) : (
+            <ReportTab data={data} />
+          )
+        )}
         {activeTab === 'ai' && <AiTab />}
       </div>
     </BaseTemplate>
