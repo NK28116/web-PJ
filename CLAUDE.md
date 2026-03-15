@@ -4,7 +4,64 @@
 
 ---
 
-## 最新の実装 (2026-03-16) — Phase 9 v6: GCP IAM ロール追加付与
+## 最新の実装 (2026-03-16) — Phase 9 v7: Cloud Run デプロイコマンド修正（Cloud SQL 接続・Secret Manager 連携）
+
+### フェーズ / タスク
+**Phase 9 v7: コンテナ起動エラー解消 (task-to-claude.md Task 6 準拠)**
+
+### 実装した変更
+
+#### `.github/workflows/cd-staging.yml` — Deploy Backend to Cloud Run
+```diff
+  gcloud run deploy ${{ env.BACKEND_SERVICE }} \
+    --image=${{ env.BACKEND_IMAGE }}:${{ github.sha }} \
+    --region=${{ env.REGION }} \
+    --platform=managed \
++   --add-cloudsql-instances=${{ env.CLOUD_SQL_INSTANCE }} \
++   --set-secrets=DATABASE_URL=DATABASE_URL:latest,JWT_SECRET=JWT_SECRET:latest,ENCRYPTION_KEY=ENCRYPTION_KEY:latest,GOOGLE_CLIENT_ID=GOOGLE_CLIENT_ID:latest,GOOGLE_CLIENT_SECRET=GOOGLE_CLIENT_SECRET:latest,INSTAGRAM_CLIENT_ID=INSTAGRAM_CLIENT_ID:latest,INSTAGRAM_CLIENT_SECRET=INSTAGRAM_CLIENT_SECRET:latest,STRIPE_SECRET_KEY=STRIPE_API:latest \
+    --quiet
+```
+
+**理由:**
+- `--add-cloudsql-instances`: Cloud Run コンテナから Cloud SQL へ unix socket 経由で接続するために必要
+- `--set-secrets`: Secret Manager の値を環境変数として Cloud Run コンテナに注入。`DATABASE_URL` が未設定だと `mustEnv` で panic してコンテナがクラッシュしていた
+
+**Secret Manager → 環境変数 マッピング:**
+
+| 環境変数 | Secret Manager キー |
+|---|---|
+| `DATABASE_URL` | `DATABASE_URL:latest` (unix socket 形式 ✅) |
+| `JWT_SECRET` | `JWT_SECRET:latest` |
+| `ENCRYPTION_KEY` | `ENCRYPTION_KEY:latest` |
+| `GOOGLE_CLIENT_ID` | `GOOGLE_CLIENT_ID:latest` |
+| `GOOGLE_CLIENT_SECRET` | `GOOGLE_CLIENT_SECRET:latest` |
+| `INSTAGRAM_CLIENT_ID` | `INSTAGRAM_CLIENT_ID:latest` |
+| `INSTAGRAM_CLIENT_SECRET` | `INSTAGRAM_CLIENT_SECRET:latest` |
+| `STRIPE_SECRET_KEY` | `STRIPE_API:latest` |
+
+---
+
+### 確認済み（変更不要と判断したもの）
+
+| 確認内容 | 状態 |
+|---|---|
+| Cloud SQL パブリック IP | ✅ `ipv4Enabled: true` で既に有効 |
+| `config.go` の PORT 処理 | ✅ `getEnv("PORT", "8080")` — Cloud Run が自動設定 |
+| Secret Manager の `DATABASE_URL` 形式 | ✅ unix socket 形式 (`host=/cloudsql/wyze-develop-staging:us-east1:wyze-staging-db`) |
+| Cloud Run SA の Secret Manager アクセス | ✅ `roles/editor` で包含済み |
+| Cloud SQL の `wyze_db` 存在確認 | ✅ `gcloud sql databases list` で確認済み |
+
+---
+
+### 完了定義 (Definition of Done) 確認
+
+1. ✅ Cloud Run バックエンドが起動時に Cloud SQL 接続・必須 env 取得可能
+2. ✅ `DATABASE_URL_TCP` (Proxy 用) と Secret Manager `DATABASE_URL` (Cloud Run 用) の役割分離
+3. ⚠️ `STRIPE_WEBHOOK_SECRET` は Secret Manager 未登録 — 必要なら手動追加
+
+---
+
+## 過去の実装 (2026-03-16) — Phase 9 v6: GCP IAM ロール追加付与
 
 ### フェーズ / タスク
 **Phase 9 v6: CD Staging 実行に必要な IAM ロールを SA に付与 (task-to-claude.md 準拠)**

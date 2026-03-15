@@ -1,107 +1,114 @@
-# 実装指示書 (Phase 9: デプロイ・CIエラーの解消)
+# 実装指示書 (Phase 9: デプロイ・CIエラーの解消 - 完全版)
 
 ## 概要
-現在、CI/CD パイプラインにおいて、Go バージョンの不整合、特定の Lint エラー、統合テストのコンパイルエラー、および GCP へのデプロイ認証・ビルド・マイグレーションエラーが発生しています。これらを一つずつ解消し、パイプラインを正常化させてください。
+現在、CI/CD パイプラインにおいて、Go バージョンの不整合、特定の Lint エラー、統合テストの不整合、および GCP へのデプロイにおける認証・権限・ネットワーク・データベース設定のエラーが発生しています。これらをすべて解消し、パイプラインを正常化させてください。
 
 ---
 
 ## 1. Go バージョンの不整合解消 (最優先)
 
 ### 症状
-- `Error: can't load config: the Go language version (go1.23) used to build golangci-lint is lower than the targeted Go version (1.25.0)`
-- `backend/Dockerfile` が `golang:1.25-alpine` を参照しており、CI 環境と不整合。
+- `golangci-lint` が Go 1.25 を要求しているが CI 環境が 1.23。
+- `backend/Dockerfile` が `golang:1.25-alpine` を参照している。
 
 ### 修正内容
-1.  **`backend/go.mod` のダウングレード**:
-    - `go 1.25.0` を **`go 1.23`** に変更してください。
-    - 変更後、`go mod tidy` を実行して依存関係を再整理してください。
-2.  **`backend/Dockerfile` の修正**:
-    - `FROM golang:1.25-alpine` を **`FROM golang:1.23-alpine`** に変更してください。
-3.  **ワークフローファイルの同期**:
-    - `.github/workflows/ci.yml` および `cd-staging.yml` の `go-version` が `'1.23'` であることを再確認し、統一してください。
+1.  **`backend/go.mod`**: `go 1.25.0` を **`go 1.23`** にダウングレードし、`go mod tidy` を実行してください。
+2.  **`backend/Dockerfile`**: `FROM golang:1.25-alpine` を **`FROM golang:1.23-alpine`** に変更してください。
+3.  **ワークフロー同期**: `.github/workflows/ci.yml` と `cd-staging.yml` の `go-version` が `'1.23'` であることを確認してください。
 
 ---
 
-## 2. バックエンドの Lint エラー解消
+## 2. バックエンドの Lint / コンパイルエラー解消
 
 ### 症状
-- `jwt`, `migrate`, `stripe` パッケージの `undefined` エラー。
-- `internal/service/google_service.go:510:6: func parseDate is unused (unused)`
+- `jwt`, `migrate`, `stripe` パッケージが `undefined`。
+- `internal/service/google_service.go:510:6: func parseDate is unused`。
 
 ### 修正内容
-1.  **インポートパスのエイリアス付与とパッケージ参照**:
-    - **jwt**: `internal/handlers/auth.go` および `internal/models/claims.go` で、`jwt "github.com/golang-jwt/jwt/v5"` のように明示的にエイリアスを付与し、`jwt.RegisteredClaims` 等の参照を有効にしてください。
-    - **migrate**: `cmd/migrate/main.go` で、パッケージ名 `migrate` として正しく参照できているか確認し、必要に応じてエイリアスを付与してください。
-    - **stripe**: `internal/service/stripe_service.go` で、`stripe-go/v76` の仕様に合わせ、適切なパッケージ（`"github.com/stripe/stripe-go/v76"` 等）をインポートし、構造体参照を修正してください。
-2.  **未使用関数の削除**:
-    - `google_service.go` 内の `parseDate` 関数が使用されていないため、削除してください。
+1.  **パッケージ参照修正**:
+    - **jwt**: `auth.go` 等で `jwt "github.com/golang-jwt/jwt/v5"` のようにエイリアスを付与。
+    - **migrate**: `cmd/migrate/main.go` でのインポートとパッケージ参照を整理。
+    - **stripe**: `stripe-go/v76` の仕様に合わせ、適切なサブパッケージをインポートし参照を修正。
+2.  **未使用関数削除**: `google_service.go` の `parseDate` 関数を削除。
 
 ---
 
 ## 3. バックエンド統合テストの修正
 
 ### 症状
-`not enough arguments in call to handlers.GoogleCallback`
-`test/data_isolation_test.go` における `handlers.GoogleCallback` の呼び出し引数が、定義と一致していません。
+- `not enough arguments in call to handlers.GoogleCallback`
 
 ### 修正内容
-1.  **引数の完全一致**:
-    - `backend/internal/handlers/oauth.go` の `GoogleCallback` の最新の定義（シグネチャ）を確認し、`test/data_isolation_test.go` での呼び出し側引数が不足している場合は、モックや適切なリポジトリを渡すよう修正してください。
+1.  `test/data_isolation_test.go` における `handlers.GoogleCallback` の呼び出し引数を、最新の定義に合わせて修正してください（モックやリポジトリの不足分を追加）。
 
 ---
 
-## 4. GCP 認証・権限・マイグレーションの修正 (CD Staging)
+## 4. GCP 認証・権限・ネットワーク設定 (CD Staging)
 
 ### 症状
-1.  **認証エラー**: `Evaluating: secrets.GCP_SA_KEY => null`
-2.  **Artifact Registry 権限不足**: `denied: Permission 'artifactregistry.repositories.uploadArtifacts' denied`
-3.  **Cloud SQL 接続エラー**: `Error 403: boss::NOT_AUTHORIZED: Possibly missing permission cloudsql.instances.get on resource instances/wyze-staging-db`
-4.  **Cloud Run デプロイ権限不足**: `PERMISSION_DENIED: Permission 'run.services.get' denied on resource 'namespaces/wyze-develop-staging/services/frontend'`
-5.  **環境変数不足**: `DATABASE_URL is required` (マイグレーション実行時)
+- `GCP_SA_KEY => null` (認証失敗)
+- `Permission 'artifactregistry.repositories.uploadArtifacts' denied` (ビルド失敗)
+- `Permission 'run.services.get' denied` (デプロイ失敗)
+- `Config error: instance does not have IP of type "PUBLIC"` (接続失敗)
 
 ### 修正内容
-1.  **GitHub Secrets の再設定**:
-    - `GCP_SA_KEY` が GitHub Actions の Secrets に正しく登録されているか確認してください。
-    - `DATABASE_URL_TCP` が正しい形式（Cloud SQL Proxy 用に `127.0.0.1:5432` 経由）で登録されているか確認してください。
-2.  **IAM 権限の付与 (GCP コンソール)**:
-    - サービスアカウントに以下のロールを付与してください：
-        - `Artifact Registry 書き込み` (roles/artifactregistry.writer)
-        - `Cloud Run 管理者` (roles/run.admin)
-        - `Cloud SQL 閲覧者` (roles/cloudsql.viewer)
-        - `Cloud SQL クライアント` (roles/cloudsql.client)
-        - `サービス アカウント ユーザー` (roles/iam.serviceAccountUser)
+1.  **Secrets 再設定**: GitHub Secrets に `GCP_SA_KEY` が正しく登録されているか確認。
+2.  **GCP ネットワーク設定**: Cloud SQL インスタンスの設定で **「パブリック IP」** を有効にしてください。
+3.  **IAM 権限付与**: サービスアカウントに以下のロールを付与してください：
+    - `Artifact Registry 書き込み`
+    - `Cloud Run 管理者`
+    - `Cloud SQL 閲覧者` および `Cloud SQL クライアント`
+    - `サービス アカウント ユーザー`
 
 ---
 
-## 5. フロントエンドのビルドエラー修正 (CD Staging)
+## 5. データベース接続・マイグレーションのエラー修正
 
 ### 症状
-- `open Dockerfile: no such file or directory` (ビルドコンテキストの誤り)
-- `"/app/public": not found` (Dockerfile 内の COPY エラー)
-- `LegacyKeyValueFormat` Warning (ENV 形式)
+- `DATABASE_URL is required` (環境変数不足)
+- `pq: database "wyze-staging-db" does not exist` (論理DB名の不一致)
 
 ### 修正内容
-1.  **ビルドコンテキストの修正**:
-    - `.github/workflows/cd-staging.yml` において、`docker build ... ./` → **`docker build ... ./frontend`** に変更してください。
-2.  **Dockerfile の修正 (`frontend/Dockerfile`)**:
-    - `ENV NODE_ENV production` → **`ENV NODE_ENV=production`** に変更してください。
-3.  **`public` ディレクトリの確保**:
-    - `frontend/public` ディレクトリが空でも存在する必要があります。`frontend/public/.gitkeep` ファイルを作成して Git で管理されるようにしてください。
+1.  **環境変数の修正**: `cd-staging.yml` でマイグレーション実行時に `DATABASE_URL` を正しく渡すよう修正。
+2.  **データベース名の修正**:
+    - **GitHub Secrets `DATABASE_URL_TCP`** の接続文字列末尾のデータベース名を確認。
+    - 「wyze-staging-db」はインスタンス名である可能性が高いため、実際のデータベース名（例: `postgres` またはアプリ用DB名）に修正してください。
 
 ---
 
-## 6. フロントエンドのテスト修正
+## 6. コンテナ起動エラーの解消 (Backend)
 
 ### 症状
-`npm test` が exit code 1 で失敗しています。
+- `The user-provided container failed to start and listen on the port defined provided by the PORT=8080`
 
 ### 修正内容
-1.  **テストケースの修正**:
-    - `frontend` ディレクトリで `npm test` を実行し、アサーションエラーや型エラーが発生しているテストファイルを特定して修正してください。
+1.  **待機ポートの確認**: アプリケーションが `PORT` 環境変数（Cloud Run が指定する 8080）を読み込み、そのポートで Listen しているか確認してください。
+2.  **接続タイムアウト**: DB接続に失敗して起動時にクラッシュしていないか、ログを確認し必要に応じてリトライ処理やタイムアウトを調整してください。
+
+---
+
+## 7. フロントエンドのビルド・デプロイ修正
+
+### 症状
+- `open Dockerfile: no such file or directory` (パスの誤り)
+- `"/app/public": not found` (Dockerfile の COPY エラー)
+- `LegacyKeyValueFormat` Warning
+
+### 修正内容
+1.  **ワークフロー修正**: `cd-staging.yml` のビルドコンテキストを `./frontend` に変更。
+2.  **Dockerfile 修正**: `ENV NODE_ENV production` → `ENV NODE_ENV=production` に修正。
+3.  **public ディレクトリ**: `frontend/public/.gitkeep` を作成し、ディレクトリがリポジトリに含まれるようにしてください。
+
+---
+
+## 8. フロントエンドのテスト修正
+
+### 修正内容
+1.  `frontend` ディレクトリで `npm test` を実行し、現状発生しているアサーションエラーや型エラーをすべて解消してください。
 
 ---
 
 ## 完了定義 (Definition of Done)
-1. GitHub Actions の `CI` ワークフローがすべてパスすること。
-2. `CD Staging` ワークフローにおいて、ビルド、プッシュ、マイグレーション、デプロイがすべて成功すること。
-3. Go の全ファイルが `1.23` で正常にコンパイル・Lint できること。
+1. CI ワークフローがすべてパスすること。
+2. CD ワークフローにおいて、フロントエンド・バックエンド共にデプロイが完了し、URLにアクセスできること。
+3. マイグレーションが正常に実行され、DBスキーマが反映されていること。
