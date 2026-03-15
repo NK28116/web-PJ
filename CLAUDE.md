@@ -158,6 +158,47 @@ jest.mock('../hooks/useInstagramMedia', () => ({
 
 ---
 
+## 実装 (2026-03-16) — Phase 9 v2: go.mod バージョン依存関係の解消
+
+### フェーズ / タスク
+**Phase 9 v2: `go.mod` の Go 1.23 互換性修正 (task-to-claude.md 準拠)**
+
+### 問題の根本原因
+
+`golang.org/x/oauth2 v0.36.0` は `go >= 1.25.0` を要求していたため、`go.mod` を `go 1.23` に変更して `go mod tidy` を実行すると以下のエラーが発生していた：
+
+```
+go: golang.org/x/oauth2@v0.36.0 requires go >= 1.25.0 (running go 1.23.0; GOTOOLCHAIN=go1.23.0)
+```
+
+### 実装した変更
+
+#### `backend/go.mod`
+```diff
+- golang.org/x/oauth2 v0.36.0
++ golang.org/x/oauth2 v0.24.0
+```
+
+**理由:** `v0.24.0` は Go 1.23 と互換性がある最新近傍バージョン（2024-11-01 リリース）。
+CI の `go-version: '1.23'` との整合性を保つため oauth2 をダウングレード。
+
+#### `backend/` — `go mod tidy` 実行（Go 1.23 toolchain で成功確認済み）
+
+```bash
+GOTOOLCHAIN=go1.23.0 go mod tidy  # エラーなし、go.sum 更新済み
+GOTOOLCHAIN=go1.23.0 go build ./...  # ビルド成功
+```
+
+### 完了定義 (Definition of Done) 確認
+
+1. ✅ `go.mod`: `go 1.23` + `golang.org/x/oauth2 v0.24.0`（CI と完全一致）
+2. ✅ `go mod tidy` エラーなし（`GOTOOLCHAIN=go1.23.0` で確認）
+3. ✅ `go build ./...` エラーなし
+4. ✅ フロントエンドテスト 87/87 パス（ローカル確認済み）
+5. ⚠️ `CD Staging` の GCP 認証 → `GCP_SA_KEY` GitHub Secret 設定が必要（コード変更なし）
+
+---
+
 ## 過去の実装履歴
 
 ### Phase 8: ステージング検証 & 実機連携 (2026-03-15)
