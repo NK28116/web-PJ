@@ -32,8 +32,10 @@ export const useReviews = () => {
     setError(null);
     try {
       const data = await apiGet<GoogleReview[]>('/api/google/reviews');
+      console.log('[useReviews] GET /api/google/reviews:', { count: data.length, data });
       setReviews(data.map(toReview));
     } catch (err) {
+      console.error('[useReviews] GET /api/google/reviews failed:', err);
       setError(err instanceof Error ? err.message : '口コミの取得に失敗しました');
     } finally {
       setLoading(false);
@@ -45,6 +47,7 @@ export const useReviews = () => {
   }, [fetchReviews]);
 
   const submitReply = useCallback(async (reviewId: string, comment: string) => {
+    console.log('[useReviews] POST /api/google/reviews/' + reviewId + '/reply:', { comment });
     await apiPost(`/api/google/reviews/${reviewId}/reply`, { comment });
     setReviews((prev) =>
       prev.map((r) =>

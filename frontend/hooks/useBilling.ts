@@ -10,9 +10,12 @@ export const useBilling = () => {
     setLoading(true);
     setError(null);
     try {
+      console.log('[useBilling] POST /api/billing/checkout:', { price_id: priceId });
       const res = await apiPost<CheckoutResponse>('/api/billing/checkout', { price_id: priceId });
-      window.location.href = res.url;
+      console.log('[useBilling] checkout response:', res);
+      window.location.assign(res.url);
     } catch (err) {
+      console.error('[useBilling] POST /api/billing/checkout failed:', err);
       setError(err instanceof Error ? err.message : '決済セッションの作成に失敗しました');
       setLoading(false);
     }
@@ -22,9 +25,12 @@ export const useBilling = () => {
     setLoading(true);
     setError(null);
     try {
+      console.log('[useBilling] POST /api/billing/portal');
       const res = await apiPost<PortalResponse>('/api/billing/portal');
-      window.location.href = res.url;
+      console.log('[useBilling] portal response:', res);
+      window.location.assign(res.url);
     } catch (err) {
+      console.error('[useBilling] POST /api/billing/portal failed:', err);
       setError(err instanceof Error ? err.message : 'ポータルの作成に失敗しました');
       setLoading(false);
     }

@@ -120,8 +120,10 @@ export const useReport = (period: string) => {
     try {
       const q = periodToQuery(period);
       const summary = await apiGet<ReportSummary>(`/api/reports/summary?start=${q.start}&end=${q.end}`);
+      console.log('[useReport] GET /api/reports/summary:', { period, query: q, summary });
       setData(toReportData(summary));
     } catch (err) {
+      console.error('[useReport] GET /api/reports/summary failed:', err);
       setError(err instanceof Error ? err.message : 'レポートの取得に失敗しました');
     } finally {
       setLoading(false);
