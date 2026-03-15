@@ -25,8 +25,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # GCP認証
+      # GCP認証 (GitHub Secrets: GCP_SA_KEY が必要)
       - id: auth
+        name: Authenticate to Google Cloud (Service Account)
         uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
@@ -78,8 +79,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # GCP認証
+      # GCP認証 (GitHub Secrets: GCP_SA_KEY が必要)
       - id: auth
+        name: Authenticate to Google Cloud (Service Account)
         uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
