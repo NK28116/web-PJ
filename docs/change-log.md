@@ -1,5 +1,45 @@
 # 変更ログ
 
+## 2026-03-15 (Phase 8-2: 指示書更新に伴う追加実装)
+
+### 概要
+指示書更新に基づき、レポートのグラフ描画を `recharts` に切り替え、Instagram メディア投稿一覧セクションを追加。領収書PDF生成はバックログに移行。
+
+### 実施内容
+
+#### 1. recharts によるグラフ描画への切り替え (ReportTab)
+- `frontend/components/templates/ReportTemplate/ReportTab.tsx` を修正
+  - 曜日傾向グラフ: カスタム SVG `BarChart` → recharts `BarChart` + `Bar` + `XAxis` + `YAxis` + `CartesianGrid` + `Tooltip`
+  - 時間帯傾向グラフ: 同上
+  - MEO順位推移: カスタム SVG `LineChart` → recharts `LineChart` + `Line`（`reversed` Y軸で1位を上に表示）
+  - `ResponsiveContainer` でレスポンシブ対応
+  - DonutChart はカスタム SVG を維持（recharts PieChart より既存デザインに適合するため）
+
+#### 2. Instagram メディア投稿一覧の追加
+- `frontend/hooks/useInstagramMedia.ts` を新規作成
+  - `GET /api/instagram/media` からメディアリスト取得
+  - `InstagramMediaItem[]` 型でデータ管理
+
+- `ReportTab` に「Instagram 投稿一覧」セクションを追加
+  - 画像サムネイル（2カラムグリッド、最大6件表示）
+  - キャプション（2行clamp）
+  - いいね数・コメント数の表示
+
+- `ReportTemplate.tsx` を修正
+  - `useInstagramMedia()` フックを呼び出し
+  - `instagramMedia` を `ReportTab` に props として渡す
+
+#### 3. 領収書PDF生成のバックログ移行
+- 指示書のセクション4で「テンプレート未完成のため実装見送り」と明記
+- 前回実装した `generateReceipt.ts` と `jspdf` 依存は将来のテンプレート確定後に活用予定
+
+### 変更ファイル一覧
+- `frontend/hooks/useInstagramMedia.ts` (新規)
+- `frontend/components/templates/ReportTemplate/ReportTab.tsx` (修正: recharts + Instagram)
+- `frontend/components/templates/ReportTemplate/ReportTemplate.tsx` (修正: Instagram連携追加)
+
+---
+
 ## 2026-03-15 (Phase 8: ステージング検証 & 実機連携)
 
 ### 概要

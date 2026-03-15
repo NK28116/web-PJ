@@ -2,6 +2,7 @@ import { Text } from '@/components/atoms/Text';
 import { Spinner } from '@/atoms/Spinner';
 import { BaseTemplate } from '@/components/templates/BaseTemplate';
 import { useReport } from '@/hooks/useReport';
+import { useInstagramMedia } from '@/hooks/useInstagramMedia';
 import React, { useEffect, useRef, useState } from 'react';
 import { IoIosArrowDown } from 'react-icons/io';
 import AiTab from './AiTab';
@@ -111,6 +112,7 @@ export const ReportTemplate: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'report' | 'ai'>('report');
   const [selectedPeriod, setSelectedPeriod] = useState('lastMonth');
   const { data, loading, error } = useReport(selectedPeriod);
+  const { media: instagramMedia } = useInstagramMedia();
 
   return (
     <BaseTemplate activeTab="report">
@@ -158,7 +160,7 @@ export const ReportTemplate: React.FC = () => {
               <Text className="text-red-500">{error}</Text>
             </div>
           ) : (
-            <ReportTab data={data} />
+            <ReportTab data={data} instagramMedia={instagramMedia} />
           )
         )}
         {activeTab === 'ai' && <AiTab />}
