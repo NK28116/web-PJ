@@ -39,6 +39,7 @@ func main() {
 	// サービス初期化
 	googleSvc := service.NewGoogleService(cfg, extAcctRepo, nil)
 	instagramSvc := service.NewInstagramService(cfg, extAcctRepo, nil)
+	stripeSvc := service.NewStripeService(cfg)
 
 	gin.SetMode(cfg.GinMode)
 	r := gin.Default()
@@ -47,6 +48,7 @@ func main() {
 	r.GET("/health", handlers.Health)
 	r.POST("/register", handlers.Register(cfg, userRepo))
 	r.POST("/login", handlers.Login(cfg, userRepo))
+	r.POST("/api/webhooks/stripe", handlers.StripeWebhook(cfg, userRepo))
 
 	// OAuth routes (認証不要 — ブラウザリダイレクト経由)
 	auth := r.Group("/api/auth")
@@ -81,6 +83,10 @@ func main() {
 		// Instagram API
 		protected.GET("/api/instagram/media", handlers.GetInstagramMedia(instagramSvc))
 		protected.POST("/api/instagram/media", handlers.CreateInstagramMedia(instagramSvc))
+
+		// Billing API
+		protected.POST("/api/billing/checkout", handlers.CreateCheckoutSession(stripeSvc))
+		protected.POST("/api/billing/portal", handlers.CreatePortalSession(stripeSvc, userRepo))
 	}
 
 	log.Printf("server starting on :%s", cfg.Port)

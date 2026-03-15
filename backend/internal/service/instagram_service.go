@@ -1,11 +1,11 @@
 package service
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"time"
@@ -35,16 +35,13 @@ func NewInstagramService(cfg *config.Config, repo *repository.ExternalAccountRep
 // getAccessToken はトークンリフレッシュ付きでアクセストークンを取得する
 func (s *InstagramService) getAccessToken(ctx context.Context, userID string) (string, error) {
 	if s.extAcctRepo == nil {
-		return "", fmt.Errorf("instagram account not linked")
+		return "", fmt.Errorf("instagram account repo not initialized")
 	}
 	return RefreshTokenIfNeeded(ctx, s.cfg, s.extAcctRepo, userID, "instagram")
 }
 
 // getIGUserID は external_accounts から provider_user_id (IG Business Account ID) を取得する
 func (s *InstagramService) getIGUserID(userID string) (string, error) {
-	if s.extAcctRepo == nil {
-		return "", fmt.Errorf("instagram account not linked")
-	}
 	ea, err := s.extAcctRepo.FindByUserAndProvider(userID, "instagram")
 	if err != nil || ea == nil {
 		return "", fmt.Errorf("instagram account not linked")
@@ -52,43 +49,38 @@ func (s *InstagramService) getIGUserID(userID string) (string, error) {
 	return ea.ProviderUserID, nil
 }
 
-// doGet はアクセストークン付きでGET リクエストを実行する
-func (s *InstagramService) doGet(ctx context.Context, apiURL, accessToken string) ([]byte, error) {
-	sep := "?"
-	if len(apiURL) > 0 && (apiURL[len(apiURL)-1] == '?' || contains(apiURL, "?")) {
-		sep = "&"
-	}
-	fullURL := apiURL + sep + "access_token=" + url.QueryEscape(accessToken)
-
-	req, err := http.NewRequestWithContext(ctx, "GET", fullURL, nil)
+// doRequest はアクセストークン付きで HTTP リクエストを実行する
+func (s *InstagramService) doRequest(ctx context.Context, method, apiURL, accessToken string, body io.Reader) ([]byte, error) {
+	// URLにアクセストークンを付与
+	u, err := url.Parse(apiURL)
 	if err != nil {
 		return nil, err
+	}
+	q := u.Query()
+	q.Set("access_token", accessToken)
+	u.RawQuery = q.Encode()
+
+	req, err := http.NewRequestWithContext(ctx, method, u.String(), body)
+	if err != nil {
+		return nil, fmt.Errorf("create request: %w", err)
 	}
 
 	resp, err := s.httpClient.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("http execute: %w", err)
 	}
 	defer resp.Body.Close()
 
-	body, err := io.ReadAll(resp.Body)
+	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("read response: %w", err)
 	}
 
 	if resp.StatusCode >= 400 {
-		return nil, fmt.Errorf("instagram api error (status %d): %s", resp.StatusCode, string(body))
+		log.Printf("Instagram API Error: status=%d, body=%s", resp.StatusCode, string(respBody))
+		return nil, fmt.Errorf("instagram api error (status %d): %s", resp.StatusCode, string(respBody))
 	}
-	return body, nil
-}
-
-func contains(s, substr string) bool {
-	for i := 0; i+len(substr) <= len(s); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
+	return respBody, nil
 }
 
 // FetchInsights はInstagramインサイトデータを取得する
@@ -107,17 +99,17 @@ func (s *InstagramService) FetchInsights(ctx context.Context, userID string, sta
 		Period: models.ReportPeriod{Start: start, End: end},
 	}
 
-	// ユーザーインサイト取得 (impressions, reach, profile_views, website_clicks)
+	// 1. ユーザーインサイト取得 (impressions, reach, profile_views, website_clicks)
+	// Note: since/until は Unix タイムスタンプ
 	since := start.Unix()
 	until := end.Unix()
-	insightsURL := fmt.Sprintf(
-		"%s/%s/insights?metric=impressions,reach,profile_views,website_clicks&period=day&since=%d&until=%d",
-		fbGraphBaseURL, igUserID, since, until,
-	)
+	// period=day の場合、過去30日間まで取得可能
+	insightsURL := fmt.Sprintf("%s/%s/insights?metric=impressions,reach,profile_views,website_clicks&period=day&since=%d&until=%d",
+		fbGraphBaseURL, igUserID, since, until)
 
-	body, err := s.doGet(ctx, insightsURL, token)
+	body, err := s.doRequest(ctx, "GET", insightsURL, token, nil)
 	if err != nil {
-		return nil, fmt.Errorf("fetch insights: %w", err)
+		return nil, fmt.Errorf("fetch user insights: %w", err)
 	}
 
 	var insightsResp struct {
@@ -129,7 +121,7 @@ func (s *InstagramService) FetchInsights(ctx context.Context, userID string, sta
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(body, &insightsResp); err != nil {
-		return nil, fmt.Errorf("decode insights: %w", err)
+		return nil, fmt.Errorf("decode user insights: %w", err)
 	}
 
 	for _, metric := range insightsResp.Data {
@@ -149,15 +141,28 @@ func (s *InstagramService) FetchInsights(ctx context.Context, userID string, sta
 		}
 	}
 
-	// フォロワー数
+	// 2. フォロワー数推移 (follower_count)
+	// 現在のフォロワー数を取得
 	profileURL := fmt.Sprintf("%s/%s?fields=followers_count", fbGraphBaseURL, igUserID)
-	profileBody, err := s.doGet(ctx, profileURL, token)
+	profileBody, err := s.doRequest(ctx, "GET", profileURL, token, nil)
 	if err == nil {
 		var profileResp struct {
 			FollowersCount int `json:"followers_count"`
 		}
 		if json.Unmarshal(profileBody, &profileResp) == nil {
 			report.FollowerCount = profileResp.FollowersCount
+		}
+	}
+
+	// 3. トップメディア (エンゲージメント順)
+	media, err := s.FetchMedia(ctx, userID)
+	if err == nil && len(media) > 0 {
+		// エンゲージメント (Like + Comment) でソート
+		sortMediaByEngagement(media)
+		if len(media) > 5 {
+			report.TopMedia = media[:5]
+		} else {
+			report.TopMedia = media
 		}
 	}
 
@@ -176,12 +181,10 @@ func (s *InstagramService) FetchMedia(ctx context.Context, userID string) ([]mod
 		return nil, err
 	}
 
-	mediaURL := fmt.Sprintf(
-		"%s/%s/media?fields=id,media_type,media_url,caption,timestamp,like_count,comments_count&limit=25",
-		fbGraphBaseURL, igUserID,
-	)
+	mediaURL := fmt.Sprintf("%s/%s/media?fields=id,media_type,media_url,caption,timestamp,like_count,comments_count&limit=50",
+		fbGraphBaseURL, igUserID)
 
-	body, err := s.doGet(ctx, mediaURL, token)
+	body, err := s.doRequest(ctx, "GET", mediaURL, token, nil)
 	if err != nil {
 		return nil, fmt.Errorf("fetch media: %w", err)
 	}
@@ -208,11 +211,12 @@ func (s *InstagramService) FetchMedia(ctx context.Context, userID string) ([]mod
 			MediaType:    m.MediaType,
 			MediaURL:     m.MediaURL,
 			Caption:      m.Caption,
-			Timestamp:    parseTime(m.Timestamp),
+			Timestamp:    parseIGRFC3339(m.Timestamp),
 			LikeCount:    m.LikeCount,
 			CommentCount: m.CommentsCount,
 		})
 	}
+
 	return items, nil
 }
 
@@ -228,21 +232,14 @@ func (s *InstagramService) CreateMedia(ctx context.Context, userID, imageURL, ca
 		return "", err
 	}
 
-	// Step 1: メディアコンテナ作成
+	// Step 1: メディアコンテナ作成 (POST)
 	containerURL := fmt.Sprintf("%s/%s/media", fbGraphBaseURL, igUserID)
-	containerData := url.Values{
-		"image_url":    {imageURL},
-		"caption":      {caption},
-		"access_token": {token},
-	}
+	params := url.Values{}
+	params.Set("image_url", imageURL)
+	params.Set("caption", caption)
+	params.Set("access_token", token)
 
-	req, err := http.NewRequestWithContext(ctx, "POST", containerURL, bytes.NewBufferString(containerData.Encode()))
-	if err != nil {
-		return "", err
-	}
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
-	resp, err := s.httpClient.Do(req)
+	resp, err := http.PostForm(containerURL, params)
 	if err != nil {
 		return "", fmt.Errorf("create media container: %w", err)
 	}
@@ -260,20 +257,13 @@ func (s *InstagramService) CreateMedia(ctx context.Context, userID, imageURL, ca
 		return "", fmt.Errorf("decode container response: %w", err)
 	}
 
-	// Step 2: メディア公開
+	// Step 2: メディア公開 (POST)
 	publishURL := fmt.Sprintf("%s/%s/media_publish", fbGraphBaseURL, igUserID)
-	publishData := url.Values{
-		"creation_id":  {containerResp.ID},
-		"access_token": {token},
-	}
+	pubParams := url.Values{}
+	pubParams.Set("creation_id", containerResp.ID)
+	pubParams.Set("access_token", token)
 
-	pubReq, err := http.NewRequestWithContext(ctx, "POST", publishURL, bytes.NewBufferString(publishData.Encode()))
-	if err != nil {
-		return "", err
-	}
-	pubReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
-	pubResp, err := s.httpClient.Do(pubReq)
+	pubResp, err := http.PostForm(publishURL, pubParams)
 	if err != nil {
 		return "", fmt.Errorf("publish media: %w", err)
 	}
@@ -292,4 +282,22 @@ func (s *InstagramService) CreateMedia(ctx context.Context, userID, imageURL, ca
 	}
 
 	return publishResp.ID, nil
+}
+
+// sortMediaByEngagement はメディアをエンゲージメント順に並び替える
+func sortMediaByEngagement(media []models.InstagramMediaItem) {
+	for i := 0; i < len(media); i++ {
+		for j := i + 1; j < len(media); j++ {
+			engI := media[i].LikeCount + media[i].CommentCount
+			engJ := media[j].LikeCount + media[j].CommentCount
+			if engJ > engI {
+				media[i], media[j] = media[j], media[i]
+			}
+		}
+	}
+}
+
+func parseIGRFC3339(s string) time.Time {
+	t, _ := time.Parse(time.RFC3339, s)
+	return t
 }

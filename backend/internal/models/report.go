@@ -125,23 +125,25 @@ type InstagramMediaItem struct {
 
 // GoogleReview は口コミ
 type GoogleReview struct {
-	ReviewID    string    `json:"review_id"`
-	Reviewer    string    `json:"reviewer"`
-	Rating      int       `json:"rating"`
-	Comment     string    `json:"comment"`
-	CreateTime  time.Time `json:"create_time"`
-	ReplyText   string    `json:"reply_text,omitempty"`
+	ReviewID    string     `json:"review_id"`
+	Reviewer    string     `json:"reviewer"`
+	Rating      int        `json:"rating"`
+	Comment     string     `json:"comment"`
+	CreateTime  time.Time  `json:"create_time"`
+	ReplyText   string     `json:"reply_text,omitempty"`
 	ReplyTime   *time.Time `json:"reply_time,omitempty"`
+	MediaURLs   []string   `json:"media_urls,omitempty"`
 }
 
 // GoogleLocation は管理対象店舗
 type GoogleLocation struct {
-	Name         string `json:"name"`
-	LocationID   string `json:"location_id"`
-	Title        string `json:"title"`
-	Address      string `json:"address"`
-	PhoneNumber  string `json:"phone_number,omitempty"`
-	Category     string `json:"category,omitempty"`
+	Name          string `json:"name"`
+	LocationID    string `json:"location_id"`
+	Title         string `json:"title"`
+	Address       string `json:"address"`
+	PhoneNumber   string `json:"phone_number,omitempty"`
+	Category      string `json:"category,omitempty"`
+	CoverPhotoURL string `json:"cover_photo_url,omitempty"`
 }
 
 // ReviewReplyRequest は口コミ返信リクエスト

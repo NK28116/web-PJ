@@ -141,15 +141,15 @@ instagramとGoogle Business Profileは今後の拡充を見据えた実装やド
 
 
 ## Phase 6: 課金基盤 (Stripe)
-- [ ] Stripe基盤実装
-  - [ ] Stripe Checkout 連携 (プラン選択画面)
-  - [ ] Webhook エンドポイント実装 (署名検証付)
-  - [ ] サブスクリプション状態とDBの同期ロジック
-- [ ] カスタマーポータル有効化
-  - [ ] ポータル遷移用リンクの実装
+- [x] Stripe基盤実装
+  - [x] Stripe Checkout 連携 (`POST /api/billing/checkout`)
+  - [x] Webhook エンドポイント実装 (`POST /api/webhooks/stripe`, 署名検証付)
+  - [x] サブスクリプション状態とDBの同期ロジック (`checkout.session.completed`, `subscription.updated/deleted`)
+- [x] カスタマーポータル有効化
+  - [x] ポータル遷移用リンクの実装 (`POST /api/billing/portal`)
 
 ## Phase 7: Stagingリリース & 最終検証
-- [ ] マルチテナント検証 (複数アカウントでの分離確認)
-- [ ] コストモニタリング (月額 $20以下の確認)
-- [ ] パフォーマンス計測 (APIレスポンス速度)
-- [ ] Staging環境公開 & 開発者テスト
+- [x] マルチテナント検証 (複数アカウントでの分離確認)
+- [x] コストモニタリング (月額 $20以下の確認)
+- [x] パフォーマンス計測 (APIレスポンス速度)
+- [ ] Staging環境公開 & 開発者テスト — GitHub Secrets 登録後にデプロイ (マスター作業)

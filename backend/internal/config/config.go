@@ -21,6 +21,10 @@ type Config struct {
 
 	// Frontend URL (for OAuth callback redirect)
 	FrontendURL string
+
+	// Stripe
+	StripeSecretKey     string
+	StripeWebhookSecret string
 }
 
 func Load() *Config {
@@ -40,6 +44,9 @@ func Load() *Config {
 		InstagramRedirectURL:  getEnv("INSTAGRAM_REDIRECT_URL", "http://localhost:8080/api/auth/instagram/callback"),
 
 		FrontendURL: getEnv("FRONTEND_URL", "http://localhost:3000"),
+
+		StripeSecretKey:     getEnv("STRIPE_SECRET_KEY", ""),
+		StripeWebhookSecret: getEnv("STRIPE_WEBHOOK_SECRET", ""),
 	}
 }
 
