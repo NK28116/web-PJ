@@ -62,3 +62,8 @@ Phase 7「Stagingリリース」の主要課題であったビルドエラーは
 
 **3. Stripe の接続:**
 - `frontend/components/templates/CurrentFeaturesTemplate` 等の「契約する」ボタンに、バックエンド API への `fetch` 処理を追加してください。
+
+
+### 3.ユーザーレビュー
+- https://web-pj-three.vercel.app/postでinstagramデータを取得できているかのAPIをconsole.logで確認したい
+- https://web-pj-three.vercel.app/reviewでGoogleMapsレビューを取得できているかのAPIをconsole.logで確認したい

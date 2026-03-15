@@ -1,5 +1,55 @@
 # 変更ログ
 
+## 2026-03-15 (Phase 8-4: Googleソーシャルログイン & 決済導線改善)
+
+### 概要
+指示書更新に基づき、Google ソーシャルログイン（新規登録・ログイン対応）をバックエンド・フロントエンド双方に実装。決済フローの遷移方法を `window.location.assign` に統一。口コミ・レポートの実装確認。
+
+### 実施内容
+
+#### 1. Google ソーシャルログインの実装（バックエンド）
+- `backend/internal/handlers/oauth.go` を修正
+  - `GoogleCallback` の引数に `UserRepositoryInterface` を追加
+  - JWT Cookie が存在しない場合のソーシャルログインフローを追加:
+    - `userRepo.FindByEmail` でユーザー検索
+    - 存在すれば既存ユーザーで JWT 発行
+    - 存在しなければ `userRepo.Create` で新規作成後に JWT 発行
+  - JWT を Cookie + クエリパラメータ (`?token=`) でフロントエンドに渡す
+  - `issueJWT` ヘルパー関数を新規追加
+- `backend/cmd/server/main.go` を修正
+  - `GoogleCallback` 呼び出しに `userRepo` を追加
+
+#### 2. Google ソーシャルログインの実装（フロントエンド）
+- `frontend/components/templates/LoginTemplate/index.tsx` を修正
+  - 「Google でログイン」ボタンを追加（Google カラーアイコン付き）
+  - `NEXT_PUBLIC_API_URL + "/api/auth/google/login"` へリダイレクト
+  - コールバック後の `?token=` パラメータを検出し `localStorage` に保存 → `/home` へ遷移
+
+#### 3. 決済フロー遷移方法の改善
+- `frontend/hooks/useBilling.ts` を修正
+  - `window.location.href = res.url` → `window.location.assign(res.url)` に変更（確実な遷移）
+
+#### 4. 口コミ管理・レポートの検証（コード変更なし）
+- `useReviews.ts`: `toReview` が `create_time` (ISO文字列) を正しくパース済み。`submitReply` 後にフロント状態が即座に「返信済み」に更新される実装を確認
+- `ReportTab.tsx`: Instagram メディア表示で `media_url` 存在チェックのガード処理を確認済み
+
+#### 5. OAuth 設定（管理コンソール作業・コード変更なし）
+- **Instagram (Meta)**: アプリドメインに `web-pj-three.vercel.app` を追加、OAuthリダイレクトURI確認が必要
+- **Google**: OAuth同意画面でアプリ公開 or テストユーザーに `wyze.system.inc@gmail.com` 追加が必要
+
+### 変更ファイル
+- `backend/internal/handlers/oauth.go`
+- `backend/cmd/server/main.go`
+- `frontend/components/templates/LoginTemplate/index.tsx`
+- `frontend/hooks/useBilling.ts`
+
+### 備考
+- Google ソーシャルログインで新規作成されたユーザーはパスワード空（`""`)。メール/パスワードログインには別途パスワード設定が必要
+- `PRICE_IDS` の値は Stripe Dashboard の実際の Price ID に置き換えが必要
+- 領収書 PDF 生成はバックログ（スコープ外）
+
+---
+
 ## 2026-03-15 (Phase 8-3: Stripe決済導線の実装 & OAuth設定)
 
 ### 概要

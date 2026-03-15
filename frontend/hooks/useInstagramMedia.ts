@@ -12,8 +12,10 @@ export const useInstagramMedia = () => {
     setError(null);
     try {
       const data = await apiGet<InstagramMediaItem[]>('/api/instagram/media');
+      console.log('[useInstagramMedia] GET /api/instagram/media:', { count: data.length, data });
       setMedia(data);
     } catch (err) {
+      console.error('[useInstagramMedia] GET /api/instagram/media failed:', err);
       setError(err instanceof Error ? err.message : 'Instagramメディアの取得に失敗しました');
     } finally {
       setLoading(false);
