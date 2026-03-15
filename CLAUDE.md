@@ -4,7 +4,66 @@
 
 ---
 
-## 最新の実装 (2026-03-15)
+## 最新の実装 (2026-03-16) — Phase 9 v4: インポートエイリアス付与 & CDフロントエンドビルドパス修正
+
+### フェーズ / タスク
+**Phase 9 v4: Lint エラー解消（明示的エイリアス）& CD Staging フロントエンドビルドパス修正 (task-to-claude.md 準拠)**
+
+### 実装した変更
+
+#### `backend/internal/models/claims.go`
+```diff
+- import "github.com/golang-jwt/jwt/v5"
++ import jwt "github.com/golang-jwt/jwt/v5"
+```
+
+#### `backend/internal/handlers/auth.go`
+```diff
+- "github.com/golang-jwt/jwt/v5"
++ jwt "github.com/golang-jwt/jwt/v5"
+```
+
+#### `backend/cmd/migrate/main.go`
+```diff
+- "github.com/golang-migrate/migrate/v4"
++ migrate "github.com/golang-migrate/migrate/v4"
+```
+
+**理由:** golangci-lint の typecheck において `jwt`/`migrate` が undefined として検出されていた。明示的エイリアスを付与することで typecheck が確実にパッケージ名を解決できるようにした。
+
+---
+
+#### `.github/workflows/cd-staging.yml`
+```diff
+- docker build -t ${{ env.FRONTEND_IMAGE }}:${{ github.sha }} -t ${{ env.FRONTEND_IMAGE }}:latest ./
++ docker build -t ${{ env.FRONTEND_IMAGE }}:${{ github.sha }} -t ${{ env.FRONTEND_IMAGE }}:latest ./frontend
+```
+
+**理由:** `frontend/Dockerfile` が存在するにもかかわらず、docker build のコンテキストがルート `./` を指していたため `open Dockerfile: no such file or directory` エラーが発生していた。`./frontend` に修正することで正しい Dockerfile を参照できるようにした。
+
+---
+
+### 確認済み（変更不要と判断したもの）
+
+| 確認内容 | 状態 |
+|---|---|
+| `backend/internal/service/stripe_service.go` の stripe インポート | ✅ 正しい（`"github.com/stripe/stripe-go/v76"` + サブパッケージ） |
+| `backend/test/data_isolation_test.go` の `GoogleCallback` 引数 | ✅ 3引数 `(cfg, extAcctRepo, userRepo)` で定義と一致 |
+| フロントエンドテスト 87/87 | ✅ ローカル確認済み |
+
+---
+
+### 完了定義 (Definition of Done) 確認
+
+1. ✅ import エイリアス付与（`jwt`, `migrate`）→ typecheck エラー解消見込み
+2. ✅ `cd-staging.yml` フロントエンドビルドパス修正 (`./` → `./frontend`)
+3. ✅ フロントエンドテスト 87/87 パス
+4. ⚠️ `GCP_SA_KEY` は GitHub Secrets に手動登録が必要（コード側は正しい）
+5. ⚠️ Artifact Registry の IAM 権限 (`artifactregistry.repositories.uploadArtifacts`) は GCP コンソールで確認が必要
+
+---
+
+## 過去の実装 (2026-03-15)
 
 ### フェーズ / タスク
 **Phase 8: ステージング検証 & 実機連携 (task-to-claude.md 準拠)**
