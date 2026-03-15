@@ -50,15 +50,19 @@
 - `Permission 'artifactregistry.repositories.uploadArtifacts' denied` (ビルド失敗)
 - `Permission 'run.services.get' denied` (デプロイ失敗)
 - `Config error: instance does not have IP of type "PUBLIC"` (接続失敗)
+- **新規**: `Permission denied on secret: projects/.../secrets/STRIPE_API` (シークレット参照失敗)
 
 ### 修正内容
 1.  **Secrets 再設定**: GitHub Secrets に `GCP_SA_KEY` が正しく登録されているか確認。
 2.  **GCP ネットワーク設定**: Cloud SQL インスタンスの設定で **「パブリック IP」** を有効にしてください。
-3.  **IAM 権限付与**: サービスアカウントに以下のロールを付与してください：
-    - `Artifact Registry 書き込み`
-    - `Cloud Run 管理者`
-    - `Cloud SQL 閲覧者` および `Cloud SQL クライアント`
-    - `サービス アカウント ユーザー`
+3.  **IAM 権限付与 (GCP コンソール)**:
+    - **デプロイ用サービスアカウント** に付与：
+        - `Artifact Registry 書き込み`
+        - `Cloud Run 管理者`
+        - `Cloud SQL 閲覧者` および `Cloud SQL クライアント`
+        - `サービス アカウント ユーザー`
+    - **Cloud Run 実行用サービスアカウント** (デフォルト: `...-compute@developer.gserviceaccount.com`) に付与：
+        - **`Secret Manager のシークレット参照者`** (roles/secretmanager.secretAccessor)
 
 ---
 

@@ -410,6 +410,16 @@ Error: Process completed with exit code 1.
  ##[debug]Finishing: Deploy Backend to Cloud Run
  
  ----
+ 
+ Run gcloud run deploy backend \
+ Deploying container to Cloud Run service [backend] in project [wyze-develop-staging] region [us-east1]
+ Deploying...
+ Creating Revision..........................failed
+ Deployment failed
+ ERROR: (gcloud.run.deploy) spec.template.spec.containers[0].env[11].value_from.secret_key_ref.name: Permission denied on secret: projects/611370943102/secrets/STRIPE_API/versions/latest for Revision service account 611370943102-compute@developer.gserviceaccount.com. The service account used must be granted the 'Secret Manager Secret Accessor' role (roles/secretmanager.secretAccessor) at the secret, project or higher level.
+ Error: Process completed with exit code 1.
+ 
+ ---
 
 ### Build &Deploy FrontEnd
 Authenticate to Google Cloud (Service Account)
