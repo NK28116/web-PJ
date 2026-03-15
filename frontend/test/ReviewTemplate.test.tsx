@@ -23,6 +23,29 @@ jest.mock('next/router', () => ({
   }),
 }))
 
+// useReviews のモック（ローディング状態を回避し、テスト用データを提供）
+jest.mock('../hooks/useReviews', () => ({
+  useReviews: () => ({
+    reviews: [
+      {
+        id: '1', userName: '佐藤 花子', rating: 4, comment: '美味しかったです',
+        images: [], createdAt: '2026-01-01', replyStatus: 'unreplied',
+        foodRate: 4, atmosphereRate: 3, serviceRate: 4, waitTime: null, noiseLevel: 'ふつう',
+      },
+      {
+        id: '2', userName: '田中 健太', rating: 3, comment: 'まあまあでした',
+        images: [], createdAt: '2026-01-02', replyStatus: 'replied', replyText: 'ありがとうございます',
+        replyCreatedAt: '2026-01-03', foodRate: 3, atmosphereRate: 3, serviceRate: 3,
+        waitTime: null, noiseLevel: 'ふつう',
+      },
+    ],
+    loading: false,
+    error: null,
+    refetch: jest.fn(),
+    submitReply: jest.fn(),
+  }),
+}))
+
 // BaseTemplateのモック
 jest.mock('../components/templates/BaseTemplate', () => ({
   BaseTemplate: ({ children, activeTab, customTabLabels }: { 

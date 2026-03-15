@@ -7,7 +7,7 @@
  * 検証項目:
  * - レンダリング確認（ヘッダー・カード情報・履歴リスト）
  * - 戻るボタンの動作
- * - カード編集モーダルの開閉
+ * - カード変更ボタンの動作（Stripe Portal 呼び出し）
  * - PDFボタンのハンドラ呼び出し
  */
 
@@ -17,12 +17,32 @@ import { BillingTemplate } from '../components/templates/BillingTemplate/Billing
 
 // Next.js routerのモック
 const mockBack = jest.fn()
+const mockReplace = jest.fn()
 jest.mock('next/router', () => ({
   useRouter: () => ({
     back: mockBack,
     push: jest.fn(),
+    replace: mockReplace,
     pathname: '/billing',
+    query: {},
   }),
+}))
+
+// useBilling のモック
+const mockOpenPortal = jest.fn()
+jest.mock('../hooks/useBilling', () => ({
+  useBilling: () => ({
+    startCheckout: jest.fn(),
+    openPortal: mockOpenPortal,
+    loading: false,
+    error: null,
+  }),
+}))
+
+// generateReceiptPDF のモック（jsPDF によるPDF生成を回避）
+const mockGenerateReceiptPDF = jest.fn()
+jest.mock('../utils/generateReceipt', () => ({
+  generateReceiptPDF: (...args: unknown[]) => mockGenerateReceiptPDF(...args),
 }))
 
 // BaseTemplateのモック
@@ -50,7 +70,7 @@ describe('BillingTemplate - レンダリング確認', () => {
     render(<BillingTemplate />)
 
     expect(screen.getByText('登録クレジットカード情報')).toBeInTheDocument()
-    expect(screen.getByText('**** **** **** 1234')).toBeInTheDocument()
+    expect(screen.getByText('**** **** **** ****')).toBeInTheDocument()
   })
 
   test('お支払い履歴が表示されること', () => {
@@ -91,82 +111,54 @@ describe('BillingTemplate - 戻るボタン', () => {
   })
 })
 
-describe('BillingTemplate - モーダル動作', () => {
-  test('「カード情報を変更する」クリックでモーダルが開くこと', () => {
-    render(<BillingTemplate />)
-
-    // モーダルが初期状態で非表示
-    expect(screen.queryByText('カード情報の変更')).not.toBeInTheDocument()
-
-    // ボタンクリック
-    fireEvent.click(screen.getByText('カード情報を変更する'))
-
-    // モーダルが表示される
-    expect(screen.getByText('カード情報の変更')).toBeInTheDocument()
-    expect(screen.getByText('保存する')).toBeInTheDocument()
-    expect(screen.getByText('キャンセル')).toBeInTheDocument()
+describe('BillingTemplate - カード変更ボタンの動作', () => {
+  beforeEach(() => {
+    mockOpenPortal.mockClear()
   })
 
-  test('「キャンセル」クリックでモーダルが閉じること', () => {
+  test('「カード情報を変更する」クリックで openPortal が呼ばれること', () => {
     render(<BillingTemplate />)
 
-    // モーダルを開く
     fireEvent.click(screen.getByText('カード情報を変更する'))
-    expect(screen.getByText('カード情報の変更')).toBeInTheDocument()
 
-    // キャンセルでモーダルを閉じる
-    fireEvent.click(screen.getByText('キャンセル'))
-    expect(screen.queryByText('カード情報の変更')).not.toBeInTheDocument()
+    expect(mockOpenPortal).toHaveBeenCalledTimes(1)
   })
 
-  test('「保存する」クリックでモーダルが閉じること', () => {
+  test('カード編集アイコンクリックで openPortal が呼ばれること', () => {
     render(<BillingTemplate />)
 
-    // モーダルを開く
-    fireEvent.click(screen.getByText('カード情報を変更する'))
+    fireEvent.click(screen.getByLabelText('カード情報を編集'))
 
-    // 保存でモーダルを閉じる
-    fireEvent.click(screen.getByText('保存する'))
-    expect(screen.queryByText('カード情報の変更')).not.toBeInTheDocument()
-  })
-
-  test('オーバーレイクリックでモーダルが閉じること', () => {
-    render(<BillingTemplate />)
-
-    // モーダルを開く
-    fireEvent.click(screen.getByText('カード情報を変更する'))
-    expect(screen.getByText('カード情報の変更')).toBeInTheDocument()
-
-    // オーバーレイ（モーダル背景）をクリック
-    const overlay = screen.getByText('カード情報の変更').closest('.bg-white')!.parentElement!
-    fireEvent.click(overlay)
-    expect(screen.queryByText('カード情報の変更')).not.toBeInTheDocument()
+    expect(mockOpenPortal).toHaveBeenCalledTimes(1)
   })
 })
 
 describe('BillingTemplate - PDFボタン', () => {
-  test('「領収書 / PDF」ボタンがセクションタイトル横に1つだけ表示されること', () => {
-    render(<BillingTemplate />)
-
-    const pdfButtons = screen.getAllByText('領収書 / PDF')
-    expect(pdfButtons).toHaveLength(1)
+  beforeEach(() => {
+    mockGenerateReceiptPDF.mockClear()
   })
 
-  test('「領収書 / PDF」クリックで領収書形式のログ出力とalertが行われること', () => {
-    const consoleSpy = jest.spyOn(console, 'log').mockImplementation()
-    const alertSpy = jest.spyOn(window, 'alert').mockImplementation()
+  test('各お支払い履歴に PDF ボタンが表示されること', () => {
     render(<BillingTemplate />)
 
-    fireEvent.click(screen.getByText('領収書 / PDF'))
+    const pdfButtons = screen.getAllByText('PDF')
+    expect(pdfButtons.length).toBe(3)
+  })
 
-    expect(consoleSpy).toHaveBeenCalledTimes(1)
-    const output = consoleSpy.mock.calls[0][0] as string
-    expect(output).toContain('領収書.pdf')
-    expect(output).toContain('2026年01月01日 ¥33,000')
-    expect(output).toContain('合計')
-    expect(output).toContain('¥99,000')
-    expect(alertSpy).toHaveBeenCalledWith('領収書(PDF)を出力しました。コンソールを確認してください。')
-    consoleSpy.mockRestore()
-    alertSpy.mockRestore()
+  test('「PDF」クリックで generateReceiptPDF が正しい引数で呼ばれること', () => {
+    render(<BillingTemplate />)
+
+    const pdfButtons = screen.getAllByText('PDF')
+    fireEvent.click(pdfButtons[0])
+
+    expect(mockGenerateReceiptPDF).toHaveBeenCalledTimes(1)
+    expect(mockGenerateReceiptPDF).toHaveBeenCalledWith(
+      expect.objectContaining({
+        paymentDate: '2026/01/01',
+        sumPrice: 33000,
+        planName: 'Standard Plan',
+        receiptNumber: 'INV-2026-001',
+      })
+    )
   })
 })
