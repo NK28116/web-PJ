@@ -4,10 +4,10 @@ node_modules/
 .pnp.js
 
 # Testing
-/coverage
+coverage/
 
 # Next.js
-/.next/
+.next/
 /out/
 
 # Production
