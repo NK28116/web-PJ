@@ -3,18 +3,50 @@ package config
 import "os"
 
 type Config struct {
-	DatabaseURL string
-	JWTSecret   string
-	Port        string
-	GinMode     string
+	DatabaseURL   string
+	JWTSecret     string
+	Port          string
+	GinMode       string
+	EncryptionKey string
+
+	// OAuth: Google
+	GoogleClientID     string
+	GoogleClientSecret string
+	GoogleRedirectURL  string
+
+	// OAuth: Instagram (Facebook)
+	InstagramClientID     string
+	InstagramClientSecret string
+	InstagramRedirectURL  string
+
+	// Frontend URL (for OAuth callback redirect)
+	FrontendURL string
+
+	// Stripe
+	StripeSecretKey     string
+	StripeWebhookSecret string
 }
 
 func Load() *Config {
 	return &Config{
-		DatabaseURL: mustEnv("DATABASE_URL"),
-		JWTSecret:   mustEnv("JWT_SECRET"),
-		Port:        getEnv("PORT", "8080"),
-		GinMode:     getEnv("GIN_MODE", "debug"),
+		DatabaseURL:   mustEnv("DATABASE_URL"),
+		JWTSecret:     mustEnv("JWT_SECRET"),
+		Port:          getEnv("PORT", "8080"),
+		GinMode:       getEnv("GIN_MODE", "debug"),
+		EncryptionKey: getEnv("ENCRYPTION_KEY", ""),
+
+		GoogleClientID:     getEnv("GOOGLE_CLIENT_ID", ""),
+		GoogleClientSecret: getEnv("GOOGLE_CLIENT_SECRET", ""),
+		GoogleRedirectURL:  getEnv("GOOGLE_REDIRECT_URL", "http://localhost:8080/api/auth/google/callback"),
+
+		InstagramClientID:     getEnv("INSTAGRAM_CLIENT_ID", ""),
+		InstagramClientSecret: getEnv("INSTAGRAM_CLIENT_SECRET", ""),
+		InstagramRedirectURL:  getEnv("INSTAGRAM_REDIRECT_URL", "http://localhost:8080/api/auth/instagram/callback"),
+
+		FrontendURL: getEnv("FRONTEND_URL", "http://localhost:3000"),
+
+		StripeSecretKey:     getEnv("STRIPE_SECRET_KEY", ""),
+		StripeWebhookSecret: getEnv("STRIPE_WEBHOOK_SECRET", ""),
 	}
 }
 

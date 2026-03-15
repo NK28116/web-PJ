@@ -1,0 +1,107 @@
+name: CD Staging
+
+on:
+  push:
+    branches: [main, infraGCPAndCloud] # 検証のため infraGCPAndCloud も一時的に追加
+
+env:
+  PROJECT_ID: wyze-develop-staging
+  REGION: us-east1
+  REPOSITORY: web-system-pj
+  BACKEND_SERVICE: backend
+  FRONTEND_SERVICE: frontend
+  BACKEND_IMAGE: us-east1-docker.pkg.dev/wyze-develop-staging/web-system-pj/backend
+  FRONTEND_IMAGE: us-east1-docker.pkg.dev/wyze-develop-staging/web-system-pj/frontend
+  CLOUD_SQL_INSTANCE: wyze-develop-staging:us-east1:wyze-staging-db
+
+jobs:
+  deploy-backend:
+    name: Build, Migrate & Deploy Backend
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # GCP認証
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      # Docker 認証
+      - run: gcloud auth configure-docker us-east1-docker.pkg.dev --quiet
+
+      # Backend ビルド & プッシュ
+      - name: Build and push backend image
+        run: |
+          docker build -t ${{ env.BACKEND_IMAGE }}:${{ github.sha }} -t ${{ env.BACKEND_IMAGE }}:latest ./backend
+          docker push ${{ env.BACKEND_IMAGE }}:${{ github.sha }}
+          docker push ${{ env.BACKEND_IMAGE }}:latest
+
+      # マイグレーション
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Run migrations
+        run: |
+          curl -o cloud-sql-proxy https://storage.googleapis.com/cloud-sql-connectors/cloud-sql-proxy/v2.14.3/cloud-sql-proxy.linux.amd64
+          chmod +x cloud-sql-proxy
+          ./cloud-sql-proxy ${{ env.CLOUD_SQL_INSTANCE }} --port=5432 &
+          PROXY_PID=$!
+          sleep 3
+          cd backend
+          DATABASE_URL="${{ secrets.DATABASE_URL_TCP }}" go run ./cmd/migrate/main.go up
+          kill $PROXY_PID
+
+      # Backend デプロイ
+      - name: Deploy Backend to Cloud Run
+        run: |
+          gcloud run deploy ${{ env.BACKEND_SERVICE }} \
+            --image=${{ env.BACKEND_IMAGE }}:${{ github.sha }} \
+            --region=${{ env.REGION }} \
+            --platform=managed \
+            --quiet
+
+  deploy-frontend:
+    name: Build & Deploy Frontend
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # GCP認証
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      # Docker 認証
+      - run: gcloud auth configure-docker us-east1-docker.pkg.dev --quiet
+
+      # Frontend ビルド & プッシュ
+      - name: Build and push frontend image
+        run: |
+          docker build -t ${{ env.FRONTEND_IMAGE }}:${{ github.sha }} -t ${{ env.FRONTEND_IMAGE }}:latest ./
+          docker push ${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
+          docker push ${{ env.FRONTEND_IMAGE }}:latest
+
+      # Frontend デプロイ
+      - name: Deploy Frontend to Cloud Run
+        run: |
+          gcloud run deploy ${{ env.FRONTEND_SERVICE }} \
+            --image=${{ env.FRONTEND_IMAGE }}:${{ github.sha }} \
+            --region=${{ env.REGION }} \
+            --platform=managed \
+            --allow-unauthenticated \
+            --quiet

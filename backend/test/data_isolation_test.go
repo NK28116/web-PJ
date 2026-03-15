@@ -28,6 +28,7 @@ import (
 	"webSystemPJ/backend/internal/middleware"
 	"webSystemPJ/backend/internal/models"
 	"webSystemPJ/backend/internal/repository"
+	"webSystemPJ/backend/internal/service"
 )
 
 func setupDB(t *testing.T) *sql.DB {
@@ -110,6 +111,38 @@ func setupRouter(db *sql.DB, cfg *config.Config) *gin.Engine {
 		protected.POST("/posts", handlers.CreatePost(postRepo))
 	}
 	return r
+}
+
+// setupExtendedRouter は拡張テスト用のルーターを構築する
+func setupExtendedRouter(cfg *config.Config, userRepo *repository.UserRepository, extAcctRepo *repository.ExternalAccountRepository, stripeSvc *service.StripeService) *gin.Engine {
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+
+	protected := r.Group("/")
+	protected.Use(middleware.Auth(cfg))
+	{
+		protected.DELETE("/api/unlink/:provider", handlers.UnlinkAccount(extAcctRepo))
+		protected.GET("/api/link-status", handlers.GetLinkStatus(extAcctRepo))
+		protected.POST("/api/billing/portal", handlers.CreatePortalSession(stripeSvc, userRepo))
+	}
+	return r
+}
+
+// insertExternalAccount はテスト用の外部アカウントを挿入する
+func insertExternalAccount(t *testing.T, repo *repository.ExternalAccountRepository, userID, provider, providerUserID string) {
+	t.Helper()
+	expiresAt := time.Now().Add(24 * time.Hour)
+	_, err := repo.Upsert(userID, provider, providerUserID, []byte("enc_access"), []byte("enc_refresh"), &expiresAt, "test_scope")
+	if err != nil {
+		t.Fatalf("insert external account: %v", err)
+	}
+}
+
+func testCfg() *config.Config {
+	return &config.Config{
+		JWTSecret:   "test-secret-key-minimum-32-characters-x",
+		FrontendURL: "http://localhost:3000",
+	}
 }
 
 // TestDataIsolation_UserACannotAccessUserBData は
@@ -212,5 +245,117 @@ func TestDataIsolation_PostListContainsOnlyOwnPosts(t *testing.T) {
 		if p["user_id"].(string) != userAID {
 			t.Errorf("found post belonging to another user in list: %v", p)
 		}
+	}
+}
+
+// TestDataIsolation_UnlinkCannotDeleteOtherUserAccount は
+// User A のトークンで User B の external_account を削除できないことを検証する
+func TestDataIsolation_UnlinkCannotDeleteOtherUserAccount(t *testing.T) {
+	db := setupDB(t)
+	defer db.Close()
+
+	cfg := testCfg()
+	extAcctRepo := repository.NewExternalAccountRepository(db)
+
+	suffix := fmt.Sprintf("%d", time.Now().UnixNano())
+	userAID := insertUser(t, db, "unlink_a_"+suffix+"@example.com", "passwordA", "user")
+	userBID := insertUser(t, db, "unlink_b_"+suffix+"@example.com", "passwordB", "user")
+
+	// User B に Google アカウントを連携
+	insertExternalAccount(t, extAcctRepo, userBID, "google", "google-provider-b")
+
+	// User B のリンク状態を確認 (連携済み)
+	statusBefore, err := extAcctRepo.GetLinkStatus(userBID)
+	if err != nil {
+		t.Fatalf("get link status: %v", err)
+	}
+	if !statusBefore.Google {
+		t.Fatal("expected User B's Google to be linked")
+	}
+
+	// User A のトークンで User B の Google を unlink しようとする
+	r := setupExtendedRouter(cfg, nil, extAcctRepo, nil)
+	tokenA := makeToken(cfg, userAID, "user")
+
+	req := httptest.NewRequest(http.MethodDelete, "/api/unlink/google", nil)
+	req.Header.Set("Authorization", "Bearer "+tokenA)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	// API は 200 を返すが (User A 自身には google がないので空振り DELETE)
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	// User B のリンク状態は変わっていないことを確認
+	statusAfter, err := extAcctRepo.GetLinkStatus(userBID)
+	if err != nil {
+		t.Fatalf("get link status after: %v", err)
+	}
+	if !statusAfter.Google {
+		t.Fatal("User B's Google account should still be linked after User A's unlink attempt")
+	}
+}
+
+// TestDataIsolation_PortalSessionRequiresOwnStripeCustomer は
+// User A のトークンでは User B の Stripe ポータルセッションを作成できないことを検証する
+func TestDataIsolation_PortalSessionRequiresOwnStripeCustomer(t *testing.T) {
+	db := setupDB(t)
+	defer db.Close()
+
+	cfg := testCfg()
+	userRepo := repository.NewUserRepository(db)
+	stripeSvc := service.NewStripeService(cfg)
+
+	suffix := fmt.Sprintf("%d", time.Now().UnixNano())
+	userAID := insertUser(t, db, "portal_a_"+suffix+"@example.com", "passwordA", "user")
+	userBID := insertUser(t, db, "portal_b_"+suffix+"@example.com", "passwordB", "user")
+
+	// User B に Stripe 情報を設定
+	err := userRepo.UpdateStripeInfo(userBID, "cus_test_b", "sub_test_b")
+	if err != nil {
+		t.Fatalf("update stripe info: %v", err)
+	}
+
+	// User A のトークンでポータルセッションを作成しようとする
+	// → User A には StripeCustomerID がないので 400 が返る
+	r := setupExtendedRouter(cfg, userRepo, nil, stripeSvc)
+	tokenA := makeToken(cfg, userAID, "user")
+
+	req := httptest.NewRequest(http.MethodPost, "/api/billing/portal", nil)
+	req.Header.Set("Authorization", "Bearer "+tokenA)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 (no stripe customer), got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+// TestDataIsolation_OAuthStateValidation は
+// state パラメータ不一致時に OAuth コールバックが拒否されることを検証する
+func TestDataIsolation_OAuthStateValidation(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	cfg := testCfg()
+	cfg.GoogleClientID = "test-client-id"
+	cfg.GoogleClientSecret = "test-client-secret"
+	cfg.GoogleRedirectURL = "http://localhost:8080/api/auth/google/callback"
+	cfg.FrontendURL = "http://localhost:3000"
+
+	db := setupDB(t)
+	defer db.Close()
+	extAcctRepo := repository.NewExternalAccountRepository(db)
+
+	r := gin.New()
+	r.GET("/api/auth/google/callback", handlers.GoogleCallback(cfg, extAcctRepo))
+
+	// state パラメータなしでコールバック → 400
+	req := httptest.NewRequest(http.MethodGet, "/api/auth/google/callback?code=test_code&state=forged_state", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 for mismatched state, got %d: %s", w.Code, w.Body.String())
 	}
 }

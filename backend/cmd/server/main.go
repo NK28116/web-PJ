@@ -3,7 +3,6 @@ package main
 import (
 	"database/sql"
 	"log"
-	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-migrate/migrate/v4"
@@ -15,6 +14,7 @@ import (
 	"webSystemPJ/backend/internal/handlers"
 	"webSystemPJ/backend/internal/middleware"
 	"webSystemPJ/backend/internal/repository"
+	"webSystemPJ/backend/internal/service"
 )
 
 func main() {
@@ -34,14 +34,30 @@ func main() {
 
 	userRepo := repository.NewUserRepository(db)
 	postRepo := repository.NewPostRepository(db)
+	extAcctRepo := repository.NewExternalAccountRepository(db)
+
+	// サービス初期化
+	googleSvc := service.NewGoogleService(cfg, extAcctRepo, nil)
+	instagramSvc := service.NewInstagramService(cfg, extAcctRepo, nil)
+	stripeSvc := service.NewStripeService(cfg)
 
 	gin.SetMode(cfg.GinMode)
 	r := gin.Default()
-	r.Use(corsMiddleware())
+	r.Use(middleware.CORS())
 
 	r.GET("/health", handlers.Health)
 	r.POST("/register", handlers.Register(cfg, userRepo))
 	r.POST("/login", handlers.Login(cfg, userRepo))
+	r.POST("/api/webhooks/stripe", handlers.StripeWebhook(cfg, userRepo))
+
+	// OAuth routes (認証不要 — ブラウザリダイレクト経由)
+	auth := r.Group("/api/auth")
+	{
+		auth.GET("/google/login", handlers.GoogleLogin(cfg))
+		auth.GET("/google/callback", handlers.GoogleCallback(cfg, extAcctRepo))
+		auth.GET("/instagram/login", handlers.InstagramLogin(cfg))
+		auth.GET("/instagram/callback", handlers.InstagramCallback(cfg, extAcctRepo))
+	}
 
 	protected := r.Group("/")
 	protected.Use(middleware.Auth(cfg))
@@ -49,6 +65,28 @@ func main() {
 		protected.GET("/posts", handlers.GetPosts(postRepo))
 		protected.GET("/posts/:id", handlers.GetPost(postRepo))
 		protected.POST("/posts", handlers.CreatePost(postRepo))
+
+		// 連携状態API
+		protected.GET("/api/link-status", handlers.GetLinkStatus(extAcctRepo))
+		protected.DELETE("/api/unlink/:provider", handlers.UnlinkAccount(extAcctRepo))
+
+		// レポートAPI
+		protected.GET("/api/reports/summary", handlers.GetReportSummary(googleSvc, instagramSvc))
+		protected.GET("/api/reports/google", handlers.GetGoogleReport(googleSvc))
+		protected.GET("/api/reports/instagram", handlers.GetInstagramReport(instagramSvc))
+
+		// Google Business Profile API
+		protected.GET("/api/google/reviews", handlers.GetGoogleReviews(googleSvc))
+		protected.POST("/api/google/reviews/:id/reply", handlers.ReplyGoogleReview(googleSvc))
+		protected.GET("/api/google/locations", handlers.GetGoogleLocations(googleSvc))
+
+		// Instagram API
+		protected.GET("/api/instagram/media", handlers.GetInstagramMedia(instagramSvc))
+		protected.POST("/api/instagram/media", handlers.CreateInstagramMedia(instagramSvc))
+
+		// Billing API
+		protected.POST("/api/billing/checkout", handlers.CreateCheckoutSession(stripeSvc))
+		protected.POST("/api/billing/portal", handlers.CreatePortalSession(stripeSvc, userRepo))
 	}
 
 	log.Printf("server starting on :%s", cfg.Port)
@@ -74,15 +112,3 @@ func runMigrations(db *sql.DB) {
 	log.Println("migrations applied")
 }
 
-func corsMiddleware() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.Header("Access-Control-Allow-Origin", "*")
-		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		c.Header("Access-Control-Allow-Headers", "Content-Type, Authorization")
-		if c.Request.Method == http.MethodOptions {
-			c.AbortWithStatus(http.StatusNoContent)
-			return
-		}
-		c.Next()
-	}
-}

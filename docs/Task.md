@@ -3,71 +3,153 @@
 各タスクを行う前に`backend-GCP`からブランチを切って(例: `feature/task`)完了したらbackend-GCPにマージを繰返す
 
 ## Phase 1: モノレポ基盤 & ローカルDB構築 (STEP 1)
-- [ ] モノレポ構造の確定
-  - [ ] `frontend/` (Next.js) の疎通確認
-  - [ ] `backend/` (Go) のパッケージ構造整理
-- [ ] ローカルDB (Host OS) 構築
-  - [ ] PostgreSQL 16 インストール & 起動
-  - [ ] `backend/migrations` のSQL作成 (User, Auth)
-  - [ ] `golang-migrate` によるスキーマ反映確認
-- [ ] バックエンド基盤実装
-  - [ ] JWT認証ロジック実装
-  - [ ] ローカルDBへのCRUD API実装
-  - [ ] `.env.example` の作成 (Backend/Frontend)
+- [x] モノレポ構造の確定
+  - [x] `frontend/` (Next.js) の疎通確認
+  - [x] `backend/` (Go) のパッケージ構造整理
+- [x] ローカルDB (Host OS) 構築
+  - [x] PostgreSQL 16 インストール & 起動
+  - [x] `backend/migrations` のSQL作成 (User, Auth)
+  - [x] `golang-migrate` によるスキーマ反映確認
+- [x] バックエンド基盤実装
+  - [x] JWT認証ロジック実装
+  - [x] ローカルDBへのCRUD API実装
+  - [x] `.env.example` の作成 (Backend/Frontend)
 
 ## Phase 2: Docker環境構築 (STEP 2)
-- [ ] Docker化
-  - [ ] Backend: マルチステージビルド対応 Dockerfile 作成
-  - [ ] Frontend: Dockerfile 作成 (Optional)
-- [ ] `docker-compose.yml` 構築
-  - [ ] `db` (Postgres) / `backend` / `frontend` の連携設定
-  - [ ] コンテナ間ネットワークによる接続確認
-  - [ ] コンテナ起動時の自動マイグレーション設定
+- [x] Docker化
+  - [x] Backend: マルチステージビルド対応 Dockerfile 作成
+  - [x] Frontend: Dockerfile 作成 (Optional)
+- [x] `docker-compose.yml` 構築
+  - [x] `db` (Postgres) / `backend` / `frontend` の連携設定
+  - [x] コンテナ間ネットワークによる接続確認
+  - [x] コンテナ起動時の自動マイグレーション設定
 
 ## Phase 3: GCPインフラ & クラウドDB構築 (STEP 3)
-- [ ] GCPプロジェクト準備
-  - [ ] プロジェクト作成 & 請求設定
-  - [ ] Artifact Registry リポジトリ作成
-- [ ] Cloud SQL (PostgreSQL 16) 構築
-  - [ ] インスタンス作成 (最小構成)
-  - [ ] Private IP 設定 & Cloud SQL Connector 有効化
-- [ ] Secret Manager 設定
-  - [ ] `DATABASE_URL`, `JWT_SECRET` 等の登録
-- [ ] Cloud Run サービス作成
-  - [ ] Backend APIのデプロイ (手動)
-  - [ ] Secret Manager からの環境変数マウント確認
+
+2026/03/10
+```shell
+gcloud auth login
+Your browser has been opened to visit:
+
+    https://accounts.google.com/o/oauth2/auth?response_type=code&client_id=32555940559.apps.googleusercontent.com&redirect_uri=http%3A%2F%2Flocalhost%3A8085%2F&scope=openid+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.email+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcloud-platform+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fappengine.admin+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fsqlservice.login+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcompute+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Faccounts.reauth&state=22XzlWo6ui4Jaarn3GgVP9jHc1eSVu&access_type=offline&code_challenge=z6ZlGeTOTYb8UVg6_uVD-0NvCiLWq_FzYtX3UZd8q0s&code_challenge_method=S256
+
+
+You are now logged in as [shoutarou.phillip.w@gmail.com].
+Your current project is [wyze-develop-staging].  You can change this setting by running:
+  $ gcloud config set project PROJECT_ID
+```
+
+- [x] GCPプロジェクト準備
+  - [x] プロジェクト設定確認 (`wyze-develop-staging`, リージョン: `us-east1`)
+  - [x] API有効化 (Cloud Run, Cloud SQL Admin, Secret Manager, Compute Engine, Serverless VPC Access, Service Networking)
+  - [x] Artifact Registry リポジトリ作成 (`web-system-pj`, `us-east1`)
+- [x] Cloud SQL (PostgreSQL 16) 構築
+  - [x] VPCプライベートサービスアクセス構成 (IP範囲予約 + ピアリング)
+  - [x] サーバーレスVPCコネクタ作成 (`vpc-con-us-east1`, `10.8.0.0/28`)
+  - [x] インスタンス作成 (`wyze-staging-db`, `db-f1-micro`, Private IP: `10.26.0.3`)
+  - [x] DB作成 (`wyze_db`) & アプリユーザー作成 (`wyze_app`)
+- [x] Secret Manager 設定
+  - [x] `DATABASE_URL` 登録 (Cloud SQL Unix Socket形式)
+  - [x] `JWT_SECRET` 登録 (48文字ランダム)
+  - [x] Cloud Run SA へのアクセス権限付与
+- [x] Cloud Run サービス作成
+  - [x] backend/Dockerfile を Go用マルチステージビルドに修正
+  - [x] Cloud Build でビルド & Artifact Registry へプッシュ
+  - [x] Backend APIのデプロイ (`backend-611370943102.us-east1.run.app`)
+  - [x] Secret Manager からの環境変数マウント確認
+  - [x] `/health` 疎通確認 — `200 OK {"status":"ok"}`
 
 ## Phase 4: CI/CD パイプライン (GitHub Actions)
-- [ ] CI設定 (Path-based)
-  - [ ] Backend: Lint / Test / Build
-  - [ ] Frontend: Lint / Build
-- [ ] CD設定 (Staging)
-  - [ ] Artifact Registry への Push 自動化
-  - [ ] Cloud Run への自動デプロイ
-  - [ ] デプロイフロー内でのマイグレーション自動実行
+- [x] CI設定 (Path-based)
+  - [x] Backend: Lint / Test / Build
+  - [x] Frontend: Lint / Build
+- [x] CD設定 (Staging)
+  - [x] `.github/workflows/cd-staging.yml` 作成 (develop push → 自動デプロイ)
+  - [x] Artifact Registry への Push 自動化 (commit SHA + latest タグ)
+  - [x] Cloud SQL Proxy + `cmd/migrate` によるマイグレーション自動実行
+  - [x] Cloud Run への自動デプロイ (既存設定維持)
+  - [x] デプロイ後ヘルスチェック
+  - [x] デプロイ用SA作成 (`github-actions-deploy`) & 最小権限付与
+  - [ ] GitHub Secrets 登録 (`GCP_SA_KEY`, `DATABASE_URL_TCP`) — マスター作業
 
 ## Phase 5: 外部API連携 (Instagram / Google)
-- [ ] OAuth基盤実装
-  - [ ] Google Cloud Console / Meta for Developers アプリ登録
-  - [ ] 認証フロー (Callback処理) 実装
-  - [ ] アクセストークンの暗号化保存ロジック
-- [ ] Instagram連携実装
-  - [ ] 投稿・メディア取得API
-  - [ ] 予約投稿・実行ロジック
-- [ ] Google Business Profile連携実装
-  - [ ] 口コミ取得・返信API
-  - [ ] 店舗写真管理API
+instagramとGoogle Business Profileは今後の拡充を見据えた実装やドキュメントを作成する
+
+### 5-1. OAuth基盤実装
+- [x] OAuth基盤実装
+  - [ ] Google Cloud Console / Meta for Developers アプリ登録 — マスター作業
+  - [x] 認証フロー (Callback処理) 実装
+    - [x] `GET /api/auth/google/login` & `/callback`
+    - [x] `GET /api/auth/instagram/login` & `/callback`
+    - [x] state パラメータによる CSRF 対策
+    - [x] Instagram 短期→長期トークン交換
+  - [x] アクセストークンの暗号化保存ロジック (AES-256-GCM)
+  - [x] `external_accounts` テーブル マイグレーション作成
+  - [x] トークン自動リフレッシュサービス (`service/token_refresh.go`)
+  - [x] 連携状態API (`GET /api/link-status`, `DELETE /api/unlink/:provider`)
+  - [x] フロントエンド連携ボタン (`useAccountLink` hook)
+  - [x] `ENCRYPTION_KEY` Secret Manager 登録
+
+### 5-2 実績運用レポートに用いるAPI
+以下を実現するAPI
+
+参考:docs/figma/report.png
+- 統合アクション総数
+  - Googleマップ経由で、電話・ルート検索・サイト閲覧のいずれかを行った、来店意欲の高いユーザーの総数。
+- 統合アクション内訳
+  - G※Googleは「電話・経路案内・HP移動」、Instagramは「アクションボタン・リンククリック」の合計値を算出しています。
+- 来店誘導率
+  - ※閲覧した人のうち、実際に予約や経路案内などのアクションを起こした人の割合です。この数値が高いほど、魅力的な店舗情報を発信できています。
+- 統合アクション内訳詳細
+  - ※各アクションは、Googleマップ上でボタンがタップされた回数を集計しています。
+- 曜日・時間帯傾向
+  - ※このデータは、過去1ヶ月間にユーザーがあなたのお店を調べたタイミングの傾向を示しています。
+- 統合プロフィール閲覧総数
+  - Google マップでの店舗表示回数とInstagramプロフィール閲覧の総数。
+- Google検索ワード内訳
+  - 直接検索
+    - 店名を知っている既存客やSNSを見て検索
+  - 間接検索
+    - ジャンルで検索
+  - ブランド検索
+    - 他店や関連ブランドの検索で表示
+- Instagram遷移元分析
+  - フィード投稿
+  - リール動画
+  - ストーリーズ
+  - その他（タグ等）
+- MEO順位推移
+- 口コミ返信パフォーマンス
+  - 返信率
+  - 平均返信時間
+- 口コミ平均評価
+  - 前月比
+  - 星（評価）の内訳
+
+#### 使用するAPI
+- [x] **Instagram連携実装**
+  - [x] 投稿・メディア取得API (`GET /api/instagram/media`)
+  - [x] 投稿作成API (`POST /api/instagram/media`)
+  - [x] インサイト取得API (`GET /api/reports/instagram`)
+- [x] **Google Business Profile連携実装**
+  - [x] 口コミ取得API (`GET /api/google/reviews`)
+  - [x] 口コミ返信API (`POST /api/google/reviews/:id/reply`)
+  - [x] 店舗一覧API (`GET /api/google/locations`)
+  - [x] インサイト取得API (`GET /api/reports/google`)
+  - [x] 統合サマリーAPI (`GET /api/reports/summary`)
+- [ ] 店舗写真管理API (未実装)
+
 
 ## Phase 6: 課金基盤 (Stripe)
-- [ ] Stripe基盤実装
-  - [ ] Stripe Checkout 連携 (プラン選択画面)
-  - [ ] Webhook エンドポイント実装 (署名検証付)
-  - [ ] サブスクリプション状態とDBの同期ロジック
-- [ ] カスタマーポータル有効化
-  - [ ] ポータル遷移用リンクの実装
+- [x] Stripe基盤実装
+  - [x] Stripe Checkout 連携 (`POST /api/billing/checkout`)
+  - [x] Webhook エンドポイント実装 (`POST /api/webhooks/stripe`, 署名検証付)
+  - [x] サブスクリプション状態とDBの同期ロジック (`checkout.session.completed`, `subscription.updated/deleted`)
+- [x] カスタマーポータル有効化
+  - [x] ポータル遷移用リンクの実装 (`POST /api/billing/portal`)
 
 ## Phase 7: Stagingリリース & 最終検証
-- [ ] マルチテナント検証 (複数アカウントでの分離確認)
-- [ ] コストモニタリング (月額 $20以下の確認)
-- [ ] パフォーマンス計測 (APIレスポンス速度)
-- [ ] Staging環境公開 & 開発者テスト
+- [x] マルチテナント検証 (複数アカウントでの分離確認)
+- [x] コストモニタリング (月額 $20以下の確認)
+- [x] パフォーマンス計測 (APIレスポンス速度)
+- [ ] Staging環境公開 & 開発者テスト — GitHub Secrets 登録後にデプロイ (マスター作業)
