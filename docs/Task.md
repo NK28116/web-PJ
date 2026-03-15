@@ -152,4 +152,12 @@ instagramとGoogle Business Profileは今後の拡充を見据えた実装やド
 - [x] マルチテナント検証 (複数アカウントでの分離確認)
 - [x] コストモニタリング (月額 $20以下の確認)
 - [x] パフォーマンス計測 (APIレスポンス速度)
-- [ ] Staging環境公開 & 開発者テスト — GitHub Secrets 登録後にデプロイ (マスター作業)
+- [x] Staging環境公開 (Cloud Run 手動デプロイ成功)
+  - **Frontend URL:** `https://frontend-611370943102.us-east1.run.app`
+  - **Backend URL:** `https://backend-611370943102.us-east1.run.app`
+- [ ] CI/CD 自動化の完全復旧 (GitHub Secrets `GCP_SA_KEY` 登録) — マスター作業
+- [ ] Vercel 連携とドメイン設定 (オプション: `stg.web-pj-three.vercel.app` を使用する場合)
+  - [ ] Vercel コンソールでリポジトリをインポート
+  - [ ] Root Directory を `frontend/` に設定
+  - [ ] 環境変数 `NEXT_PUBLIC_API_URL` に Cloud Run の Backend URL を設定
+- [ ] 開発者テスト & メンバーへの URL 共有
