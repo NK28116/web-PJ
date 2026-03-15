@@ -61,7 +61,7 @@ func main() {
 	auth := r.Group("/api/auth")
 	{
 		auth.GET("/google/login", handlers.GoogleLogin(cfg))
-		auth.GET("/google/callback", handlers.GoogleCallback(cfg, extAcctRepo))
+		auth.GET("/google/callback", handlers.GoogleCallback(cfg, extAcctRepo, userRepo))
 		auth.GET("/instagram/login", handlers.InstagramLogin(cfg))
 		auth.GET("/instagram/callback", handlers.InstagramCallback(cfg, extAcctRepo))
 	}

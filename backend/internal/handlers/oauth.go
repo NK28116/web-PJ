@@ -12,10 +12,12 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 
 	"webSystemPJ/backend/internal/config"
+	"webSystemPJ/backend/internal/models"
 	"webSystemPJ/backend/internal/repository"
 	"webSystemPJ/backend/internal/utils"
 )
@@ -69,7 +71,7 @@ func GoogleLogin(cfg *config.Config) gin.HandlerFunc {
 }
 
 // GoogleCallback はGoogle認可コードを受け取り、トークンを交換・保存する
-func GoogleCallback(cfg *config.Config, extAcctRepo *repository.ExternalAccountRepository) gin.HandlerFunc {
+func GoogleCallback(cfg *config.Config, extAcctRepo *repository.ExternalAccountRepository, userRepo repository.UserRepositoryInterface) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// state検証
 		savedState, err := c.Cookie("oauth_state")
@@ -119,11 +121,47 @@ func GoogleCallback(cfg *config.Config, extAcctRepo *repository.ExternalAccountR
 			return
 		}
 
-		// JWTからuser_idを取得
+		// JWTからuser_idを取得（既存ユーザーの連携時）
 		userID := getUserIDFromOAuthCookie(c, cfg)
+
+		// JWTが存在しない場合 → ソーシャルログイン/新規登録フロー
 		if userID == "" {
-			redirectWithError(c, cfg.FrontendURL, "authentication_required")
-			return
+			if userInfo.Email == "" {
+				redirectWithError(c, cfg.FrontendURL, "email_not_provided")
+				return
+			}
+
+			existingUser, err := userRepo.FindByEmail(userInfo.Email)
+			if err != nil {
+				log.Printf("google login find user error: %v", err)
+				redirectWithError(c, cfg.FrontendURL, "login_failed")
+				return
+			}
+
+			var targetUser *models.User
+			if existingUser != nil {
+				targetUser = existingUser
+			} else {
+				// 新規ユーザー作成（パスワードは空ハッシュ: ソーシャルログイン専用）
+				newUser, err := userRepo.Create(userInfo.Email, "", "user")
+				if err != nil {
+					log.Printf("google login create user error: %v", err)
+					redirectWithError(c, cfg.FrontendURL, "registration_failed")
+					return
+				}
+				targetUser = newUser
+			}
+
+			userID = targetUser.ID
+
+			// JWT発行してCookieにセット
+			jwtToken, err := issueJWT(targetUser, cfg.JWTSecret)
+			if err != nil {
+				log.Printf("google login jwt error: %v", err)
+				redirectWithError(c, cfg.FrontendURL, "token_generation_failed")
+				return
+			}
+			c.SetCookie("auth_token", jwtToken, 86400, "/", "", false, true)
 		}
 
 		// トークン暗号化・保存
@@ -136,7 +174,12 @@ func GoogleCallback(cfg *config.Config, extAcctRepo *repository.ExternalAccountR
 		log.Printf("google oauth linked: user=%s provider_user=%s", userID, userInfo.ID)
 
 		// フロントエンドにリダイレクト
-		c.Redirect(http.StatusTemporaryRedirect, cfg.FrontendURL+"/home?linked=google")
+		redirectURL := cfg.FrontendURL + "/home?linked=google"
+		// ソーシャルログインの場合、JWTをクエリパラメータでも渡す（フロントでlocalStorageに保存用）
+		if jwtCookie, err := c.Cookie("auth_token"); err == nil && jwtCookie != "" {
+			redirectURL += "&token=" + url.QueryEscape(jwtCookie)
+		}
+		c.Redirect(http.StatusTemporaryRedirect, redirectURL)
 	}
 }
 
@@ -329,6 +372,20 @@ func getInstagramUserID(accessToken string) (string, error) {
 		return pageID, nil
 	}
 	return igResult.IgAccount.ID, nil
+}
+
+// issueJWT はユーザー情報からJWTトークン文字列を生成する
+func issueJWT(user *models.User, secret string) (string, error) {
+	claims := &models.Claims{
+		UserID: user.ID,
+		Role:   user.Role,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+		},
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString([]byte(secret))
 }
 
 // --- 共通ヘルパー ---

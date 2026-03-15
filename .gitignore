@@ -1,13 +1,13 @@
 # Dependencies
-/node_modules
+node_modules/
 /.pnp
 .pnp.js
 
 # Testing
-/coverage
+coverage/
 
 # Next.js
-/.next/
+.next/
 /out/
 
 # Production
@@ -31,13 +31,13 @@ yarn-error.log*
 
 # TypeScript
 *.tsbuildinfo
-next-env.d.ts
+/next-env.d.ts
 
 .cursor/*
 .vscode/*
 .swc/*
 .claude/settings.local.json
 
-package-lock.json
+/package-lock.json
 *storybook.log
 storybook-static

@@ -152,4 +152,64 @@ instagramとGoogle Business Profileは今後の拡充を見据えた実装やド
 - [x] マルチテナント検証 (複数アカウントでの分離確認)
 - [x] コストモニタリング (月額 $20以下の確認)
 - [x] パフォーマンス計測 (APIレスポンス速度)
-- [ ] Staging環境公開 & 開発者テスト — GitHub Secrets 登録後にデプロイ (マスター作業)
+- [x] Staging環境公開 (Cloud Run 手動デプロイ成功)
+  - **Frontend URL:** `https://frontend-611370943102.us-east1.run.app`
+  - **Backend URL:** `https://backend-611370943102.us-east1.run.app`
+- [ ] CI/CD 自動化の完全復旧 (GitHub Secrets `GCP_SA_KEY` 登録) — マスター作業->DONE
+- [x] Vercel 連携とドメイン設定 : DONE (https://web-pj-three.vercel.app/)
+  - [x] Vercel コンソールでリポジトリをインポート
+  - [x] Root Directory を `frontend/` に設定
+  - [x] 環境変数 `NEXT_PUBLIC_API_URL` に Cloud Run の Backend URL を設定
+- [ ] 開発者テスト & メンバーへの URL 共有
+
+## Phase 8: ステージング検証の準備
+ステージング検証内容と必要なもの
+
+### 検証項目と現状の妥当性
+- [ ] **Google アカウント連携 & 口コミ取得**
+    - **妥当性:** バックエンド (`/api/google/reviews`) は実装済み。フロントエンドの `ReviewTemplate` との結合を確認する必要がある。
+- [ ] **Instagram 連携 & 投稿画像表示**
+    - **妥当性:** バックエンド (`/api/instagram/media`) は実装済み。フロントエンドの `ReportTemplate` 等での表示を確認する必要がある。
+- [ ] **Stripe 決済連携**
+    - **妥当性:** バックエンドの Checkout/Webhook 処理は実装済み。フロントエンド (`BillingTemplate`) は現在モック表示のため、Stripe Checkout への遷移ボタンを実装・検証する必要がある。
+- [ ] **領収書発行機能**
+    - **妥当性:** **未実装 (要実装)**。現在の `BillingTemplate` ではモックデータを `console.log` 出力するのみ。Stripe の支払い履歴からデータを取得し、指定の MoneyForward テンプレート風のレイアウトで PDF 出力するロジックが必要。
+
+### 検証方法（テスト手順）
+1. **Google/Instagram 連携テスト**
+    - テストユーザー (`test@example.com`) でログイン。
+    - アカウント設定ページから各プロバイダーの連携ボタンをクリック。
+    - 認可画面で提供されたアカウント情報を使用し、完了後に「連携済み」になるか確認。
+    - 各機能ページ（口コミ一覧、レポート）で実際のデータが表示されるか確認。
+2. **Stripe 決済テスト**
+    - 料金プランページから「申し込む」をクリックし、Stripe Checkout 画面へ遷移することを確認。
+    - テスト用カード番号 (`4242 4242 4242 4242`) を使用して決済完了。
+    - 完了後、アプリケーションに戻り、サブスクリプション状態が「有効」に更新されることを確認。
+3. **領収書発行テスト**
+    - 支払い完了後、請求情報ページに履歴が表示されることを確認。
+    - 「領収書発行」ボタンから、決済内容（日付、金額、店舗名）が正しく反映された PDF が生成されるか確認。
+
+### 必要なもの
+
+#### ユーザーが用意したもの
+- Google アカウント
+  - ID: wyze.system.inc@gmail.com
+  - Pass: wyze2025
+- Instagram
+  - ID: wyze_system_official
+  - Pass: wyze2025
+- Stripe
+  - 公開可能キー: `pk_test_51RxMhx2LUnmFOZdSeo2akMqr5MqfELVd3RN4jm3JhPNraBB0LF3hX0Wb32fsUbxvTBM8qM4Mmztknh1DBxeInW9f00OdP69dvc`
+- Google Cloud
+  - プロジェクトID: `wyze-develop-staging` (611370943102)
+- Meta for Developer
+  - アプリ名: Wyze System (ID: 1263482195912997)
+
+#### 追加で必要なもの (開発チーム作業)
+- [ ] **リダイレクトURLの設定確認:** GCP コンソールおよび Meta コンソールで、ステージング環境の URL(https://web-pj-three.vercel.app/以外は未設定)が許可リストに登録されていること。
+- [ ] **Stripe Webhook 設定:** Stripe 管理画面で、Cloud Run の Webhook エンドポイント URL を登録し、`STRIPE_WEBHOOK_SECRET` を Secret Manager に設定すること。
+- [ ] **PDF 生成ライブラリの選定:** 領収書 PDF 出力用（例: `jspdf`, `react-pdf` またはバックエンドでの生成）。
+
+### 検証環境
+- **Frontend URL:** `https://web-pj-three.vercel.app/`
+- **Backend URL:** `https://backend-611370943102.us-east1.run.app`

@@ -70,17 +70,30 @@
 
 ---
 
-## 5. 認証・UI設計 (Phase 1 & 7)
-- **要求**: セキュアな認証画面と直感的なサインアップフローの提供（`docs/design.md` 1, 2項）
+## 6. ステージング検証 & 実機連携 (Phase 8)
+- **要求**: 本番環境（GCP/Vercel）での外部 API 連携の完遂と、決済から領収書発行までの実運用フローの検証（`docs/requirements.md` 3, 5項）
 
 ### 基本設計
-- **実装方針・概要**: 既存資産を Next.js 向けに最適化し、レスポンシブな Tailwind CSS ベースの UI を構築する。
+- **実装方針・概要**: 
+  - バックエンドに実装済みの Google/Instagram API をフロントエンド（Review/Report 画面）へ統合する。
+  - Stripe Checkout をフロントエンドの `BillingTemplate` と疎通させ、実際のテスト決済フローを構築する。
+  - Stripe の支払い完了イベント（Webhook）をトリガーに、指定のテンプレートに基づいた領収書 PDF 生成機能を実装する。
+  - 使用する領収書はdocs/Receiptに格納
+    - 未完成
+    - docs/Receipt/receiptTemplate.xlsx を参考に変数にできる部分は抽出しておく
 - **技術・アーキテクチャ**:
-  - UI: Headless UI, Heroicons
-  - Logic: React Hook Form, Zod (バリデーション)
-- **異常系・リスク**: フォームバリデーション漏れ、セッションハイジャック。
+  - Integration: SWR または React Query による API フェッチ
+  - Payment: Stripe SDK (Frontend), Stripe Webhook (Backend)
+  - Document: `jspdf` または `react-pdf` によるクライアントサイド PDF 生成
+- **異常系・リスク**: 
+  - 外部 API（Meta/Google）の認可エラー、リダイレクト URL の不一致。
+  - Stripe Webhook の遅延や受信失敗による契約状態の不整合。
 
 ### 詳細設計
-- **実装の概要**: ログイン画面・サインアップステップの実装、AuthGuard によるルーティング制限の適用。
-- **コミットメッセージ**: `feat: implement responsive login and step-by-step signup UI`
-- **行数目安**: 150~200行程度 (Size: L)
+- **実装の概要**: 
+  - `ReviewTemplate` / `ReportTemplate` での API 呼び出し実装。
+  - `BillingTemplate` への Stripe Checkout 遷移ロジック追加。
+  - MoneyForward テンプレート風の領収書生成ロジックの実装。
+  - GCP/Meta/Stripe 管理画面での本番（ステージング）用 URL の設定確認。
+- **コミットメッセージ**: `feat: integrate real API data and implement stripe payment with receipt generation`
+- **行数目安**: 200~300行程度 (Size: L)

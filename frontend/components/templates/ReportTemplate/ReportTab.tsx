@@ -3,24 +3,31 @@ import {
   SectionTitle,
   KPICard,
   DonutChart,
-  BarChart,
-  LineChart,
   EmptyState,
   isEmpty,
 } from '@/organisms/Report';
 import React from 'react';
 import type { ReportData } from '@/test/mock/reportMockData';
 import { tooltips } from '@/test/mock/reportMockData';
+import {
+  BarChart as RechartsBarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  LineChart as RechartsLineChart,
+  Line,
+} from 'recharts';
+import type { InstagramMediaItem } from '@/types/api';
 
 export interface ReportTabProps {
   data: ReportData;
+  instagramMedia?: InstagramMediaItem[];
 }
 
-/**
- * ReportTabコンポーネント - 運用実績レポートの内容を表示
- * シングルカラムレイアウト: 全画面幅で1列表示
- */
-const ReportTab: React.FC<ReportTabProps> = ({ data }) => {
+const ReportTab: React.FC<ReportTabProps> = ({ data, instagramMedia }) => {
   return (
     <div className="px-4 flex flex-col gap-4">
       {/* KPIカード */}
@@ -66,6 +73,7 @@ const ReportTab: React.FC<ReportTabProps> = ({ data }) => {
           </div>
         )}
       </div>
+
       {/* KPIカード */}
       <KPICard
         title="来店誘導率"
@@ -100,7 +108,6 @@ const ReportTab: React.FC<ReportTabProps> = ({ data }) => {
                 thickness={20}
               />
             </div>
-
             <div className="flex-1 space-y-4">
               {data.actionDetails.map((action, index) => (
                 <div key={index} className="flex flex-col gap-1 items-start w-full">
@@ -108,7 +115,6 @@ const ReportTab: React.FC<ReportTabProps> = ({ data }) => {
                     <div className="w-3 h-3 rounded-full" style={{ backgroundColor: action.color }} />
                     <Text className="text-lg font-medium text-gray-700">{action.label}</Text>
                   </div>
-
                   <div className="flex items-end ml-auto">
                     <Text className="text-lg font-medium ">
                       {action.count.toLocaleString()}
@@ -150,30 +156,45 @@ const ReportTab: React.FC<ReportTabProps> = ({ data }) => {
         )}
       </div>
 
-      {/* 曜日・時間帯傾向 */}
+      {/* 曜日・時間帯傾向（recharts） */}
       <div className="bg-white p-4 rounded-lg border border-gray-200">
         <SectionTitle title="曜日・時間帯傾向" tooltip={tooltips.weekdayTrend} />
 
-        {/* 曜日傾向グラフ */}
         <div className="mb-6">
           <Text className="text-xs text-gray-500 mb-2">曜日傾向</Text>
-          <BarChart
-            data={data.weekdayTrend.map((item) => ({ label: item.day, value: item.value }))}
-            height={150}
-            barColor="#D9D9D9"
-          />
+          {isEmpty(data.weekdayTrend) ? (
+            <EmptyState />
+          ) : (
+            <ResponsiveContainer width="100%" height={150}>
+              <RechartsBarChart data={data.weekdayTrend.map((d) => ({ name: d.day, value: d.value }))}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                <YAxis tick={{ fontSize: 10 }} width={30} />
+                <Tooltip formatter={(value) => [`${value} 件`, '']} />
+                <Bar dataKey="value" fill="#D9D9D9" radius={[4, 4, 0, 0]} />
+              </RechartsBarChart>
+            </ResponsiveContainer>
+          )}
         </div>
 
-        {/* 時間帯傾向 */}
         <div>
           <Text className="text-xs text-gray-500 mb-2">時間帯傾向</Text>
-          <BarChart
-            data={data.timeTrend?.map((item) => ({ label: item.hour, value: item.value })) || []}
-            height={150}
-            barColor="#00A48D"
-          />
+          {isEmpty(data.timeTrend) ? (
+            <EmptyState />
+          ) : (
+            <ResponsiveContainer width="100%" height={150}>
+              <RechartsBarChart data={data.timeTrend.map((d) => ({ name: d.hour, value: d.value }))}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="name" tick={{ fontSize: 10 }} interval={1} />
+                <YAxis tick={{ fontSize: 10 }} width={30} />
+                <Tooltip formatter={(value) => [`${value} 件`, '']} />
+                <Bar dataKey="value" fill="#00A48D" radius={[4, 4, 0, 0]} />
+              </RechartsBarChart>
+            </ResponsiveContainer>
+          )}
         </div>
       </div>
+
       {/* Google検索ワード内訳 */}
       <div className="bg-white p-4 rounded-lg border border-gray-200">
         <SectionTitle title="Google検索ワード内訳" tooltip={tooltips.searchKeywords} />
@@ -214,14 +235,14 @@ const ReportTab: React.FC<ReportTabProps> = ({ data }) => {
           </div>
         )}
       </div>
-      {/* Instagram遷移元分析: チャート左・リスト右のレイアウト */}
+
+      {/* Instagram遷移元分析 */}
       <div className="bg-white p-4 rounded-lg border border-gray-200">
         <SectionTitle title="Instagram遷移元分析" />
         {isEmpty(data.instagramSource) ? (
           <EmptyState />
         ) : (
           <div className="flex items-center justify-around">
-            {/* 左: ドーナツチャート（媒体別内訳と同サイズ） */}
             <div className="w-[140px]">
               <DonutChart
                 segments={data.instagramSource.map((d) => ({
@@ -232,7 +253,6 @@ const ReportTab: React.FC<ReportTabProps> = ({ data }) => {
                 thickness={25}
               />
             </div>
-            {/* 右: 凡例リスト */}
             <div className="space-y-4">
               {data.instagramSource.map((source, index) => (
                 <div key={index} className="flex items-center gap-4">
@@ -251,6 +271,36 @@ const ReportTab: React.FC<ReportTabProps> = ({ data }) => {
         )}
       </div>
 
+      {/* Instagram メディア投稿一覧 */}
+      <div className="bg-white p-4 rounded-lg border border-gray-200">
+        <SectionTitle title="Instagram 投稿一覧" />
+        {!instagramMedia || instagramMedia.length === 0 ? (
+          <EmptyState />
+        ) : (
+          <div className="grid grid-cols-2 gap-3 mt-2">
+            {instagramMedia.slice(0, 6).map((item) => (
+              <div key={item.id} className="border border-gray-100 rounded-lg overflow-hidden">
+                {item.media_url && (
+                  <img
+                    src={item.media_url}
+                    alt={item.caption || 'Instagram post'}
+                    className="w-full h-32 object-cover"
+                  />
+                )}
+                <div className="p-2">
+                  <Text className="text-xs text-gray-700 line-clamp-2">{item.caption}</Text>
+                  <div className="flex items-center gap-3 mt-1">
+                    <Text className="text-[10px] text-gray-400">♥ {item.like_count}</Text>
+                    <Text className="text-[10px] text-gray-400">💬 {item.comment_count}</Text>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* 星（評価）の内訳 */}
       <div className="bg-white p-4 rounded-lg border border-gray-200">
         <SectionTitle title="星（評価）の内訳" />
         {isEmpty(data.starDistribution) ? (
@@ -272,7 +322,8 @@ const ReportTab: React.FC<ReportTabProps> = ({ data }) => {
           </div>
         )}
       </div>
-      {/* 口コミ返信パフォーマンス: KPICardと同等のフォントサイズで数値を強調 */}
+
+      {/* 口コミ返信パフォーマンス */}
       <div className="bg-white p-4 rounded-lg border border-gray-200">
         <SectionTitle title="口コミ返信パフォーマンス" />
         {!data.reviewResponse || (data.reviewResponse.responseRate === 0 && data.reviewResponse.avgResponseTime === 0) ? (
@@ -283,7 +334,6 @@ const ReportTab: React.FC<ReportTabProps> = ({ data }) => {
               <div className="flex flex-col items-center justify-center p-2">
                 <Text className="text-xs font-bold text-gray-500 mb-2">返信率</Text>
                 <div className="flex items-end">
-                  {/* text-4xl（2.25rem）: KPICardと同等サイズで数値を強調 */}
                   <Text className="text-4xl leading-none font-bold text-wyze-primary">
                     {data.reviewResponse.responseRate}
                   </Text>
@@ -294,7 +344,6 @@ const ReportTab: React.FC<ReportTabProps> = ({ data }) => {
               <div className="flex flex-col items-center justify-center p-2">
                 <Text className="text-xs font-bold text-gray-500 mb-2">平均返信時間</Text>
                 <div className="flex items-end">
-                  {/* text-4xl（2.25rem）: KPICardと同等サイズで数値を強調 */}
                   <Text className="text-4xl leading-none font-bold text-wyze-primary">
                     {data.reviewResponse.avgResponseTime}
                   </Text>
@@ -309,23 +358,40 @@ const ReportTab: React.FC<ReportTabProps> = ({ data }) => {
         )}
       </div>
 
-      {/* MEO順位推移: チャート → キーワードリスト → 免責事項の順 */}
+      {/* MEO順位推移（recharts） */}
       <div className="bg-white p-4 rounded-lg border border-gray-200">
         <SectionTitle title="MEO順位推移" />
         {isEmpty(data.meoRankingHistory?.datasets) || isEmpty(data.meoRankingHistory?.labels) ? (
           <EmptyState />
         ) : (
           <>
-            {/* 1. チャート（Y軸反転: 1位が上） */}
-            <LineChart
-              labels={data.meoRankingHistory.labels}
-              datasets={data.meoRankingHistory.datasets}
-              height={150}
-              maxValue={20}
-              yAxisLabels={['1位', '10位', '20位']}
-              invertYAxis={true}
-            />
-            {/* 2. キーワードリスト（ランク昇順でソート） */}
+            <ResponsiveContainer width="100%" height={180}>
+              <RechartsLineChart
+                data={data.meoRankingHistory.labels.map((label, i) => {
+                  const point: Record<string, string | number> = { name: label };
+                  data.meoRankingHistory.datasets.forEach((ds) => {
+                    point[ds.label] = ds.data[i] ?? 0;
+                  });
+                  return point;
+                })}
+              >
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                <YAxis reversed domain={[1, 20]} tick={{ fontSize: 10 }} width={30} />
+                <Tooltip />
+                {data.meoRankingHistory.datasets.map((ds) => (
+                  <Line
+                    key={ds.label}
+                    type="monotone"
+                    dataKey={ds.label}
+                    stroke={ds.color}
+                    strokeWidth={2}
+                    dot={{ r: 3 }}
+                  />
+                ))}
+              </RechartsLineChart>
+            </ResponsiveContainer>
+
             <div className="space-y-6 mt-8">
               {[...data.meoKeywords]
                 .sort((a, b) => a.rank - b.rank)
@@ -354,7 +420,7 @@ const ReportTab: React.FC<ReportTabProps> = ({ data }) => {
                   );
                 })}
             </div>
-            {/* 3. 免責事項（最下部） */}
+
             <p className="mt-4 text-xs text-gray-400 leading-relaxed">
               ※MEO順位は、店舗所在地を基準とした検索結果を表示しています。検索する場所やデバイスによって順位が異なる場合があります。
             </p>

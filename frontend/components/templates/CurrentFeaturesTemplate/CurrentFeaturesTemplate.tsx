@@ -1,6 +1,7 @@
 import { Button } from '@/atoms/Button';
 import { Text } from '@/atoms/Text';
 import { BaseTemplate } from '@/templates/BaseTemplate';
+import { useBilling } from '@/hooks/useBilling';
 import React, { useState } from 'react';
 import { BsThreeDotsVertical } from 'react-icons/bs';
 
@@ -31,6 +32,13 @@ export const CurrentFeaturesTemplate: React.FC<CurrentFeaturesTemplateProps> = (
   const [planStatus, setPlanStatus] = useState<PlanStatus>('active');
   const [isAutoRenewal, setIsAutoRenewal] = useState(true);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { startCheckout, loading: billingLoading, error: billingError } = useBilling();
+
+  const PRICE_IDS = {
+    light: 'price_light_plan',
+    basic: 'price_basic_plan',
+    pro: 'price_pro_plan',
+  } as const;
 
   const handleCancel = () => {
     setPlanStatus('inactive');
@@ -44,8 +52,11 @@ export const CurrentFeaturesTemplate: React.FC<CurrentFeaturesTemplateProps> = (
   };
 
   const handleSubscribe = () => {
-    setPlanStatus('active');
-    setIsAutoRenewal(true);
+    startCheckout(PRICE_IDS.light);
+  };
+
+  const handleUpgrade = (priceId: string) => {
+    startCheckout(priceId);
   };
 
   return (
@@ -133,6 +144,12 @@ export const CurrentFeaturesTemplate: React.FC<CurrentFeaturesTemplateProps> = (
             )}
         </div>
 
+        {billingError && (
+          <div className="bg-red-50 border border-red-200 text-red-600 text-[14px] p-3">
+            {billingError}
+          </div>
+        )}
+
         {/* プラン変更ブロック */}
         <div className="border border-gray-300 bg-white">
              <div className="border-b border-gray-300 p-2">
@@ -143,13 +160,25 @@ export const CurrentFeaturesTemplate: React.FC<CurrentFeaturesTemplateProps> = (
                     <Text>
                       Basic プラン
                     </Text>
-                    <Button className="text-[14px] text-black">アップグレード</Button>
+                    <Button
+                      className="text-[14px] text-black"
+                      onClick={() => handleUpgrade(PRICE_IDS.basic)}
+                      disabled={billingLoading}
+                    >
+                      {billingLoading ? '処理中...' : 'アップグレード'}
+                    </Button>
                 </div>
                 <div className="flex items-center gap-3">
                     <Text>
                       Pro プラン
                     </Text>
-                    <Button className="text-[14px] text-black">アップグレード</Button>
+                    <Button
+                      className="text-[14px] text-black"
+                      onClick={() => handleUpgrade(PRICE_IDS.pro)}
+                      disabled={billingLoading}
+                    >
+                      {billingLoading ? '処理中...' : 'アップグレード'}
+                    </Button>
                 </div>
              </div>
         </div>
@@ -160,8 +189,9 @@ export const CurrentFeaturesTemplate: React.FC<CurrentFeaturesTemplateProps> = (
             <Button
               onClick={handleSubscribe}
               className="border border-orange-400 text-orange-400 px-6 py-2 text-[12px]"
+              disabled={billingLoading}
             >
-              契約する
+              {billingLoading ? '処理中...' : '契約する'}
             </Button>
           </div>
         )}
