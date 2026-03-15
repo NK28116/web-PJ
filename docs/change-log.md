@@ -1,5 +1,99 @@
 # 変更ログ
 
+## 2026-03-15 (Phase 8: ステージング検証 & 実機連携)
+
+### 概要
+バックエンドに実装済みの外部API（Google/Instagram/Stripe）をフロントエンドと統合し、モックデータからAPI連携への切り替えおよび領収書PDF生成機能を実装。
+
+### 実施内容
+
+#### 1. APIクライアント基盤の構築
+- `frontend/utils/api.ts` を新規作成
+  - `apiGet<T>()`, `apiPost<T>()` 汎用関数
+  - `localStorage` の `auth_token` を自動的に `Authorization` ヘッダーに付与
+  - `NEXT_PUBLIC_API_URL` 環境変数によるエンドポイント設定
+
+- `frontend/types/api.ts` を新規作成
+  - バックエンドのレスポンス型を TypeScript で定義
+  - `GoogleReview`, `ReportSummary`, `GoogleReport`, `InstagramReport`, `InstagramMediaItem`, `CheckoutResponse`, `PortalResponse` 等
+
+#### 2. 口コミ管理のAPI連携 (ReviewTemplate)
+- `frontend/hooks/useReviews.ts` を新規作成
+  - `GET /api/google/reviews` からデータ取得
+  - `POST /api/google/reviews/:id/reply` で返信送信
+  - バックエンド `GoogleReview` 型 → フロントエンド `Review` 型への変換
+  - ローディング・エラー状態管理
+
+- `frontend/components/templates/ReviewTemplate/ReviewTemplate.tsx` を修正
+  - `reviewMockData` 直接参照 → `useReviews()` フックに切り替え
+  - ローディング中は `Spinner` 表示
+  - API エラー時はエラーメッセージ表示
+  - 返信送信を非同期APIコールに変更、エラーハンドリング追加
+
+#### 3. レポート・ダッシュボードのAPI連携 (ReportTemplate)
+- `frontend/hooks/useReport.ts` を新規作成
+  - `GET /api/reports/summary?start=...&end=...` からデータ取得
+  - 期間セレクタの値（lastMonth/lastWeek/last2Week/thisYear）をAPIクエリパラメータに変換
+  - バックエンド `ReportSummary` → フロントエンド `ReportData` への変換ロジック
+    - プロフィール閲覧数、アクション総数、来店誘導率を算出
+    - Google/Instagram のアクション内訳を統合
+    - 曜日・時間帯傾向、検索キーワード、口コミ統計を変換
+  - 期間変更時に自動再取得
+
+- `frontend/components/templates/ReportTemplate/ReportTemplate.tsx` を修正
+  - `operationalReportData` 直接参照 → `useReport()` フックに切り替え
+  - ローディング・エラー表示を追加
+
+#### 4. Stripe課金フローの連携 (BillingTemplate)
+- `frontend/hooks/useBilling.ts` を新規作成
+  - `startCheckout(priceId)`: `POST /api/billing/checkout` → Stripe Checkout画面へリダイレクト
+  - `openPortal()`: `POST /api/billing/portal` → Stripe Customer Portal画面へリダイレクト
+  - ローディング・エラー状態管理
+
+- `frontend/components/templates/BillingTemplate/BillingTemplate.tsx` を修正
+  - 「プランに申し込む」ボタン → `startCheckout()` 呼び出し
+  - 「カード情報を変更する」「編集」ボタン → `openPortal()` 呼び出し
+  - 決済完了後（`?checkout=success`）にサブスクリプション更新メッセージ表示
+  - カード編集モーダルを削除（Stripe Portal で管理するため）
+  - 処理中状態の表示（ボタン無効化 + 「処理中...」テキスト）
+
+#### 5. 領収書PDF生成機能の実装
+- `jspdf` パッケージを `dependencies` に追加
+
+- `frontend/utils/generateReceipt.ts` を新規作成
+  - `docs/Receipt/receiptTemplate.csv` のレイアウトを再現
+  - 埋め込み変数のマッピング:
+    - `{$yyyy}`, `{$mm}`, `{$dd}`: 支払い完了日
+    - `{$CompanyName}`: ユーザーのメールアドレス（localStorage から取得）
+    - `{$SumPrice}`: 支払い合計金額
+    - `{$PlanName}`: 契約プラン名
+    - `{$ReceiptNumber}`: Invoice ID
+  - セクション構成: ヘッダー、合計金額、但し書き、明細、税率内訳、備考
+  - `doc.save()` でブラウザダウンロード
+
+- `BillingTemplate` の支払い履歴に各行ごとの「PDF」ボタンを追加
+  - クリックで該当月の領収書PDFを即時生成・ダウンロード
+
+### 変更ファイル一覧
+- `frontend/utils/api.ts` (新規)
+- `frontend/types/api.ts` (新規)
+- `frontend/hooks/useReviews.ts` (新規)
+- `frontend/hooks/useReport.ts` (新規)
+- `frontend/hooks/useBilling.ts` (新規)
+- `frontend/utils/generateReceipt.ts` (新規)
+- `frontend/components/templates/ReviewTemplate/ReviewTemplate.tsx` (修正)
+- `frontend/components/templates/ReportTemplate/ReportTemplate.tsx` (修正)
+- `frontend/components/templates/BillingTemplate/BillingTemplate.tsx` (修正)
+- `frontend/package.json` (jspdf追加)
+
+### 環境設定の確認事項（セクション4）
+以下は手動確認が必要：
+- **CORS設定**: `backend/internal/middleware/cors.go` で Vercel ドメインが許可されているか
+- **OAuthリダイレクト**: GCP / Meta のデベロッパーコンソールでコールバックURL登録済みか
+- **Stripe Webhook**: Cloud Run の `/api/webhooks/stripe` URLが Stripe管理画面に登録済みか
+
+---
+
 ## 2026-03-13 (Phase 5-7 最終リリース概要)
 
 ### 概要

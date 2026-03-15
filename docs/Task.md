@@ -156,10 +156,10 @@ instagramとGoogle Business Profileは今後の拡充を見据えた実装やド
   - **Frontend URL:** `https://frontend-611370943102.us-east1.run.app`
   - **Backend URL:** `https://backend-611370943102.us-east1.run.app`
 - [ ] CI/CD 自動化の完全復旧 (GitHub Secrets `GCP_SA_KEY` 登録) — マスター作業->DONE
-- [ ] Vercel 連携とドメイン設定 :検証URLがhttps://web-pj-three.vercel.app/しかないので必要なら追加
-  - [ ] Vercel コンソールでリポジトリをインポート
-  - [ ] Root Directory を `frontend/` に設定
-  - [ ] 環境変数 `NEXT_PUBLIC_API_URL` に Cloud Run の Backend URL を設定
+- [x] Vercel 連携とドメイン設定 : DONE (https://web-pj-three.vercel.app/)
+  - [x] Vercel コンソールでリポジトリをインポート
+  - [x] Root Directory を `frontend/` に設定
+  - [x] 環境変数 `NEXT_PUBLIC_API_URL` に Cloud Run の Backend URL を設定
 - [ ] 開発者テスト & メンバーへの URL 共有
 
 ## Phase 8: ステージング検証の準備
