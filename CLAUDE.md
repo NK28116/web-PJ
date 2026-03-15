@@ -4,7 +4,57 @@
 
 ---
 
-## 最新の実装 (2026-03-16) — Phase 9 v4: インポートエイリアス付与 & CDフロントエンドビルドパス修正
+## 最新の実装 (2026-03-16) — Phase 9 v5: Dockerfile バージョン統一 & frontend/public 作成 & ENV 形式修正
+
+### フェーズ / タスク
+**Phase 9 v5: backend/Dockerfile Go バージョン統一、frontend/Dockerfile 修正、public ディレクトリ作成 (task-to-claude.md 準拠)**
+
+### 実装した変更
+
+#### `backend/Dockerfile`
+```diff
+- FROM golang:1.25-alpine AS builder
++ FROM golang:1.23-alpine AS builder
+```
+**理由:** `go.mod` は `go 1.23` であるにもかかわらず、Dockerfile が `golang:1.25-alpine` を参照しており CI 環境と不整合だった。
+
+---
+
+#### `frontend/Dockerfile`
+```diff
+- ENV NODE_ENV production
++ ENV NODE_ENV=production
+```
+**理由:** `LegacyKeyValueFormat` Warning が発生していたため、現行仕様の `KEY=VALUE` 形式に修正。
+
+---
+
+#### `frontend/public/.gitkeep` (新規作成)
+- `frontend/public` ディレクトリが存在しないため、Dockerfile の `COPY --from=builder /app/public ./public` が `/app/public: not found` で失敗していた。
+- 空ディレクトリとして `public/.gitkeep` を作成して解消。
+
+---
+
+### 確認済み（変更不要と判断したもの）
+
+| 確認内容 | 状態 |
+|---|---|
+| `cd-staging.yml` の `DATABASE_URL_TCP` 渡し | ✅ `DATABASE_URL="${{ secrets.DATABASE_URL_TCP }}" go run ./cmd/migrate/main.go up` で正しい |
+| フロントエンドテスト 87/87 | ✅ パス確認済み |
+
+---
+
+### 完了定義 (Definition of Done) 確認
+
+1. ✅ `backend/Dockerfile` → `golang:1.23-alpine`（go.mod・CI と統一）
+2. ✅ `frontend/Dockerfile` → `ENV NODE_ENV=production`（LegacyKeyValueFormat 解消）
+3. ✅ `frontend/public/.gitkeep` → Dockerfile COPY エラー解消
+4. ⚠️ `GCP_SA_KEY` は GitHub Secrets に手動登録が必要
+5. ⚠️ `DATABASE_URL_TCP` は GitHub Secrets に手動登録が必要（コード側は正しい）
+
+---
+
+## 過去の実装 (2026-03-16) — Phase 9 v4: インポートエイリアス付与 & CDフロントエンドビルドパス修正
 
 ### フェーズ / タスク
 **Phase 9 v4: Lint エラー解消（明示的エイリアス）& CD Staging フロントエンドビルドパス修正 (task-to-claude.md 準拠)**

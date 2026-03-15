@@ -336,6 +336,20 @@ Process completed with exit code
  
  ---
  
+ 100 31.8M  100 31.8M    0     0  75.9M      0 --:--:-- --:--:-- --:--:-- 76.1M
+ 2026/03/15 17:00:49 Authorizing with Application Default Credentials
+ 2026/03/15 17:00:49 [wyze-develop-staging:us-east1:wyze-staging-db] Listening on 127.0.0.1:5432
+ 2026/03/15 17:00:49 The proxy has started successfully and is ready for new connections!
+ go: downloading github.com/golang-migrate/migrate/v4 v4.17.0
+ go: downloading github.com/lib/pq v1.10.9
+ go: downloading github.com/hashicorp/go-multierror v1.1.1
+ go: downloading go.uber.org/atomic v1.7.0
+ go: downloading github.com/hashicorp/errwrap v1.1.0
+ 2026/03/15 17:01:05 DATABASE_URL is required
+ exit status 1
+ Error: Process completed with exit code 1.
+ ##[debug]Finishing: Run migrations
+ 
 
 ### Build &Deploy FrontEnd
 Authenticate to Google Cloud (Service Account)
@@ -443,3 +457,17 @@ Error: Process completed with exit code 1.
 ##[debug]Finishing: Build and push frontend image
 
 ---
+
+ 1 warning found (use docker --debug to expand):
+ - LegacyKeyValueFormat: "ENV key=value" should be used instead of legacy "ENV key value" format (line 17)
+Dockerfile:21
+--------------------
+  19 |     # Copy necessary files
+  20 |     COPY --from=builder /app/.next ./.next
+  21 | >>> COPY --from=builder /app/public ./public
+  22 |     COPY --from=builder /app/package.json ./package.json
+  23 |     COPY --from=builder /app/node_modules ./node_modules
+--------------------
+ERROR: failed to build: failed to solve: failed to compute cache key: failed to calculate checksum of ref d09189cb-1d3f-4984-a57a-14f8dab86177::y4gawhx1sja497r4os1ymdl34: "/app/public": not found
+Error: Process completed with exit code 1.
+##[debug]Finishing: Build and push frontend image
