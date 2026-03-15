@@ -1,6 +1,6 @@
 package models
 
-import "github.com/golang-jwt/jwt/v5"
+import jwt "github.com/golang-jwt/jwt/v5"
 
 // Claims は JWT のペイロード定義
 type Claims struct {
