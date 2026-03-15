@@ -1,11 +1,12 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import { useRouter } from 'next/router';
 import { BaseTemplate } from '@/templates/BaseTemplate';
 import { useAuth } from '@/hooks/useAuth';
+import { useAccountLink } from '@/hooks/useAccountLink';
 import {
   DashboardSection,
   DashboardStats,
   AccountLinkingSection,
-  AccountLinkingState,
   ShopListSection,
   Shop,
 } from '@/organisms/Home';
@@ -44,12 +45,17 @@ export const HomeTemplate: React.FC<HomeTemplateProps> = ({
   onTabChange,
 }) => {
   const { user } = useAuth();
+  const router = useRouter();
+  const { linkingState, toggleGoogle, toggleInstagram, refetch } = useAccountLink();
 
-  // Account linking state management
-  const [linkingState, setLinkingState] = useState<AccountLinkingState>({
-    google: false,
-    instagram: false,
-  });
+  // OAuthコールバック後の連携完了検知
+  useEffect(() => {
+    if (router.query.linked) {
+      refetch();
+      // クエリパラメータをクリーンアップ
+      router.replace('/home', undefined, { shallow: true });
+    }
+  }, [router.query.linked, refetch, router]);
 
   // AI priority action (null when no action)
   const [aiPriorityAction] = useState<string | null>(null);
@@ -69,18 +75,12 @@ export const HomeTemplate: React.FC<HomeTemplateProps> = ({
 
   // Event handlers
   const handleToggleGoogle = useCallback(() => {
-    setLinkingState((prev) => ({
-      ...prev,
-      google: !prev.google,
-    }));
-  }, []);
+    toggleGoogle();
+  }, [toggleGoogle]);
 
   const handleToggleInstagram = useCallback(() => {
-    setLinkingState((prev) => ({
-      ...prev,
-      instagram: !prev.instagram,
-    }));
-  }, []);
+    toggleInstagram();
+  }, [toggleInstagram]);
 
   const handleRefresh = useCallback(() => {
     // Refresh logic will be implemented when API is ready

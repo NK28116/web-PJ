@@ -33,9 +33,9 @@ func (r *UserRepository) FindByEmail(email string) (*models.User, error) {
 func (r *UserRepository) FindByID(id string) (*models.User, error) {
 	var user models.User
 	err := r.db.QueryRow(
-		"SELECT id, email, role, created_at, updated_at FROM users WHERE id = $1",
+		"SELECT id, email, role, stripe_customer_id, stripe_subscription_id, subscription_status, created_at, updated_at FROM users WHERE id = $1",
 		id,
-	).Scan(&user.ID, &user.Email, &user.Role, &user.CreatedAt, &user.UpdatedAt)
+	).Scan(&user.ID, &user.Email, &user.Role, &user.StripeCustomerID, &user.StripeSubscriptionID, &user.SubscriptionStatus, &user.CreatedAt, &user.UpdatedAt)
 
 	if err == sql.ErrNoRows {
 		return nil, nil
@@ -56,4 +56,20 @@ func (r *UserRepository) Create(email, hashedPassword, role string) (*models.Use
 		return nil, err
 	}
 	return &user, nil
+}
+
+func (r *UserRepository) UpdateStripeInfo(userID, customerID, subscriptionID string) error {
+	_, err := r.db.Exec(
+		"UPDATE users SET stripe_customer_id = $1, stripe_subscription_id = $2, subscription_status = 'active', updated_at = NOW() WHERE id = $3",
+		customerID, subscriptionID, userID,
+	)
+	return err
+}
+
+func (r *UserRepository) UpdateSubscriptionStatus(subscriptionID, status string) error {
+	_, err := r.db.Exec(
+		"UPDATE users SET subscription_status = $1, updated_at = NOW() WHERE stripe_subscription_id = $2",
+		status, subscriptionID,
+	)
+	return err
 }
