@@ -24,6 +24,10 @@
 
 ## 2. バックエンドの Lint エラー解消
 
+### 症状
+- `jwt`, `migrate`, `stripe` パッケージの `undefined` エラー。
+- `internal/service/google_service.go:510:6: func parseDate is unused (unused)`
+
 ### 修正内容
 1.  **インポートパスのエイリアス付与とパッケージ参照**:
     - **jwt**: `internal/handlers/auth.go` および `internal/models/claims.go` で、`jwt "github.com/golang-jwt/jwt/v5"` のように明示的にエイリアスを付与し、`jwt.RegisteredClaims` 等の参照を有効にしてください。
@@ -46,34 +50,30 @@
 
 ---
 
-## 4. GCP 認証と権限の修正 (CD Staging)
+## 4. GCP 認証・権限・マイグレーションの修正 (CD Staging)
 
 ### 症状
-- `Evaluating: secrets.GCP_SA_KEY => null`
-- `denied: Permission 'artifactregistry.repositories.uploadArtifacts' denied on resource`
+1.  **認証エラー**: `Evaluating: secrets.GCP_SA_KEY => null`
+2.  **Artifact Registry 権限不足**: `denied: Permission 'artifactregistry.repositories.uploadArtifacts' denied`
+3.  **Cloud SQL 接続エラー**: `Error 403: boss::NOT_AUTHORIZED: Possibly missing permission cloudsql.instances.get on resource instances/wyze-staging-db`
+4.  **Cloud Run デプロイ権限不足**: `PERMISSION_DENIED: Permission 'run.services.get' denied on resource 'namespaces/wyze-develop-staging/services/frontend'`
+5.  **環境変数不足**: `DATABASE_URL is required` (マイグレーション実行時)
 
 ### 修正内容
 1.  **GitHub Secrets の再設定**:
     - `GCP_SA_KEY` が GitHub Actions の Secrets に正しく登録されているか確認してください。
-2.  **IAM 権限の確認**:
-    - サービスアカウントに `Artifact Registry 書き込み` (roles/artifactregistry.writer) 権限が付与されているか、コンソールで確認してください。
+    - `DATABASE_URL_TCP` が正しい形式（Cloud SQL Proxy 用に `127.0.0.1:5432` 経由）で登録されているか確認してください。
+2.  **IAM 権限の付与 (GCP コンソール)**:
+    - サービスアカウントに以下のロールを付与してください：
+        - `Artifact Registry 書き込み` (roles/artifactregistry.writer)
+        - `Cloud Run 管理者` (roles/run.admin)
+        - `Cloud SQL 閲覧者` (roles/cloudsql.viewer)
+        - `Cloud SQL クライアント` (roles/cloudsql.client)
+        - `サービス アカウント ユーザー` (roles/iam.serviceAccountUser)
 
 ---
 
-## 5. バックエンド・マイグレーションのエラー修正
-
-### 症状
-- `2026/03/15 17:01:05 DATABASE_URL is required`
-
-### 修正内容
-1.  **環境変数の確認**:
-    - `cd-staging.yml` において `DATABASE_URL="${{ secrets.DATABASE_URL_TCP }}"` が正しく渡されているか確認してください。
-2.  **GitHub Secrets の確認**:
-    - `DATABASE_URL_TCP` が GitHub Actions の Secrets に登録されているか、および正しい PostgreSQL 接続文字列（Cloud SQL Proxy 経由の場合は `postgres://user:pass@127.0.0.1:5432/db?sslmode=disable` 等）になっているか確認してください。
-
----
-
-## 6. フロントエンドのビルドエラー修正 (CD Staging)
+## 5. フロントエンドのビルドエラー修正 (CD Staging)
 
 ### 症状
 - `open Dockerfile: no such file or directory` (ビルドコンテキストの誤り)
@@ -85,11 +85,12 @@
     - `.github/workflows/cd-staging.yml` において、`docker build ... ./` → **`docker build ... ./frontend`** に変更してください。
 2.  **Dockerfile の修正 (`frontend/Dockerfile`)**:
     - `ENV NODE_ENV production` → **`ENV NODE_ENV=production`** に変更してください。
-    - **`public` ディレクトリの欠落**: `frontend/public` が存在しないためビルドが失敗しています。`frontend/public` ディレクトリを（空の状態でも良いので）作成するか、不要であれば Dockerfile の `COPY` 行を削除してください。通常は `public/.gitkeep` を作成してディレクトリを保持することを推奨します。
+3.  **`public` ディレクトリの確保**:
+    - `frontend/public` ディレクトリが空でも存在する必要があります。`frontend/public/.gitkeep` ファイルを作成して Git で管理されるようにしてください。
 
 ---
 
-## 7. フロントエンドのテスト修正
+## 6. フロントエンドのテスト修正
 
 ### 症状
 `npm test` が exit code 1 で失敗しています。
@@ -102,5 +103,5 @@
 
 ## 完了定義 (Definition of Done)
 1. GitHub Actions の `CI` ワークフローがすべてパスすること。
-2. `CD Staging` ワークフローにおいて、ビルド、プッシュ、マイグレーション、デプロイが成功すること。
+2. `CD Staging` ワークフローにおいて、ビルド、プッシュ、マイグレーション、デプロイがすべて成功すること。
 3. Go の全ファイルが `1.23` で正常にコンパイル・Lint できること。
