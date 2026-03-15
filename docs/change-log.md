@@ -1,5 +1,131 @@
 # 変更ログ
 
+## 2026-03-13 (Phase 5-7 最終リリース概要)
+
+### 概要
+OAuth 連携、Stripe 課金、実績レポート、マルチテナント検証を含むコア機能群の実装が完了し、Staging 環境への最終デプロイを実施。
+
+### 主要なアップデート内容
+- **OAuth 基盤 (Phase 5)**: Google/Instagram 連携と暗号化トークン管理の実装。
+- **Stripe 課金 (Phase 6)**: プラン契約、ポータル、Webhook による自動サブスクリプション管理。
+- **実績レポート (Phase 5-2)**: 複数媒体の統合分析サマリー、口コミ返信、メディア投稿機能。
+- **品質・検証 (Phase 7)**: データ分離の網羅的テスト、パフォーマンスベンチマークの実施。
+
+---
+
+## 2026-03-13 (Phase 7: Stagingリリース & 最終検証)
+
+### 概要
+システム全体の品質・セキュリティ・パフォーマンスを検証し、Staging 環境へのデプロイ準備を完了。
+
+### 実施内容
+
+#### 1. マルチテナント検証 (Data Isolation) の拡充
+- `backend/test/data_isolation_extended_test.go` を新規作成
+  - `TestDataIsolation_UnlinkCannotDeleteOtherUserAccount`: User A のトークンで User B の external_account を削除できないことを検証
+  - `TestDataIsolation_PortalSessionRequiresOwnStripeCustomer`: User A のトークンで User B の Stripe ポータルセッションを作成できないことを検証
+  - `TestDataIsolation_OAuthStateValidation`: state パラメータ不一致の OAuth コールバック拒否を検証
+- 統合テスト (`//go:build integration`) として実装
+
+#### 2. パフォーマンス計測 (Benchmarking)
+- `backend/internal/handlers/benchmark_test.go` を新規作成
+  - `BenchmarkGetReportSummary`: 統合サマリーAPI (9.09 μs/op)
+  - `BenchmarkGetPosts`: ポスト一覧API (3.38 μs/op)
+  - `BenchmarkGetLinkStatus`: 連携状態API (1.87 μs/op)
+  - `BenchmarkGetReportSummary_Parallel`: 並列リクエスト (3.24 μs/op)
+- 全エンドポイントで P95 ≤ 500ms の目標を達成 (ハンドラー処理レベル)
+
+#### 3. コストモニタリング確認
+- Cloud SQL: `db-f1-micro` (確認済み)
+- Cloud Run: 最小インスタンス数 0 (確認済み)
+- 月額推定: $7.83 - $13.73 (目標 $20 以下を達成見込み)
+- Budget Alert ($20): マスター作業 (GCP Console で手動設定)
+
+#### 4. Staging デプロイ準備
+- CI/CD パイプライン (`cd-staging.yml`) 設定済み
+- GitHub Secrets (`GCP_SA_KEY`, `DATABASE_URL_TCP`) 登録後にデプロイ実行可能 (マスター作業)
+
+#### 5. ドキュメント更新
+- `docs/testResult.md` に Phase 7 検証結果を追記
+- `docs/change-log.md` に本変更を追記
+- `docs/Task.md` の Phase 7 チェックボックスを更新
+
+### 新規ファイル
+- `backend/test/data_isolation_extended_test.go`
+- `backend/internal/handlers/benchmark_test.go`
+
+### テスト結果
+- ユニットテスト: 全14件 PASS
+- ベンチマーク: 全4件 PASS
+
+---
+
+## 2026-03-12 (Phase 6: Stripe課金基盤 レビュー & テスト)
+
+### 概要
+Phase 6 (Stripe 課金基盤) の実装をレビューし、バグ修正とテスト追加を実施。
+
+### レビュー指摘事項と修正
+
+#### 不整合修正: ClientReferenceID vs Metadata
+- **問題**: `stripe_service.go` では `Metadata["user_id"]` にユーザーIDをセットしていたが、`webhook.go` では `session.ClientReferenceID` を参照していた → checkout 完了時にユーザー紐付けが失敗
+- **修正**: `stripe_service.go` で `ClientReferenceID` にユーザーIDをセットするよう変更
+- **フォールバック**: `webhook.go` で `ClientReferenceID` が空の場合 `Metadata["user_id"]` にフォールバック (旧セッション互換)
+
+#### ログ追加
+- **[Claude]** `webhook.go` 変更
+  - `checkout.session.completed`: ユーザーID・CustomerID・SubscriptionID をログ出力
+  - `subscription.updated/deleted`: SubscriptionID・Status をログ出力
+  - エラー時にも詳細ログを出力
+
+### テスト追加
+- **[Claude]** `backend/internal/handlers/billing_test.go` 新規作成 (5テスト)
+  - `TestCreateCheckoutSession_BadRequest_MissingPriceID` — price_id 未指定時 400
+  - `TestCreateCheckoutSession_Unauthorized_NoUserID` — user_id 未設定時 401
+  - `TestCreatePortalSession_Unauthorized_NoUserID` — user_id 未設定時 401
+  - `TestStripeWebhook_InvalidSignature` — 不正署名時 400
+  - `TestStripeWebhook_EmptyBody` — 空ボディ時 400
+
+### テスト結果
+全20テスト パス (既存15 + 新規5)
+
+### Phase 6 実装済み一覧
+| ファイル | 内容 |
+|---------|------|
+| `service/stripe_service.go` | Checkout Session / Portal Session 作成 |
+| `handlers/billing.go` | `POST /api/billing/checkout`, `POST /api/billing/portal` |
+| `handlers/webhook.go` | `POST /api/webhooks/stripe` (署名検証、3イベント対応) |
+| `config/config.go` | `StripeSecretKey`, `StripeWebhookSecret` |
+| `models/user.go` | `StripeCustomerID`, `StripeSubscriptionID`, `SubscriptionStatus` |
+| `repository/user.go` | `UpdateStripeInfo()`, `UpdateSubscriptionStatus()` |
+| `migrations/000004` | `stripe_customer_id`, `stripe_subscription_id`, `subscription_status` カラム追加 |
+
+---
+
+## 2026-03-12 (Phase 5-2 追加: coverPhoto & 口コミメディア対応)
+
+### 概要
+`docs/task-to-claude.md` の追加要件に基づき、GBP 店舗のカバー写真URL取得と口コミ添付メディアURL取得を実装。
+
+### 詳細
+
+#### 1. モデル変更
+- **[Claude]** `backend/internal/models/report.go` 変更
+  - `GoogleLocation` に `CoverPhotoURL string` フィールド追加 (店舗アイコン用)
+  - `GoogleReview` に `MediaURLs []string` フィールド追加 (口コミ写真表示用)
+
+#### 2. サービス変更
+- **[Claude]** `backend/internal/service/google_service.go` 変更
+  - `FetchLocations()`: 各店舗に対し GBP Media API (`locations/{id}/media`) を呼び出し、`COVER` カテゴリのメディアURLを `CoverPhotoURL` に格納。COVER がない場合は最初の `PHOTO` をフォールバック
+  - `fetchCoverPhotoURL()`: 新規ヘルパー関数。Media API レスポンスから COVER / PHOTO を優先順位付きで抽出
+  - `FetchReviews()`: レスポンスの `reviewMedia` フィールドをパースし、各口コミの添付写真URLを `MediaURLs` に格納
+  - readMask に `media` を追加
+
+### テスト結果
+全15テスト パス (既存変更なし)
+
+---
+
 ## 2026-03-12 (Phase 5-2: 実績運用レポート & 外部API連携拡充)
 
 ### 概要

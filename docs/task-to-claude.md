@@ -1,53 +1,44 @@
-# 実装指示書 (Phase 5-2: 実績運用レポート & 外部API連携拡充)
+# 実装指示書 (Phase 7: Stagingリリース & 最終検証)
 
 ## 概要
-Google Business Profile (GBP) および Instagram Graph API と連携し、実績運用レポート（インサイト）の取得と、口コミ・投稿のリソース管理機能を実装してください。
+システム全体の最終的な品質・セキュリティ・パフォーマンスを検証し、Staging 環境への完全なデプロイを完了させてください。
 
-## 1. 共通要件
-- 外部 API へのアクセス時は、`backend/internal/service/token_refresh.go` の `RefreshTokenIfNeeded` を呼び出し、最新のアクセストークンを確保すること。
-- アクセストークンの暗号化/復号には `backend/internal/utils/crypto.go` を使用すること（既存実装を継承）。
-- 各 API のエラー（トークン失効、クォータ制限など）を適切にハンドリングし、フロントエンドに分かりやすいエラーメッセージを返すこと。
+## 1. マルチテナント検証の拡充 (Data Isolation)
+既存の `backend/test/data_isolation_test.go` を拡張し、以下のリソースについてもユーザー間のデータ分離が厳格に行われていることをテストしてください。
 
-## 2. 実績運用レポート API (Analytics)
-以下のエンドポイントを実装し、`docs/figma/report.png` の要件を満たすデータを取得・加工してください。
+- **External Accounts:**
+  - User A のトークンを用いて、User B の `external_account` を削除 (`DELETE /api/unlink/:provider`) できないこと。
+- **Billing:**
+  - User A のトークンを用いて、User B の Stripe 情報に紐づくポータルセッションを作成できないこと。
+- **OAuth Callback:**
+  - state パラメータの不一致や、他人の JWT トークンを用いた連携の乗っ取りが不可能であることの再確認。
 
-### エンドポイント
-- `GET /api/reports/summary`: Google と Instagram の統合サマリー（アクション総数、閲覧数など）。
-- `GET /api/reports/google`: Google Business Profile の詳細データ（電話・ルート・サイト閲覧、検索ワード、口コミ評価）。
-- `GET /api/reports/instagram`: Instagram の詳細データ（プロフィール閲覧、フォロワー推移、投稿エンゲージメント）。
+## 2. パフォーマンス計測 (Benchmarking)
+主要な API エンドポイントのレスポンス時間を計測し、レポートを作成してください。
 
-### 使用する主な API エンドポイント
-- **Google Business Profile (GBP):**
-  - `locations.getInsights` または `locations:fetchMultiDailyMetricsTimeSeries` (Performance API)。
-  - `locations.reviews.list` (口コミ評価、件数)。
-- **Instagram Graph API:**
-  - `/{ig-user-id}/insights` (impressions, reach, profile_views, website_clicks)。
-  - `/{ig-user-id}/media` (投稿ごとのエンゲージメント)。
+- **対象:** `GET /api/reports/summary`, `GET /api/posts`, `GET /api/link-status`
+- **目標:** 95パーセンタイル (P95) でレスポンス時間が 500ms 以下（外部 API 連携を含む場合は 1.5s 以下）であることを確認。
+- **手法:** `go test -bench` または `k6` 等の簡易的なツールを使用して計測値を `docs/testResult.md` に追記してください。
 
-## 3. リソース管理 API (Resource Management)
-以下の機能を実装してください。
+## 3. コストモニタリングの確認
+GCP 環境におけるコストが月額 $20 以下に収まる設定であることを確認してください。
 
-### Instagram 連携
-- `GET /api/instagram/media`: 投稿・メディア一覧の取得。
-- `POST /api/instagram/media`: 投稿作成（まずは画像/動画投稿の枠組み）。
+- Cloud SQL インスタンスが `db-f1-micro` であることの確認。
+- Cloud Run の最小インスタンス数が 0 に設定されていることの確認（コールドスタートは許容）。
+- GCP Console にて Budget Alert ($20) を設定したことを報告してください（設定済みであればチェック）。
 
-### Google Business Profile 連携
-- `GET /api/google/reviews`: 口コミ一覧の取得。
-- `POST /api/google/reviews/:id/reply`: 口コミへの返信。
-- `GET /api/google/locations`: 管理対象店舗（Location）の取得。
+## 4. Staging デプロイ & 疎通確認
+CI/CD パイプライン (`.github/workflows/cd-staging.yml`) をトリガーし、最新コードをデプロイしてください。
 
-## 4. 実装構造
-- **Models:** `backend/internal/models/report.go` を新規作成し、レスポンス形式を定義。
-- **Services:** `backend/internal/service/google_service.go` および `backend/internal/service/instagram_service.go` を作成。外部 API 呼び出しの具象化。
-- **Handlers:** `backend/internal/handlers/report.go`, `backend/internal/handlers/google.go`, `backend/internal/handlers/instagram.go` を作成。
-- **Routes:** `backend/cmd/server/main.go` の `protected` グループにエンドポイントを登録。
+- **デプロイ後チェック:**
+  - Staging ドメイン（`backend-*.run.app`）に対して `/health` が `200 OK` を返すこと。
+  - フロントエンドからログイン、OAuth 連携、レポート表示が正常に行えること。
+- **ログ確認:** Google Cloud Logging にて致命的なエラー (Error/Critical) が出力されていないことを確認。
 
-## 5. テスト
-- 各サービスの外部 API 呼び出し部分を Mock 化し、単体テストを記述してください。
-- 既存の `backend/test/` 以下の構成を参考にすること。
+## 5. ドキュメントの最終化
+- `docs/change-log.md` に今回のリリース内容を追記。
+- `docs/testResult.md` に本フェーズでの検証結果をすべて記載。
 
 ## 参考資料
-- `docs/Task.md` (Phase 5-2)
-- `docs/figma/report.png`
-- Google Business Profile API Documentation
-- Instagram Graph API Documentation
+- `docs/Task.md` (Phase 7)
+- `backend/test/data_isolation_test.go`
