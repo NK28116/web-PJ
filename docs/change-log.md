@@ -1,5 +1,36 @@
 # 変更ログ
 
+## 2026-03-15 (Phase 8-3: Stripe決済導線の実装 & OAuth設定)
+
+### 概要
+指示書更新に基づき、`CurrentFeaturesTemplate` の「契約する」ボタンおよび「アップグレード」ボタンに Stripe Checkout 決済フローを実装。OAuth 設定不備は管理コンソール側の対応事項として記録。
+
+### 実施内容
+
+#### 1. CurrentFeaturesTemplate に Stripe Checkout を統合
+- `frontend/components/templates/CurrentFeaturesTemplate/CurrentFeaturesTemplate.tsx` を修正
+  - `useBilling()` フックをインポート・使用
+  - `handleSubscribe`: `startCheckout(priceId)` を呼び出し → Stripe Checkout 画面へリダイレクト
+  - `handleUpgrade(priceId)`: Basic / Pro プランの「アップグレード」ボタンに接続
+  - `PRICE_IDS` 定数でプラン別の Stripe Price ID を管理
+  - `billingLoading` 状態でボタンを `disabled` + 「処理中...」表示
+  - `billingError` 発生時にエラーメッセージを表示
+
+#### 2. OAuth 連携設定（管理コンソール作業・コード変更なし）
+- **Instagram (Meta)**: アプリドメインに `web-pj-three.vercel.app` を追加、OAuthリダイレクトURI確認が必要
+- **Google**: OAuth同意画面でアプリ公開またはテスターメールアドレス追加が必要
+
+### 変更ファイル
+- `frontend/components/templates/CurrentFeaturesTemplate/CurrentFeaturesTemplate.tsx`
+
+### 備考
+- `PRICE_IDS` の値（`price_light_plan` 等）は Stripe Dashboard で作成した実際の Price ID に置き換える必要あり
+- `BillingTemplate` は Phase 8 で既に `useBilling()` を統合済み
+- 口コミ管理・レポートダッシュボードは Phase 8 / 8-2 で実装済み
+- 領収書 PDF 生成はバックログ（スコープ外）
+
+---
+
 ## 2026-03-15 (Phase 8-2: 指示書更新に伴う追加実装)
 
 ### 概要
