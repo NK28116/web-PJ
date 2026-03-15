@@ -397,7 +397,19 @@ Error: Process completed with exit code 1.
 
 ----
 
+ Run gcloud run deploy backend \
+ ##[debug]/usr/bin/bash -e /home/runner/work/_temp/a1c6cc5f-0dac-4637-ada8-1462a00615fa.sh
+ Deploying container to Cloud Run service [backend] in project [wyze-develop-staging] region [us-east1]
+ Deploying...
+ Creating Revision.............................................................................failed
+ Deployment failed
+ ERROR: (gcloud.run.deploy) The user-provided container failed to start and listen on the port defined provided by the PORT=8080 environment variable within the allocated timeout. This can happen when the container port is misconfigured or if the timeout is too short. The health check timeout can be extended. Logs for this revision might contain more information.
+ Logs URL: https://console.cloud.google.com/logs/viewer?project=wyze-develop-staging&resource=cloud_run_revision/service_name/backend/revision_name/backend-00007-8wb&advancedFilter=resource.type%3D%22cloud_run_revision%22%0Aresource.labels.service_name%3D%22backend%22%0Aresource.labels.revision_name%3D%22backend-00007-8wb%22 
+ For more troubleshooting guidance, see https://cloud.google.com/run/docs/troubleshooting#container-failed-to-start
+ Error: Process completed with exit code 1.
+ ##[debug]Finishing: Deploy Backend to Cloud Run
  
+ ----
 
 ### Build &Deploy FrontEnd
 Authenticate to Google Cloud (Service Account)
