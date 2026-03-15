@@ -29,7 +29,7 @@ export const CurrentFeaturesTemplate: React.FC<CurrentFeaturesTemplateProps> = (
   activeTab,
   onTabChange,
 }) => {
-  const [planStatus, setPlanStatus] = useState<PlanStatus>('active');
+  const [planStatus, setPlanStatus] = useState<PlanStatus>('inactive');
   const [isAutoRenewal, setIsAutoRenewal] = useState(true);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { startCheckout, loading: billingLoading, error: billingError } = useBilling();

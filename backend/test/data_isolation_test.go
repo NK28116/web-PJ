@@ -346,9 +346,10 @@ func TestDataIsolation_OAuthStateValidation(t *testing.T) {
 	db := setupDB(t)
 	defer db.Close()
 	extAcctRepo := repository.NewExternalAccountRepository(db)
+	userRepo := repository.NewUserRepository(db)
 
 	r := gin.New()
-	r.GET("/api/auth/google/callback", handlers.GoogleCallback(cfg, extAcctRepo))
+	r.GET("/api/auth/google/callback", handlers.GoogleCallback(cfg, extAcctRepo, userRepo))
 
 	// state パラメータなしでコールバック → 400
 	req := httptest.NewRequest(http.MethodGet, "/api/auth/google/callback?code=test_code&state=forged_state", nil)
