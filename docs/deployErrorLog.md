@@ -373,6 +373,30 @@ exit status 1
 Error: Process completed with exit code 1.
 
 ---
+
+Run curl -o cloud-sql-proxy https://storage.googleapis.com/cloud-sql-connectors/cloud-sql-proxy/v2.14.3/cloud-sql-proxy.linux.amd64
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
+  1 31.8M    1  356k    0     0  2428k      0  0:00:13 --:--:--  0:00:13 2422k
+100 31.8M  100 31.8M    0     0  37.6M      0 --:--:-- --:--:-- --:--:-- 37.5M
+2026/03/15 17:28:25 Authorizing with Application Default Credentials
+2026/03/15 17:28:25 [wyze-develop-staging:us-east1:wyze-staging-db] Listening on 127.0.0.1:5432
+2026/03/15 17:28:25 The proxy has started successfully and is ready for new connections!
+go: downloading github.com/golang-migrate/migrate/v4 v4.17.0
+go: downloading github.com/lib/pq v1.10.9
+go: downloading github.com/hashicorp/go-multierror v1.1.1
+go: downloading go.uber.org/atomic v1.7.0
+go: downloading github.com/hashicorp/errwrap v1.1.0
+2026/03/15 17:28:42 [wyze-develop-staging:us-east1:wyze-staging-db] Accepted connection from 127.0.0.1:51548
+2026/03/15 17:28:42 [wyze-develop-staging:us-east1:wyze-staging-db] failed to connect to instance: Config error: instance does not have IP of type "PUBLIC" (connection name = "wyze-develop-staging:us-east1:wyze-staging-db")
+2026/03/15 17:28:42 ping: read tcp 127.0.0.1:51548->127.0.0.1:5432: read: connection reset by peer
+exit status 1
+Error: Process completed with exit code 1.
+
+----
+
  
 
 ### Build &Deploy FrontEnd
