@@ -2,12 +2,18 @@
 FROM node:20-alpine AS builder
 WORKDIR /app
 
-# Install dependencies first (for better caching)
+# Install dependencies from root
 COPY package*.json ./
 RUN npm install
 
-# Copy source and build
-COPY . .
+# Copy frontend source
+COPY frontend/ ./
+COPY next.config.js ./
+COPY tsconfig.json ./
+COPY tailwind.config.js ./
+COPY postcss.config.js ./
+
+# Build
 RUN npm run build
 
 # Run stage
@@ -16,12 +22,14 @@ WORKDIR /app
 
 ENV NODE_ENV production
 
-# Copy necessary files
+# Copy only existing necessary files
 COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/public ./public
 COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/next.config.js ./next.config.js
+
+# Ensure public dir doesn't block if it's missing, but copy if it was created during build
+# RUN mkdir -p public
 
 EXPOSE 3000
 CMD ["npm", "start"]

@@ -1,44 +1,41 @@
-# 実装指示書 (Phase 7: Stagingリリース & 最終検証)
+# 実装指示書 (Google ソーシャルログイン機能)
 
 ## 概要
-システム全体の最終的な品質・セキュリティ・パフォーマンスを検証し、Staging 環境への完全なデプロイを完了させてください。
+Google アカウントを使用して、アプリケーションへのログインおよび新規登録を完遂できる機能を実装してください。現在の「既存アカウントへの紐付け」フローを拡張し、非ログイン状態からのアクセスに対応させます。
 
-## 1. マルチテナント検証の拡充 (Data Isolation)
-既存の `backend/test/data_isolation_test.go` を拡張し、以下のリソースについてもユーザー間のデータ分離が厳格に行われていることをテストしてください。
+## 1. バックエンドの拡張 (`backend/internal/handlers/oauth.go`)
 
-- **External Accounts:**
-  - User A のトークンを用いて、User B の `external_account` を削除 (`DELETE /api/unlink/:provider`) できないこと。
-- **Billing:**
-  - User A のトークンを用いて、User B の Stripe 情報に紐づくポータルセッションを作成できないこと。
-- **OAuth Callback:**
-  - state パラメータの不一致や、他人の JWT トークンを用いた連携の乗っ取りが不可能であることの再確認。
+`GoogleCallback` ハンドラーを以下のロジックに修正・拡張してください。
 
-## 2. パフォーマンス計測 (Benchmarking)
-主要な API エンドポイントのレスポンス時間を計測し、レポートを作成してください。
+### ロジックフロー:
+1.  **既存の紐付けチェック:** 
+    -   Cookie に `oauth_token` (JWT) が存在する場合、現在の「アカウント紐付け」処理を継続。
+2.  **ログイン/新規登録フロー (JWT がない場合):**
+    -   Google から取得した `email` を使用して `UserRepository.FindByEmail` でユーザーを検索。
+    -   **ユーザーが存在する場合:** そのユーザーとしてログイン。
+    -   **ユーザーが存在しない場合:** 
+        -   新規ユーザーを作成 (`UserRepository.Create`)。パスワードはランダムな文字列または null を許容（パスワード認証を将来的に行う場合は再設定が必要な旨を案内）。
+        -   作成したユーザーとしてログイン。
+3.  **JWT の発行:**
+    -   ログイン/新規登録に成功したユーザーに対し、新しい JWT トークンを発行。
+4.  **フロントエンドへのリダイレクト:**
+    -   フロントエンドのリダイレクト先を `${FrontendURL}/login/callback?token=${JWT}` の形式にするか、あるいは Cookie にトークンをセットしてリダイレクトしてください。
 
-- **対象:** `GET /api/reports/summary`, `GET /api/posts`, `GET /api/link-status`
-- **目標:** 95パーセンタイル (P95) でレスポンス時間が 500ms 以下（外部 API 連携を含む場合は 1.5s 以下）であることを確認。
-- **手法:** `go test -bench` または `k6` 等の簡易的なツールを使用して計測値を `docs/testResult.md` に追記してください。
+## 2. フロントエンドの更新
 
-## 3. コストモニタリングの確認
-GCP 環境におけるコストが月額 $20 以下に収まる設定であることを確認してください。
+### ログイン画面 (`frontend/pages/login.tsx`)
+- 「Google でログイン」ボタンを追加してください。
+- ボタン押下時に `backend/api/auth/google/login` へリダイレクト（非ログイン状態で遷移）するようにしてください。
 
-- Cloud SQL インスタンスが `db-f1-micro` であることの確認。
-- Cloud Run の最小インスタンス数が 0 に設定されていることの確認（コールドスタートは許容）。
-- GCP Console にて Budget Alert ($20) を設定したことを報告してください（設定済みであればチェック）。
+### コールバック受け取り (`frontend/pages/login/callback.tsx` を新規作成)
+- クエリパラメータから `token` を受け取るページを作成。
+- 受け取ったトークンを `localStorage` (または既存の認証管理 `useAuth`) に保存。
+- 保存完了後、ダッシュボード (`/home`) へ自動リダイレクト。
 
-## 4. Staging デプロイ & 疎通確認
-CI/CD パイプライン (`.github/workflows/cd-staging.yml`) をトリガーし、最新コードをデプロイしてください。
-
-- **デプロイ後チェック:**
-  - Staging ドメイン（`backend-*.run.app`）に対して `/health` が `200 OK` を返すこと。
-  - フロントエンドからログイン、OAuth 連携、レポート表示が正常に行えること。
-- **ログ確認:** Google Cloud Logging にて致命的なエラー (Error/Critical) が出力されていないことを確認。
-
-## 5. ドキュメントの最終化
-- `docs/change-log.md` に今回のリリース内容を追記。
-- `docs/testResult.md` に本フェーズでの検証結果をすべて記載。
+## 3. セキュリティ
+- `state` パラメータによる CSRF 対策は既存の実装を維持・徹底すること。
+- Google から提供される `email_verified` フラグが true であることを確認するロジックを追加（任意だが推奨）。
 
 ## 参考資料
-- `docs/Task.md` (Phase 7)
-- `backend/test/data_isolation_test.go`
+- `backend/internal/handlers/oauth.go` (既存の Google 連携ロジック)
+- `backend/internal/repository/user.go` (ユーザー検索・作成)

@@ -37,13 +37,13 @@ func Load() *Config {
 
 		GoogleClientID:     getEnv("GOOGLE_CLIENT_ID", ""),
 		GoogleClientSecret: getEnv("GOOGLE_CLIENT_SECRET", ""),
-		GoogleRedirectURL:  getEnv("GOOGLE_REDIRECT_URL", "http://localhost:8080/api/auth/google/callback"),
+		GoogleRedirectURL:  getEnv("GOOGLE_REDIRECT_URL", "https://backend-611370943102.us-east1.run.app/api/auth/google/callback"),
 
 		InstagramClientID:     getEnv("INSTAGRAM_CLIENT_ID", ""),
 		InstagramClientSecret: getEnv("INSTAGRAM_CLIENT_SECRET", ""),
-		InstagramRedirectURL:  getEnv("INSTAGRAM_REDIRECT_URL", "http://localhost:8080/api/auth/instagram/callback"),
+		InstagramRedirectURL:  getEnv("INSTAGRAM_REDIRECT_URL", "https://backend-611370943102.us-east1.run.app/api/auth/instagram/callback"),
 
-		FrontendURL: getEnv("FRONTEND_URL", "http://localhost:3000"),
+		FrontendURL: getEnv("FRONTEND_URL", "https://frontend-611370943102.us-east1.run.app"),
 
 		StripeSecretKey:     getEnv("STRIPE_SECRET_KEY", ""),
 		StripeWebhookSecret: getEnv("STRIPE_WEBHOOK_SECRET", ""),

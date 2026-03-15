@@ -45,6 +45,13 @@ func main() {
 	r := gin.Default()
 	r.Use(middleware.CORS())
 
+	r.GET("/", func(c *gin.Context) {
+		c.JSON(200, gin.H{
+			"message": "Wyze System API is running",
+			"version": "1.0.0",
+			"health":  "/health",
+		})
+	})
 	r.GET("/health", handlers.Health)
 	r.POST("/register", handlers.Register(cfg, userRepo))
 	r.POST("/login", handlers.Login(cfg, userRepo))
