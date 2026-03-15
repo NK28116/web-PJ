@@ -4,7 +4,38 @@
 
 ---
 
-## 最新の実装 (2026-03-16) — Phase 9 v7: Cloud Run デプロイコマンド修正（Cloud SQL 接続・Secret Manager 連携）
+## 最新の実装 (2026-03-16) — Phase 9 v8: Cloud Run 実行用 SA への Secret Manager アクセス権付与
+
+### フェーズ / タスク
+**Phase 9 v8: `Permission denied on secret` エラー解消 (task-to-claude.md Task 4 新規追加項目)**
+
+### 実装した変更（GCP IAM）
+
+対象 SA: `611370943102-compute@developer.gserviceaccount.com`（Cloud Run 実行用デフォルト SA）
+
+```bash
+gcloud projects add-iam-policy-binding wyze-develop-staging \
+  --member="serviceAccount:611370943102-compute@developer.gserviceaccount.com" \
+  --role="roles/secretmanager.secretAccessor" \
+  --condition=None
+```
+
+| ロール | 付与目的 | 状態 |
+|---|---|---|
+| `roles/secretmanager.secretAccessor` | Cloud Run コンテナ起動時の Secret Manager 参照 | ✅ 今回付与 |
+
+**理由:** `roles/editor` は `secretmanager.secretAccessor` を包含しないため、`--set-secrets` で注入した SECRET_API 等の参照が `Permission denied` になっていた。
+
+---
+
+### 完了定義 (Definition of Done) 確認
+
+1. ✅ Cloud Run 実行用 SA が Secret Manager シークレットを参照可能
+2. ✅ `STRIPE_SECRET_KEY=STRIPE_API:latest` 等の `--set-secrets` が正常動作見込み
+
+---
+
+## 過去の実装 (2026-03-16) — Phase 9 v7: Cloud Run デプロイコマンド修正（Cloud SQL 接続・Secret Manager 連携）
 
 ### フェーズ / タスク
 **Phase 9 v7: コンテナ起動エラー解消 (task-to-claude.md Task 6 準拠)**
