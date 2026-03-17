@@ -1,5 +1,66 @@
 # 変更ログ
 
+## 2026-03-18 (Phase 11: Stripe カード管理 & Webhook サブスクリプション制御)
+
+### 概要
+Stripe Elements を使ったインアプリカード登録（SetupIntent フロー）、PaymentMethod CRUD、Webhook によるサブスクリプションライフサイクル管理（role ロールバック）を実装。
+
+### 実施内容
+
+#### 1. バックエンド — Stripe サービス拡張 (`backend/internal/service/stripe_service.go`)
+- `CreateSetupIntent(customerID string) (string, error)` 追加: カード保存用 SetupIntent を作成し ClientSecret を返す
+- `PaymentMethodItem` 構造体追加: `ID, Brand, Last4 string`, `ExpMonth, ExpYear int64`
+- `ListPaymentMethods(customerID string) ([]PaymentMethodItem, error)` 追加
+- `DetachPaymentMethod(pmID string) error` 追加
+
+#### 2. バックエンド — Billing ハンドラ拡張 (`backend/internal/handlers/billing.go`)
+- `CreateSetupIntent` ハンドラ: `POST /api/billing/setup-intent` → `{"client_secret": "..."}`
+- `GetPaymentMethods` ハンドラ: `GET /api/billing/payment-methods` → `{"payment_methods": [...]}`
+- `DeletePaymentMethod` ハンドラ: `DELETE /api/billing/payment-methods/:id`
+
+#### 3. バックエンド — Webhook 拡張 (`backend/internal/handlers/webhook.go`)
+- `customer.subscription.created` ケース追加（`updated` と同ハンドラ）
+- `customer.subscription.deleted` で `userRepo.CancelSubscription(subscription.ID)` 呼び出し → `subscription_status='canceled'`, `role='free'` に更新
+
+#### 4. バックエンド — UserRepository 拡張 (`backend/internal/repository/user.go`)
+- `CancelSubscription(subscriptionID string) error` 追加: `subscription_status='canceled'`, `role='free'` をセット
+
+#### 5. バックエンド — ルート追加 (`backend/cmd/server/main.go`)
+- `POST /api/billing/setup-intent`
+- `GET /api/billing/payment-methods`
+- `DELETE /api/billing/payment-methods/:id`
+
+#### 6. フロントエンド — 型定義拡張 (`frontend/types/api.ts`)
+- `SetupIntentResponse { client_secret: string }` 追加
+- `PaymentMethod { id, brand, last4: string, exp_month, exp_year: number }` 追加
+
+#### 7. フロントエンド — API ユーティリティ拡張 (`frontend/utils/api.ts`)
+- `apiDelete<T>` 追加: DELETE メソッド、204 No Content 対応
+
+#### 8. フロントエンド — useBilling フック全面更新 (`frontend/hooks/useBilling.ts`)
+- `fetchPaymentMethods`, `getSetupIntentSecret`, `deletePaymentMethod` 追加
+- `paymentMethods: PaymentMethod[]`, `pmLoading` 状態追加
+- `refetchPaymentMethods` を外部公開
+
+#### 9. フロントエンド — BillingTemplate 全面更新 (`frontend/components/templates/BillingTemplate/BillingTemplate.tsx`)
+- `@stripe/react-stripe-js` の `Elements`, `CardElement`, `useStripe`, `useElements` 導入
+- `CardSetupForm` 内部コンポーネント: `getSetupIntentSecret()` → `stripe.confirmCardSetup()` フロー
+- 保存済みカード一覧表示（ブランド・下4桁・有効期限）+ 削除ボタン
+- 編集アイコンでカード登録フォームのトグル表示
+- `handleCardSetupSuccess`: フォームクローズ・成功メッセージ・`refetchPaymentMethods` 呼び出し
+
+#### 10. フロントエンド — パッケージ追加 (`frontend/package.json`)
+- `"@stripe/react-stripe-js": "^5.6.1"`
+- `"@stripe/stripe-js": "^8.10.0"`
+
+#### 11. テスト修正
+- `frontend/test/BillingTemplate.test.tsx`: Stripe モック追加、`useBilling` モックに新フィールド追加、編集アイコンテストをフォームトグル確認に更新
+- `frontend/test/ReportTemplate.test.tsx`: `{data && ...}` → `{!!data && ...}` で TypeScript エラー解消
+
+### 注意事項
+- `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` を `.env.local` に設定が必要（Stripe Dashboard → Developers → API keys）
+- Stripe Customer が存在しない場合、`/api/billing/setup-intent` は 400 を返す（先に Checkout でサブスク作成が必要）
+
 ## 2026-03-15 (Phase 8-4: Googleソーシャルログイン & 決済導線改善)
 
 ### 概要

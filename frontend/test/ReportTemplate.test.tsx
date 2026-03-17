@@ -41,7 +41,7 @@ jest.mock('../components/templates/ReportTemplate/ReportTab', () => ({
   default: ({ data }: { data: unknown }) => (
     <div data-testid="report-tab">
       レポート内容
-      {data && <span data-testid="has-data">データあり</span>}
+      {!!data && <span data-testid="has-data">データあり</span>}
     </div>
   ),
 }))

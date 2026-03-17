@@ -94,6 +94,9 @@ func main() {
 		// Billing API
 		protected.POST("/api/billing/checkout", handlers.CreateCheckoutSession(stripeSvc))
 		protected.POST("/api/billing/portal", handlers.CreatePortalSession(stripeSvc, userRepo))
+		protected.POST("/api/billing/setup-intent", handlers.CreateSetupIntent(stripeSvc, userRepo))
+		protected.GET("/api/billing/payment-methods", handlers.GetPaymentMethods(stripeSvc, userRepo))
+		protected.DELETE("/api/billing/payment-methods/:id", handlers.DeletePaymentMethod(stripeSvc))
 	}
 
 	log.Printf("server starting on :%s", cfg.Port)
