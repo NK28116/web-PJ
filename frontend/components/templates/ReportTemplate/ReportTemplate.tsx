@@ -111,7 +111,7 @@ const getDateRange = (period: string): string => {
 export const ReportTemplate: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'report' | 'ai'>('report');
   const [selectedPeriod, setSelectedPeriod] = useState('lastMonth');
-  const { data, loading, error } = useReport(selectedPeriod);
+  const { data, loading, error, partialErrors = {} } = useReport(selectedPeriod);
   const { media: instagramMedia } = useInstagramMedia();
 
   return (
@@ -160,7 +160,25 @@ export const ReportTemplate: React.FC = () => {
               <Text className="text-red-500">{error}</Text>
             </div>
           ) : (
-            <ReportTab data={data} instagramMedia={instagramMedia} />
+            <>
+              {(partialErrors.google || partialErrors.instagram) && (
+                <div className="mx-4 mt-2 space-y-1">
+                  {partialErrors.google && (
+                    <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-yellow-50 border border-yellow-200 text-xs text-yellow-800">
+                      <span>⚠</span>
+                      <span>Google: {partialErrors.google} — Googleデータは表示されません</span>
+                    </div>
+                  )}
+                  {partialErrors.instagram && (
+                    <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-yellow-50 border border-yellow-200 text-xs text-yellow-800">
+                      <span>⚠</span>
+                      <span>Instagram: {partialErrors.instagram} — Instagramデータは表示されません</span>
+                    </div>
+                  )}
+                </div>
+              )}
+              <ReportTab data={data} instagramMedia={instagramMedia} />
+            </>
           )
         )}
         {activeTab === 'ai' && <AiTab />}

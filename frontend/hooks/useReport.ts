@@ -4,6 +4,8 @@ import type { ReportSummary } from '@/types/api';
 import type { ReportData } from '@/test/mock/reportMockData';
 import { initialReportData } from '@/test/mock/reportMockData';
 
+export type ReportErrorKind = 'NOT_CONNECTED' | 'RATE_LIMIT' | 'PARTIAL' | 'ERROR' | null;
+
 const KEYWORD_COLORS = ['#4285F4', '#CF2E92', '#0CBA65', '#FBBC05', '#9E9E9E'];
 
 function periodToQuery(period: string): { start: string; end: string } {
@@ -46,9 +48,9 @@ function toReportData(s: ReportSummary): ReportData {
     totalProfileViewsChange: formatChange(s.profile_views.change_percent),
     totalActions: s.total_actions.value,
     totalActionsChange: formatChange(s.total_actions.change_percent),
-    visitConversionRate: s.profile_views.value > 0
+    visitConversionRate: s.conversion_rate ?? (s.profile_views.value > 0
       ? Math.round((s.total_actions.value / s.profile_views.value) * 1000) / 10
-      : 0,
+      : 0),
     visitConversionRateChange: '-',
     avgRating: s.review_avg_rating,
     avgRatingChange: gd ? `${gd.review_stats.avg_rating.change_point >= 0 ? '+' : ''}${gd.review_stats.avg_rating.change_point}pt` : '-',
@@ -70,9 +72,9 @@ function toReportData(s: ReportSummary): ReportData {
     ],
 
     instagramSource: ig ? [
-      { label: 'フィード投稿', count: ig.source_breakdown.feed, color: '#4285F4' },
-      { label: 'リール動画', count: ig.source_breakdown.reels, color: '#CF2E92' },
-      { label: 'ストーリーズ', count: ig.source_breakdown.stories, color: '#0CBA65' },
+      { label: 'プロフィールリンク', count: ig.profile_link_clicks?.value ?? ig.source_breakdown.feed, color: '#4285F4' },
+      { label: 'ストーリーリンク', count: ig.story_link_clicks?.value ?? ig.source_breakdown.stories, color: '#CF2E92' },
+      { label: 'リール動画', count: ig.source_breakdown.reels, color: '#0CBA65' },
       { label: 'その他(タグ等)', count: ig.source_breakdown.other, color: '#FBBC05' },
     ] : [],
 
@@ -113,18 +115,46 @@ export const useReport = (period: string) => {
   const [data, setData] = useState<ReportData>(initialReportData);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [errorKind, setErrorKind] = useState<ReportErrorKind>(null);
+  const [partialErrors, setPartialErrors] = useState<{ google?: string; instagram?: string }>({});
 
   const fetchReport = useCallback(async () => {
     setLoading(true);
     setError(null);
+    setErrorKind(null);
+    setPartialErrors({});
     try {
       const q = periodToQuery(period);
       const summary = await apiGet<ReportSummary>(`/api/reports/summary?start=${q.start}&end=${q.end}`);
       console.log('[useReport] GET /api/reports/summary:', { period, query: q, summary });
+
+      // 部分エラーの収集
+      const partial: { google?: string; instagram?: string } = {};
+      if (summary.google_error) {
+        partial.google = summary.google_error.code === 'NOT_CONNECTED'
+          ? 'Google未連携'
+          : summary.google_error.code === '429'
+            ? 'Googleレート制限超過'
+            : 'Googleデータ取得失敗';
+      }
+      if (summary.instagram_error) {
+        partial.instagram = summary.instagram_error.code === 'NOT_CONNECTED'
+          ? 'Instagram未連携'
+          : summary.instagram_error.code === '429'
+            ? 'Instagramレート制限超過'
+            : 'Instagramデータ取得失敗';
+      }
+      if (Object.keys(partial).length > 0) {
+        setPartialErrors(partial);
+        setErrorKind('PARTIAL');
+      }
+
       setData(toReportData(summary));
     } catch (err) {
       console.error('[useReport] GET /api/reports/summary failed:', err);
-      setError(err instanceof Error ? err.message : 'レポートの取得に失敗しました');
+      const msg = err instanceof Error ? err.message : 'レポートの取得に失敗しました';
+      setError(msg);
+      setErrorKind('ERROR');
     } finally {
       setLoading(false);
     }
@@ -134,5 +164,5 @@ export const useReport = (period: string) => {
     fetchReport();
   }, [fetchReport]);
 
-  return { data, loading, error, refetch: fetchReport };
+  return { data, loading, error, errorKind, partialErrors, refetch: fetchReport };
 };

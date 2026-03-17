@@ -44,13 +44,16 @@ type ActionBreakdown struct {
 
 // GoogleReport はGBP詳細レポート
 type GoogleReport struct {
-	Period           ReportPeriod       `json:"period"`
-	ActionDetail     GoogleActionDetail `json:"action_detail"`
-	DayOfWeekTrend   []DayOfWeekEntry   `json:"day_of_week_trend"`
-	HourlyTrend      []HourlyEntry      `json:"hourly_trend"`
-	SearchKeywords   []SearchKeyword    `json:"search_keywords"`
-	ReviewStats      ReviewStats        `json:"review_stats"`
-	ReplyPerformance ReplyPerformance   `json:"reply_performance"`
+	Period             ReportPeriod       `json:"period"`
+	MapViews           int                `json:"map_views"`
+	ActionDetail       GoogleActionDetail `json:"action_detail"`
+	QueriesDirect      int                `json:"queries_direct"`
+	QueriesIndirect    int                `json:"queries_indirect"`
+	DayOfWeekTrend     []DayOfWeekEntry   `json:"day_of_week_trend"`
+	HourlyTrend        []HourlyEntry      `json:"hourly_trend"`
+	SearchKeywords     []SearchKeyword    `json:"search_keywords"`
+	ReviewStats        ReviewStats        `json:"review_stats"`
+	ReplyPerformance   ReplyPerformance   `json:"reply_performance"`
 }
 
 // GoogleActionDetail は電話・経路・Webアクセスの内訳
@@ -94,14 +97,17 @@ type ReplyPerformance struct {
 
 // InstagramReport はInstagram詳細レポート
 type InstagramReport struct {
-	Period          ReportPeriod         `json:"period"`
-	ProfileViews    MetricWithChange     `json:"profile_views"`
-	Impressions     MetricWithChange     `json:"impressions"`
-	Reach           MetricWithChange     `json:"reach"`
-	WebsiteClicks   MetricWithChange     `json:"website_clicks"`
-	FollowerCount   int                  `json:"follower_count"`
-	SourceBreakdown InstagramSources     `json:"source_breakdown"`
-	TopMedia        []InstagramMediaItem `json:"top_media"`
+	Period            ReportPeriod         `json:"period"`
+	ProfileViews      MetricWithChange     `json:"profile_views"`
+	ActionClicks      MetricWithChange     `json:"action_clicks"`
+	ProfileLinkClicks MetricWithChange     `json:"profile_link_clicks"`
+	StoryLinkClicks   MetricWithChange     `json:"story_link_clicks"`
+	Impressions       MetricWithChange     `json:"impressions"`
+	Reach             MetricWithChange     `json:"reach"`
+	WebsiteClicks     MetricWithChange     `json:"website_clicks"`
+	FollowerCount     int                  `json:"follower_count"`
+	SourceBreakdown   InstagramSources     `json:"source_breakdown"`
+	TopMedia          []InstagramMediaItem `json:"top_media"`
 }
 
 // InstagramSources はInstagram遷移元分析
