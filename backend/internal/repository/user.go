@@ -73,3 +73,12 @@ func (r *UserRepository) UpdateSubscriptionStatus(subscriptionID, status string)
 	)
 	return err
 }
+
+// CancelSubscription はサブスクリプション終了時にステータスを canceled、role を free に戻す
+func (r *UserRepository) CancelSubscription(subscriptionID string) error {
+	_, err := r.db.Exec(
+		"UPDATE users SET subscription_status = 'canceled', role = 'free', updated_at = NOW() WHERE stripe_subscription_id = $1",
+		subscriptionID,
+	)
+	return err
+}

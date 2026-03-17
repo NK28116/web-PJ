@@ -5,7 +5,11 @@ import { useBilling } from '@/hooks/useBilling';
 import { generateReceiptPDF } from '@/utils/generateReceipt';
 import React, { useState } from 'react';
 import { useRouter } from 'next/router';
-import { MdKeyboardArrowLeft, MdEdit } from 'react-icons/md';
+import { MdKeyboardArrowLeft, MdEdit, MdDelete } from 'react-icons/md';
+import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
+import { loadStripe } from '@stripe/stripe-js';
+
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '');
 
 interface PaymentHistory {
   id: string;
@@ -32,6 +36,78 @@ const formatCurrency = (amount: number): string => {
   return `¥${new Intl.NumberFormat('ja-JP').format(amount)}`;
 };
 
+// カード登録フォーム（SetupIntent フロー）
+const CardSetupForm: React.FC<{
+  onSuccess: () => void;
+  onCancel: () => void;
+  getSetupIntentSecret: () => Promise<string | null>;
+}> = ({ onSuccess, onCancel, getSetupIntentSecret }) => {
+  const stripe = useStripe();
+  const elements = useElements();
+  const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!stripe || !elements) return;
+
+    setSubmitting(true);
+    setFormError(null);
+
+    const clientSecret = await getSetupIntentSecret();
+    if (!clientSecret) {
+      setSubmitting(false);
+      return;
+    }
+
+    const cardElement = elements.getElement(CardElement);
+    if (!cardElement) {
+      setSubmitting(false);
+      return;
+    }
+
+    const { error } = await stripe.confirmCardSetup(clientSecret, {
+      payment_method: { card: cardElement },
+    });
+
+    if (error) {
+      setFormError(error.message ?? 'カード登録に失敗しました');
+      setSubmitting(false);
+      return;
+    }
+
+    onSuccess();
+    setSubmitting(false);
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="p-4 space-y-3">
+      <div className="border border-gray-300 rounded p-3">
+        <CardElement options={{ hidePostalCode: true }} />
+      </div>
+      {formError && (
+        <Text className="text-xs text-red-500">{formError}</Text>
+      )}
+      <div className="flex gap-2">
+        <Button
+          type="submit"
+          disabled={!stripe || submitting}
+          className="flex-1 bg-[#00A48D] text-white text-[14px] py-2"
+        >
+          {submitting ? '登録中...' : 'カードを登録する'}
+        </Button>
+        <Button
+          type="button"
+          onClick={onCancel}
+          className="flex-1 border border-gray-300 text-[14px] py-2"
+        >
+          キャンセル
+        </Button>
+      </div>
+    </form>
+  );
+};
+
 export interface BillingTemplateProps {
   className?: string;
   activeTab?: 'home' | 'post' | 'report' | 'review';
@@ -44,8 +120,19 @@ export const BillingTemplate: React.FC<BillingTemplateProps> = ({
   onTabChange,
 }) => {
   const router = useRouter();
-  const { startCheckout, openPortal, loading: billingLoading, error: billingError } = useBilling();
+  const {
+    startCheckout,
+    openPortal,
+    getSetupIntentSecret,
+    deletePaymentMethod,
+    paymentMethods,
+    pmLoading,
+    loading: billingLoading,
+    error: billingError,
+    refetchPaymentMethods,
+  } = useBilling();
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [showCardForm, setShowCardForm] = useState(false);
 
   // Stripe Checkout完了後の戻り先チェック
   React.useEffect(() => {
@@ -55,8 +142,15 @@ export const BillingTemplate: React.FC<BillingTemplateProps> = ({
     }
   }, [router]);
 
-  const handleChangeCard = () => {
-    openPortal();
+  const handleCardSetupSuccess = async () => {
+    setShowCardForm(false);
+    setSuccessMessage('カードを登録しました');
+    await refetchPaymentMethods();
+  };
+
+  const handleDeleteCard = async (pmId: string) => {
+    if (!confirm('このカードを削除しますか？')) return;
+    await deletePaymentMethod(pmId);
   };
 
   const handleCheckout = () => {
@@ -112,27 +206,63 @@ export const BillingTemplate: React.FC<BillingTemplateProps> = ({
           <div className="flex items-center justify-between border-b border-gray-300 p-3">
             <Text className="text-[14px] text-black font-normal">登録クレジットカード情報</Text>
             <button
-              onClick={handleChangeCard}
+              onClick={() => setShowCardForm(!showCardForm)}
               className="text-gray-500 hover:text-black"
               aria-label="カード情報を編集"
-              disabled={billingLoading}
             >
               <MdEdit size={18} />
             </button>
           </div>
+
+          {/* 保存済みカード一覧 */}
           <div className="p-4 space-y-2">
-            <div className="flex justify-between">
-              <Text className="text-[14px] text-black">カード番号</Text>
-              <Text className="text-[14px] text-black tracking-wider">**** **** **** ****</Text>
-            </div>
-            <div className="flex justify-between">
-              <Text className="text-[14px] text-black">有効期限</Text>
-              <Text className="text-[14px] text-black">**/**</Text>
-            </div>
+            {pmLoading ? (
+              <Text className="text-[13px] text-gray-400">読み込み中...</Text>
+            ) : paymentMethods.length > 0 ? (
+              paymentMethods.map((pm) => (
+                <div key={pm.id} className="flex items-center justify-between">
+                  <div>
+                    <Text className="text-[14px] text-black capitalize">{pm.brand}</Text>
+                    <Text className="text-[13px] text-gray-500">**** **** **** {pm.last4}　{pm.exp_month}/{pm.exp_year}</Text>
+                  </div>
+                  <button
+                    onClick={() => handleDeleteCard(pm.id)}
+                    disabled={billingLoading}
+                    className="text-gray-400 hover:text-red-500"
+                    aria-label="カードを削除"
+                  >
+                    <MdDelete size={18} />
+                  </button>
+                </div>
+              ))
+            ) : (
+              <>
+                <div className="flex justify-between">
+                  <Text className="text-[14px] text-black">カード番号</Text>
+                  <Text className="text-[14px] text-black tracking-wider">**** **** **** ****</Text>
+                </div>
+                <div className="flex justify-between">
+                  <Text className="text-[14px] text-black">有効期限</Text>
+                  <Text className="text-[14px] text-black">**/**</Text>
+                </div>
+              </>
+            )}
           </div>
+
+          {/* カード登録フォーム（SetupIntent） */}
+          {showCardForm && (
+            <Elements stripe={stripePromise}>
+              <CardSetupForm
+                onSuccess={handleCardSetupSuccess}
+                onCancel={() => setShowCardForm(false)}
+                getSetupIntentSecret={getSetupIntentSecret}
+              />
+            </Elements>
+          )}
+
           <div className="px-4 pb-4 space-y-2">
             <Button
-              onClick={handleChangeCard}
+              onClick={openPortal}
               className="w-full border border-gray-300 text-[14px] text-black py-2"
               disabled={billingLoading}
             >
@@ -140,7 +270,7 @@ export const BillingTemplate: React.FC<BillingTemplateProps> = ({
             </Button>
             <Button
               onClick={handleCheckout}
-              className="w-full bg-[#00A48D] text-white text-[14px] py-2"
+              className="w-full bg-[#00A48D] text-blue-950 text-[14px] py-2"
               disabled={billingLoading}
             >
               {billingLoading ? '処理中...' : 'プランに申し込む'}

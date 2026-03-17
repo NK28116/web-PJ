@@ -1,10 +1,52 @@
-import { useCallback, useState } from 'react';
-import { apiPost } from '@/utils/api';
-import type { CheckoutResponse, PortalResponse } from '@/types/api';
+import { useCallback, useEffect, useState } from 'react';
+import { apiDelete, apiGet, apiPost } from '@/utils/api';
+import type { CheckoutResponse, PaymentMethod, PortalResponse, SetupIntentResponse } from '@/types/api';
 
 export const useBilling = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
+  const [pmLoading, setPmLoading] = useState(false);
+
+  const fetchPaymentMethods = useCallback(async () => {
+    setPmLoading(true);
+    try {
+      const res = await apiGet<{ payment_methods: PaymentMethod[] }>('/api/billing/payment-methods');
+      setPaymentMethods(res.payment_methods ?? []);
+    } catch {
+      // 未契約など Customer 未作成の場合は空配列のまま
+      setPaymentMethods([]);
+    } finally {
+      setPmLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchPaymentMethods();
+  }, [fetchPaymentMethods]);
+
+  const getSetupIntentSecret = useCallback(async (): Promise<string | null> => {
+    try {
+      const res = await apiPost<SetupIntentResponse>('/api/billing/setup-intent');
+      return res.client_secret;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'カード登録の準備に失敗しました');
+      return null;
+    }
+  }, []);
+
+  const deletePaymentMethod = useCallback(async (pmId: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      await apiDelete(`/api/billing/payment-methods/${pmId}`);
+      await fetchPaymentMethods();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'カードの削除に失敗しました');
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchPaymentMethods]);
 
   const startCheckout = useCallback(async (priceId: string) => {
     setLoading(true);
@@ -36,5 +78,15 @@ export const useBilling = () => {
     }
   }, []);
 
-  return { startCheckout, openPortal, loading, error };
+  return {
+    startCheckout,
+    openPortal,
+    getSetupIntentSecret,
+    deletePaymentMethod,
+    paymentMethods,
+    pmLoading,
+    loading,
+    error,
+    refetchPaymentMethods: fetchPaymentMethods,
+  };
 };

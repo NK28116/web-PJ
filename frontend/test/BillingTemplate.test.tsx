@@ -28,14 +28,30 @@ jest.mock('next/router', () => ({
   }),
 }))
 
+// Stripe のモック
+jest.mock('@stripe/react-stripe-js', () => ({
+  Elements: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  CardElement: () => <div data-testid="card-element" />,
+  useStripe: () => null,
+  useElements: () => null,
+}))
+jest.mock('@stripe/stripe-js', () => ({
+  loadStripe: () => Promise.resolve(null),
+}))
+
 // useBilling のモック
 const mockOpenPortal = jest.fn()
 jest.mock('../hooks/useBilling', () => ({
   useBilling: () => ({
     startCheckout: jest.fn(),
     openPortal: mockOpenPortal,
+    getSetupIntentSecret: jest.fn(),
+    deletePaymentMethod: jest.fn(),
+    paymentMethods: [],
+    pmLoading: false,
     loading: false,
     error: null,
+    refetchPaymentMethods: jest.fn(),
   }),
 }))
 
@@ -124,12 +140,12 @@ describe('BillingTemplate - カード変更ボタンの動作', () => {
     expect(mockOpenPortal).toHaveBeenCalledTimes(1)
   })
 
-  test('カード編集アイコンクリックで openPortal が呼ばれること', () => {
+  test('カード編集アイコンクリックでカード登録フォームが表示されること', () => {
     render(<BillingTemplate />)
 
     fireEvent.click(screen.getByLabelText('カード情報を編集'))
 
-    expect(mockOpenPortal).toHaveBeenCalledTimes(1)
+    expect(screen.getByTestId('card-element')).toBeInTheDocument()
   })
 })
 
