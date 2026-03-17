@@ -10,15 +10,25 @@ export interface GoogleReview {
   media_urls?: string[];
 }
 
+// API エラーレスポンス（統一形式）
+export interface ApiError {
+  error: boolean;
+  code: string; // '429' | 'NOT_CONNECTED' | 'API_ERROR'
+  message: string;
+}
+
 // Report Summary
 export interface ReportSummary {
   period: { start: string; end: string };
   profile_views: MetricWithChange;
   total_actions: MetricWithChange;
+  conversion_rate: number;
   action_breakdown: { google: number; instagram: number };
   google_detail?: GoogleReport;
   review_avg_rating: number;
   instagram_detail?: InstagramReport;
+  google_error?: ApiError;
+  instagram_error?: ApiError;
 }
 
 export interface MetricWithChange {
@@ -28,6 +38,9 @@ export interface MetricWithChange {
 
 export interface GoogleReport {
   period: { start: string; end: string };
+  map_views: number;
+  queries_direct: number;
+  queries_indirect: number;
   action_detail: {
     phone_calls: number;
     direction_requests: number;
@@ -50,6 +63,9 @@ export interface GoogleReport {
 export interface InstagramReport {
   period: { start: string; end: string };
   profile_views: MetricWithChange;
+  action_clicks: MetricWithChange;
+  profile_link_clicks: MetricWithChange;
+  story_link_clicks: MetricWithChange;
   impressions: MetricWithChange;
   reach: MetricWithChange;
   website_clicks: MetricWithChange;

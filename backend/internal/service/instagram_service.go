@@ -76,6 +76,9 @@ func (s *InstagramService) doRequest(ctx context.Context, method, apiURL, access
 		return nil, fmt.Errorf("read response: %w", err)
 	}
 
+	if resp.StatusCode == http.StatusTooManyRequests {
+		return nil, &RateLimitError{Provider: "instagram"}
+	}
 	if resp.StatusCode >= 400 {
 		log.Printf("Instagram API Error: status=%d, body=%s", resp.StatusCode, string(respBody))
 		return nil, fmt.Errorf("instagram api error (status %d): %s", resp.StatusCode, string(respBody))
@@ -99,12 +102,12 @@ func (s *InstagramService) FetchInsights(ctx context.Context, userID string, sta
 		Period: models.ReportPeriod{Start: start, End: end},
 	}
 
-	// 1. ユーザーインサイト取得 (impressions, reach, profile_views, website_clicks)
+	// 1. ユーザーインサイト取得
 	// Note: since/until は Unix タイムスタンプ
 	since := start.Unix()
 	until := end.Unix()
 	// period=day の場合、過去30日間まで取得可能
-	insightsURL := fmt.Sprintf("%s/%s/insights?metric=impressions,reach,profile_views,website_clicks&period=day&since=%d&until=%d",
+	insightsURL := fmt.Sprintf("%s/%s/insights?metric=impressions,reach,profile_views,website_clicks,phone_call_clicks,email_contacts,get_directions_clicks&period=day&since=%d&until=%d",
 		fbGraphBaseURL, igUserID, since, until)
 
 	body, err := s.doRequest(ctx, "GET", insightsURL, token, nil)
@@ -124,6 +127,7 @@ func (s *InstagramService) FetchInsights(ctx context.Context, userID string, sta
 		return nil, fmt.Errorf("decode user insights: %w", err)
 	}
 
+	actionTotal := 0
 	for _, metric := range insightsResp.Data {
 		total := 0
 		for _, v := range metric.Values {
@@ -138,8 +142,13 @@ func (s *InstagramService) FetchInsights(ctx context.Context, userID string, sta
 			report.ProfileViews.Value = total
 		case "website_clicks":
 			report.WebsiteClicks.Value = total
+			report.ProfileLinkClicks.Value = total
+		case "phone_call_clicks", "email_contacts", "get_directions_clicks":
+			// アクションボタンタップ数として合算
+			actionTotal += total
 		}
 	}
+	report.ActionClicks.Value = actionTotal
 
 	// 2. フォロワー数推移 (follower_count)
 	// 現在のフォロワー数を取得

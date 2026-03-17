@@ -21,6 +21,15 @@ type HTTPClient interface {
 	Do(req *http.Request) (*http.Response, error)
 }
 
+// RateLimitError はAPIのレート制限（429）を表すエラー型
+type RateLimitError struct {
+	Provider string
+}
+
+func (e *RateLimitError) Error() string {
+	return fmt.Sprintf("%s api rate limit exceeded", e.Provider)
+}
+
 // GoogleService はGBP API操作を提供する
 type GoogleService struct {
 	cfg         *config.Config
@@ -66,6 +75,9 @@ func (s *GoogleService) doRequest(ctx context.Context, method, apiURL, accessTok
 		return nil, fmt.Errorf("read response: %w", err)
 	}
 
+	if resp.StatusCode == http.StatusTooManyRequests {
+		return nil, &RateLimitError{Provider: "google"}
+	}
 	if resp.StatusCode >= 400 {
 		log.Printf("Google API Error: status=%d, body=%s", resp.StatusCode, string(respBody))
 		return nil, fmt.Errorf("google api error (status %d): %s", resp.StatusCode, string(respBody))
@@ -271,7 +283,15 @@ func (s *GoogleService) FetchInsights(ctx context.Context, userID string, start,
 	targetLocation := locations[0].Name // "locations/{locationId}"
 
 	// 2. Performance API (v1) でメトリクス取得
-	metrics := []string{"CALL_CLICKS", "DIRECTION_REQUESTS", "WEBSITE_CLICKS", "BUSINESS_IMPRESSIONS_DESKTOP_SEARCH", "BUSINESS_IMPRESSIONS_MOBILE_SEARCH"}
+	metrics := []string{
+		"CALL_CLICKS",
+		"DIRECTION_REQUESTS",
+		"WEBSITE_CLICKS",
+		"BUSINESS_IMPRESSIONS_DESKTOP_MAPS",
+		"BUSINESS_IMPRESSIONS_MOBILE_MAPS",
+		"QUERIES_DIRECT",
+		"QUERIES_INDIRECT",
+	}
 	metricsQuery := ""
 	for _, m := range metrics {
 		metricsQuery += "&dailyMetrics=" + m
@@ -325,6 +345,12 @@ func (s *GoogleService) FetchInsights(ctx context.Context, userID string, start,
 			report.ActionDetail.DirectionReqs = int(total)
 		case "WEBSITE_CLICKS":
 			report.ActionDetail.WebsiteVisits = int(total)
+		case "BUSINESS_IMPRESSIONS_DESKTOP_MAPS", "BUSINESS_IMPRESSIONS_MOBILE_MAPS":
+			report.MapViews += int(total)
+		case "QUERIES_DIRECT":
+			report.QueriesDirect = int(total)
+		case "QUERIES_INDIRECT":
+			report.QueriesIndirect = int(total)
 		}
 	}
 

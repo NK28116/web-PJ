@@ -78,7 +78,7 @@ func main() {
 		protected.DELETE("/api/unlink/:provider", handlers.UnlinkAccount(extAcctRepo))
 
 		// レポートAPI
-		protected.GET("/api/reports/summary", handlers.GetReportSummary(googleSvc, instagramSvc))
+		protected.GET("/api/reports/summary", handlers.GetReportSummary(googleSvc, instagramSvc, cfg))
 		protected.GET("/api/reports/google", handlers.GetGoogleReport(googleSvc))
 		protected.GET("/api/reports/instagram", handlers.GetInstagramReport(instagramSvc))
 

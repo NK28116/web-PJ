@@ -4,7 +4,84 @@
 
 ---
 
-## 最新の実装 (2026-03-16) — Phase 9 v8: Cloud Run 実行用 SA への Secret Manager アクセス権付与
+## 最新の実装 (2026-03-17) — Phase 10: 外部API連携 & レポート集計基盤の完成
+
+### フェーズ / タスク
+**Phase 10: task-to-claude.md (外部APICoordination) 全タスク実装**
+
+### 実装した変更
+
+#### `backend/internal/config/config.go`
+- `MockMode bool` フィールド追加
+- `MOCK_MODE=true` 環境変数で有効化
+
+#### `backend/internal/models/report.go`
+- `GoogleReport` に `MapViews`, `QueriesDirect`, `QueriesIndirect` フィールド追加
+- `InstagramReport` に `ActionClicks`, `ProfileLinkClicks`, `StoryLinkClicks` フィールド追加
+
+#### `backend/internal/service/google_service.go`
+- `RateLimitError` 型を定義（共用）
+- `doRequest` に HTTP 429 → `&RateLimitError{Provider:"google"}` 即時返却
+- `FetchInsights` メトリクスに `BUSINESS_IMPRESSIONS_DESKTOP_MAPS`, `BUSINESS_IMPRESSIONS_MOBILE_MAPS`（MAP_VIEWS合算）、`QUERIES_DIRECT`, `QUERIES_INDIRECT` を追加
+
+#### `backend/internal/service/instagram_service.go`
+- `doRequest` に HTTP 429 → `&RateLimitError{Provider:"instagram"}` 即時返却
+- `FetchInsights` メトリクスに `phone_call_clicks`, `email_contacts`, `get_directions_clicks` を追加（ActionClicks合算）
+- `ProfileLinkClicks` は `website_clicks` から取得
+
+#### `backend/internal/handlers/report.go`
+- `apiError` 統一エラー型を定義（`code`: `"429"` / `"NOT_CONNECTED"` / `"API_ERROR"`）
+- `classifyError()` でエラーをコード分類
+- モックデータ関数 `mockGoogleReport()` / `mockInstagramReport()` 追加（requirements.md定義値）
+- `GetReportSummary` に `cfg *config.Config` を追加（MockMode参照用）
+- `buildSummaryResponse()` に分離：Google MAP_VIEWS + Instagram ProfileViews = `profile_views` 統合、来店誘導率 `conversion_rate` をバックエンドで計算（小数第一位）
+- `google_error` / `instagram_error` を部分成功レスポンスとして返却
+- `GetGoogleReport` / `GetInstagramReport` も統一エラー形式に変更
+
+#### `backend/cmd/server/main.go`
+- `GetReportSummary(googleSvc, instagramSvc, cfg)` に cfg を渡すよう更新
+
+#### `frontend/types/api.ts`
+- `ApiError` インターフェース追加
+- `ReportSummary` に `conversion_rate`, `google_error`, `instagram_error` 追加
+- `GoogleReport` に `map_views`, `queries_direct`, `queries_indirect` 追加
+- `InstagramReport` に `action_clicks`, `profile_link_clicks`, `story_link_clicks` 追加
+
+#### `frontend/hooks/useReport.ts`
+- `ReportErrorKind` 型を export（`'NOT_CONNECTED' | 'RATE_LIMIT' | 'PARTIAL' | 'ERROR' | null`）
+- `partialErrors` state を追加（`{ google?: string; instagram?: string }`）
+- `errorKind` state を追加
+- `google_error` / `instagram_error` のコードを日本語メッセージに変換
+- `conversion_rate` はバックエンド値を優先、フォールバックでフロントエンド計算
+- `instagramSource` を `profile_link_clicks` / `story_link_clicks` に対応
+
+#### `frontend/components/templates/ReportTemplate/ReportTemplate.tsx`
+- `partialErrors` を `useReport` から取得（デフォルト `{}`）
+- Google / Instagram それぞれの部分エラー時に黄色バナーを表示
+- エラーバナーは `partialErrors.google` / `partialErrors.instagram` が存在する場合のみ表示
+
+---
+
+### 完了定義 (Definition of Done) 確認
+
+1. ✅ **暗号化**: DB内トークンはAES-256で暗号化（既存実装 + 今回確認済み）
+2. ✅ **レポート計算**: MAP_VIEWS+ProfileViews=統合プロフィール閲覧、来店誘導率バックエンド計算
+3. ✅ **エラーハンドリング**: 429→即時RateLimitError、部分成功レスポンス、統一エラーコード
+4. ✅ **モックモード**: `MOCK_MODE=true` でrequirements.mdのJSON値を返却
+5. ✅ **フロントエンド**: エラー種別識別・部分エラーバナー・87/87テストパス
+
+---
+
+### 注意すべきポイント
+
+1. **Instagram ActionClicks**: `phone_call_clicks`, `email_contacts`, `get_directions_clicks` を合算。Instagram Graph API v21.0 で利用できない場合は 0 として扱われる（アプリがクラッシュしない設計）
+2. **StoryLinkClicks**: 現状 0（ストーリーズメディアの個別メトリクス取得は未実装。モックは 60）
+3. **モックモードの起動**: `MOCK_MODE=true` を環境変数に設定するか、Secret Managerに追加する
+4. **RateLimitError 共用**: `RateLimitError` 型は `google_service.go` に定義。Instagram側も同ファイルのものを参照（同パッケージ）
+
+---
+
+## 過去の実装 (2026-03-16) — Phase 9 v8: Cloud Run 実行用 SA への Secret Manager アクセス権付与
 
 ### フェーズ / タスク
 **Phase 9 v8: `Permission denied on secret` エラー解消 (task-to-claude.md Task 4 新規追加項目)**

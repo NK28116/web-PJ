@@ -1,5 +1,82 @@
 # 変更ログ
 
+## 2026-03-17 (Phase 10: 外部API連携 & レポート集計基盤)
+
+### 概要
+`task-to-claude.md`（feature/externalAPICoordination）に基づき、Google Business Profile API・Instagram Graph API の連携基盤を完成。429レート制限対応・モックモード・部分成功レスポンス・フロントエンドエラーバナーを実装。
+
+### 実施内容
+
+#### 1. 429レート制限対応（Backend）
+- **[Claude]** `backend/internal/service/google_service.go` を修正。
+  - `RateLimitError` 型を定義（`Provider` フィールド付き）
+  - `doRequest` に HTTP 429 → `&RateLimitError{Provider:"google"}` 即時返却を追加（リトライなし）
+- **[Claude]** `backend/internal/service/instagram_service.go` を修正。
+  - `doRequest` に HTTP 429 → `&RateLimitError{Provider:"instagram"}` 即時返却を追加（リトライなし）
+
+#### 2. 取得メトリクス追加（Backend）
+- **[Claude]** `backend/internal/service/google_service.go` を修正。
+  - `FetchInsights` のメトリクスに `BUSINESS_IMPRESSIONS_DESKTOP_MAPS` / `BUSINESS_IMPRESSIONS_MOBILE_MAPS`（MAP_VIEWS として合算）を追加
+  - `QUERIES_DIRECT` / `QUERIES_INDIRECT`（ブランド検索）を追加
+- **[Claude]** `backend/internal/service/instagram_service.go` を修正。
+  - `FetchInsights` のメトリクスに `phone_call_clicks` / `email_contacts` / `get_directions_clicks` を追加し `ActionClicks` として合算
+  - `website_clicks` を `ProfileLinkClicks` としても参照
+
+#### 3. モデル拡張（Backend）
+- **[Claude]** `backend/internal/models/report.go` を修正。
+  - `GoogleReport` に `MapViews int` / `QueriesDirect int` / `QueriesIndirect int` フィールドを追加
+  - `InstagramReport` に `ActionClicks` / `ProfileLinkClicks` / `StoryLinkClicks`（`MetricWithChange` 型）フィールドを追加
+
+#### 4. モックモード実装（Backend）
+- **[Claude]** `backend/internal/config/config.go` を修正。
+  - `MockMode bool` フィールドを追加（`MOCK_MODE=true` 環境変数で有効化）
+- **[Claude]** `backend/internal/handlers/report.go` を修正。
+  - `mockGoogleReport()` / `mockInstagramReport()` をrequirements.md定義値（Google: mapViews=1200等、Instagram: profileViews=800等）で実装
+  - `GetReportSummary` に `cfg *config.Config` を追加し、`cfg.MockMode` 時はモックデータを返却
+
+#### 5. 統一エラーレスポンス & 部分成功（Backend）
+- **[Claude]** `backend/internal/handlers/report.go` を修正。
+  - `apiError` 統一型を定義（`error: bool`, `code: string`, `message: string`）
+  - `classifyError()` でエラーを `"429"` / `"NOT_CONNECTED"` / `"API_ERROR"` に分類
+  - `buildSummaryResponse()` を分離し、`google_error` / `instagram_error` フィールドで部分エラーを返却
+  - 統合プロフィール閲覧数（`profile_views`）を Google MAP_VIEWS + Instagram ProfileViews で計算
+  - 来店誘導率（`conversion_rate`）をバックエンドで計算（小数第一位、分母0→0）
+- **[Claude]** `backend/cmd/server/main.go` を修正。
+  - `GetReportSummary(googleSvc, instagramSvc, cfg)` に cfg を追加
+
+#### 6. フロントエンド型定義更新（Frontend）
+- **[Claude]** `frontend/types/api.ts` を修正。
+  - `ApiError` インターフェースを追加（`error`, `code`, `message`）
+  - `ReportSummary` に `conversion_rate` / `google_error` / `instagram_error` を追加
+  - `GoogleReport` に `map_views` / `queries_direct` / `queries_indirect` を追加
+  - `InstagramReport` に `action_clicks` / `profile_link_clicks` / `story_link_clicks` を追加
+
+#### 7. エラー種別識別（Frontend）
+- **[Claude]** `frontend/hooks/useReport.ts` を修正。
+  - `ReportErrorKind` 型を export（`'NOT_CONNECTED' | 'RATE_LIMIT' | 'PARTIAL' | 'ERROR' | null`）
+  - `errorKind` / `partialErrors` state を追加
+  - `google_error` / `instagram_error` のコードを日本語メッセージに変換
+  - `conversion_rate` はバックエンド値を優先し、未設定時はフロントエンドで計算
+  - `instagramSource` を `profile_link_clicks` / `story_link_clicks` に対応
+
+#### 8. エラーバナー追加（Frontend）
+- **[Claude]** `frontend/components/templates/ReportTemplate/ReportTemplate.tsx` を修正。
+  - `partialErrors` を `useReport` から取得（デフォルト `{}`）
+  - Google / Instagram それぞれの部分エラー時に黄色バナー（⚠アイコン + 日本語メッセージ）を表示
+
+### 検証結果
+- Go ビルド（`GOTOOLCHAIN=go1.23.0 go build ./...`）: ✅ エラーなし
+- TypeScript 型チェック（実装ファイル）: ✅ エラーなし
+- フロントエンドテスト: ✅ 87/87 パス
+
+### 技術的な判断
+1. **RateLimitError の定義場所**: `google_service.go` 内に定義し、同パッケージの `instagram_service.go` から参照。新規ファイル作成を避け既存構成を維持。
+2. **部分成功レスポンス**: 片方のAPIが失敗しても 200 OK で返却し、`google_error` / `instagram_error` フィールドでエラーを通知。フロントエンドが取得できたデータのみ表示できる設計。
+3. **Instagram ActionClicks**: `phone_call_clicks`, `email_contacts`, `get_directions_clicks` を合算。APIが特定メトリクスを返さない場合は 0 として扱われ、クラッシュしない。
+4. **StoryLinkClicks**: 現状 0（ストーリーズメディアの個別メトリクス取得は範囲外）。モックでは 60 を返却。
+
+---
+
 ## 2026-03-15 (Phase 8-4: Googleソーシャルログイン & 決済導線改善)
 
 ### 概要

@@ -25,6 +25,9 @@ type Config struct {
 	// Stripe
 	StripeSecretKey     string
 	StripeWebhookSecret string
+
+	// Mock mode
+	MockMode bool
 }
 
 func Load() *Config {
@@ -47,6 +50,8 @@ func Load() *Config {
 
 		StripeSecretKey:     getEnv("STRIPE_SECRET_KEY", ""),
 		StripeWebhookSecret: getEnv("STRIPE_WEBHOOK_SECRET", ""),
+
+		MockMode: getEnv("MOCK_MODE", "") == "true",
 	}
 }
 
