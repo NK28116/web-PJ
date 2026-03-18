@@ -3,6 +3,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { apiPost } from '@/utils/api';
 import { useRouter } from 'next/router';
 import React, { useState } from 'react';
+import { MdCheckCircleOutline } from 'react-icons/md';
 const INDUSTRY_OPTIONS = ['飲食', '美容', 'その他'] as const;
 type Industry = typeof INDUSTRY_OPTIONS[number] | '';
 
