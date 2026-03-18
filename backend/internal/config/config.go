@@ -8,6 +8,7 @@ type Config struct {
 	Port          string
 	GinMode       string
 	EncryptionKey string
+	MockMode      bool
 
 	// OAuth: Google
 	GoogleClientID     string
@@ -25,6 +26,11 @@ type Config struct {
 	// Stripe
 	StripeSecretKey     string
 	StripeWebhookSecret string
+
+	// Stripe Plan Price IDs
+	StripePriceIDLight string
+	StripePriceIDBasic string
+	StripePriceIDPro   string
 }
 
 func Load() *Config {
@@ -34,6 +40,7 @@ func Load() *Config {
 		Port:          getEnv("PORT", "8080"),
 		GinMode:       getEnv("GIN_MODE", "debug"),
 		EncryptionKey: getEnv("ENCRYPTION_KEY", ""),
+		MockMode:      os.Getenv("MOCK_MODE") == "true",
 
 		GoogleClientID:     getEnv("GOOGLE_CLIENT_ID", ""),
 		GoogleClientSecret: getEnv("GOOGLE_CLIENT_SECRET", ""),
@@ -47,6 +54,10 @@ func Load() *Config {
 
 		StripeSecretKey:     getEnv("STRIPE_SECRET_KEY", ""),
 		StripeWebhookSecret: getEnv("STRIPE_WEBHOOK_SECRET", ""),
+
+		StripePriceIDLight: getEnv("STRIPE_PRICE_ID_LIGHT", ""),
+		StripePriceIDBasic: getEnv("STRIPE_PRICE_ID_BASIC", ""),
+		StripePriceIDPro:   getEnv("STRIPE_PRICE_ID_PRO", ""),
 	}
 }
 

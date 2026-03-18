@@ -73,6 +73,15 @@ export interface InstagramMediaItem {
   comment_count: number;
 }
 
+// User Profile
+export interface ProfileResponse {
+  id: string;
+  email: string;
+  nickname: string;
+  role: string;
+  plan_tier: string;
+}
+
 // Billing
 export interface CheckoutResponse {
   url: string;

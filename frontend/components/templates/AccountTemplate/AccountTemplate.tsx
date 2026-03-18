@@ -5,6 +5,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/router';
 import { MdKeyboardArrowLeft, MdNotifications, MdMenu } from 'react-icons/md';
 import { BsThreeDotsVertical } from 'react-icons/bs';
+import { useProfile } from '@/hooks/useProfile';
 
 interface AccountData {
   profile: {

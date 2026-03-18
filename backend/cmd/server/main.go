@@ -35,6 +35,7 @@ func main() {
 	userRepo := repository.NewUserRepository(db)
 	postRepo := repository.NewPostRepository(db)
 	extAcctRepo := repository.NewExternalAccountRepository(db)
+	verifyRepo := repository.NewVerificationRepository(db)
 
 	// サービス初期化
 	googleSvc := service.NewGoogleService(cfg, extAcctRepo, nil)
@@ -55,6 +56,8 @@ func main() {
 	r.GET("/health", handlers.Health)
 	r.POST("/register", handlers.Register(cfg, userRepo))
 	r.POST("/login", handlers.Login(cfg, userRepo))
+	r.POST("/api/auth/send-code", handlers.SendVerificationCode(verifyRepo))
+	r.POST("/api/auth/verify-code", handlers.VerifyCode(verifyRepo))
 	r.POST("/api/webhooks/stripe", handlers.StripeWebhook(cfg, userRepo))
 
 	// OAuth routes (認証不要 — ブラウザリダイレクト経由)
@@ -90,6 +93,10 @@ func main() {
 		// Instagram API
 		protected.GET("/api/instagram/media", handlers.GetInstagramMedia(instagramSvc))
 		protected.POST("/api/instagram/media", handlers.CreateInstagramMedia(instagramSvc))
+
+		// User Profile API
+		protected.GET("/api/user/profile", handlers.GetProfile(userRepo))
+		protected.PUT("/api/user/profile", handlers.UpdateProfile(userRepo))
 
 		// Billing API
 		protected.POST("/api/billing/checkout", handlers.CreateCheckoutSession(stripeSvc))

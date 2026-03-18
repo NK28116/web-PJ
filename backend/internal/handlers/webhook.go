@@ -83,6 +83,20 @@ func StripeWebhook(cfg *config.Config, userRepo *repository.UserRepository) gin.
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update subscription status"})
 				return
 			}
+			// price_id からプラン区分を判定して plan_tier を更新
+			if len(subscription.Items.Data) > 0 {
+				priceID := subscription.Items.Data[0].Price.ID
+				planTier := "light"
+				switch priceID {
+				case cfg.StripePriceIDBasic:
+					planTier = "basic"
+				case cfg.StripePriceIDPro:
+					planTier = "pro"
+				}
+				if err := userRepo.UpdatePlanTierBySubscription(subscription.ID, planTier); err != nil {
+					log.Printf("stripe webhook: UpdatePlanTierBySubscription error: %v", err)
+				}
+			}
 
 		case "customer.subscription.deleted":
 			var subscription stripe.Subscription
