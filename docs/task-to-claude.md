@@ -1,92 +1,60 @@
-# 実装指示書 (Phase 11: 課金・サブスクリプション基盤 / Stripe)
+# 実装指示書 (Phase 12: Staging検証に向けた最終統合)
 
 ## 概要
-Stripe を利用した決済基盤を構築してください。フロントエンドでのカード情報管理（登録・更新・削除）と、Stripe Checkout によるサブスクリプション契約フロー、および Webhook によるユーザー状態の自動更新を実装します。
+GitHub Issue #30「Staging検証」の要件に基づき、未実装のアカウント管理、動的なメール認証、および詳細なプラン管理を完遂してください。これが Staging 環境での全機能統合の最終フェーズとなります。
 
 ---
 
-## 1. カード情報管理 (Frontend / Stripe Elements)
+## 1. アカウント・プロフィール編集機能 (Account)
 
 ### 要求事項
-- **`BillingTemplate.tsx` の完成**: 
-  - Stripe Elements (`CardElement` または `PaymentElement`) を組み込み、カード情報の登録・変更を行えるようにする。
-  - **SetupIntent** を利用して、決済を伴わないカード保存フローを実装。
-- **カード CRUD**:
-  - 保存済みカードの一覧表示、およびデフォルト決済手段の削除機能を実装。
-- **UX**: 登録中、削除中のローディング状態と、成功・失敗のフィードバックを表示。
+- **Profile API**: ログインユーザーのニックネームおよびメールアドレスを取得・更新する。
+- **ユニーク制約**: メールアドレス変更時、既に他ユーザーが使用している場合はエラー（409 Conflict）を返す。
+- **フロントエンド統合**: `AccountTemplate.tsx` に編集モードを実装し、保存時に API を叩く。
 
 ### 修正/新規ファイル
-- `frontend/components/templates/BillingTemplate/BillingTemplate.tsx`
-- `frontend/hooks/useBilling.ts`
+- `backend/internal/handlers/user.go` (新規/修正)
+- `frontend/hooks/useProfile.ts` (新規)
+- `frontend/components/templates/AccountTemplate/AccountTemplate.tsx`
 
 ---
 
-## 2. サブスクリプションフロー (Backend / Checkout)
+## 2. 本番用メール認証シーケンス (Sign Up)
 
 ### 要求事項
-- **Checkout Session**: 
-  - ユーザーがプランを選択した際、Stripe Checkout 画面へ遷移させる API を実装。
-  - `success_url` / `cancel_url` をフロントエンドの `/billing?success=true` 等に設定。
-- **Portal Session**:
-  - 契約済みユーザーがプラン変更や請求履歴確認を行えるよう、Stripe Customer Portal への遷移 API を実装。
+- **動的コード生成**: 6桁のランダム数字を生成し、DB 等に一時保存（有効期限10分）。
+- **メール送信モック**: Staging環境では実際にメールを送る代わりに、バックエンドのログに「【Verification Code】: 123456」のように出力し、検証可能にする。
+- **API連携**: `SignUpTemplate` の認証コード入力ステップにて、実際の API を使用して検証を行う。
 
 ### 修正/新規ファイル
-- `backend/internal/service/stripe_service.go`
-- `backend/internal/handlers/billing.go` (または `report.go` 等に集約)
+- `backend/internal/service/auth_service.go`
+- `frontend/components/templates/SignUpTemplate/index.tsx`
 
 ---
 
-## 3. Webhook ハンドリング & DB同期 (Backend)
+## 3. 3段階プラン & サブスクリプション制御 (Stripe)
+
+### プラン定義
+- **Light / Basic / Pro** の 3 段階をサポートする。
+- 各プランの `price_id` を環境変数として管理し、Stripe Checkout 時に使用する。
+
+### タスク
+- **Webhook**: 支払い完了時に、取得した `price_id` からプラン種別を判定し、DB の `users.plan_tier` (新規追加) を更新。
+- **UI表示**: `BillingTemplate` に現在のプラン（Light 等）を明示し、上位プランへのアップグレードを促す表示。
+
+---
+
+## 4. 外部コンテンツの表示統合
 
 ### 要求事項
-- **署名検証**: `STRIPE_WEBHOOK_SECRET` を用いたリクエストの正当性検証。
-- **ユーザー状態の更新**:
-  - `customer.subscription.created` / `updated` / `deleted`: ユーザーのプラン区分や Stripe Customer ID を DB (`users` テーブル) に反映。
-  - 契約終了時は権限を `free` または適切な初期状態へ戻す処理。
-
----
-
-## 補足
-
-設定するプランは以下の通り
-
-```
-〈Light プラン〉
-→連携重視
-月額費用：
-・ベータ版：10,000円　※事例獲得最優先
-・立ち上げ期：19,800円（契約10〜30件）※最初の事例が出た段階
-・成長期：24,800円（契約30件以上）※ROI実績が3件以上証明できた段階
-
-〈Basicプラン〉
-→自動化重視
-月額費用：
-・ベータ版：29,800円　※事例獲得最優先
-・立ち上げ期：39,800円（契約10〜30件）※最初の事例が出た段階
-・成長期：49,800円（契約30件以上）※ROI実績が3件以上証明できた段階
-
-〈Proプラン〉
-→戦略重視
-月額費用：
-・ベータ版：59,800円　※事例獲得最優先
-・立ち上げ期：79,800円（契約10〜30件）※最初の事例が出た段階
-・成長期：99,800円（契約30件以上）※ROI実績が3件以上証明できた段階
-```
-
-
----
-
-## 4. 領収書対応 (検証フェーズ)
-
-### 要求事項
-- **Stripe デフォルト機能の利用**:
-  - 決済完了時に Stripe が自動送信する領収書メールの設定を確認。
-  - バックエンドでは、領収書発行フラグ等を管理する必要はない（Stripe側に委ねる）。
+- **Review**: Google Business Profile から取得した「実際の口コミ」を `ReviewTemplate` に表示。
+- **Post**: Instagram から取得した「実際の投稿」を `PostTemplate` に表示。
+- **モックとの切り替え**: `MOCK_MODE=false` 時は、必ず実 API からのデータを使用すること。
 
 ---
 
 ## 完了定義 (Definition of Done)
-1. **カード登録**: フロントエンドからカードを登録し、Stripe Dashboard 上で Customer に紐付いていることを確認。
-2. **サブスクリプション**: テスト決済を行い、DB のユーザー情報が自動で更新（プラン昇格）されること。
-3. **Webhook 検証**: Stripe CLI 等を用いて Webhook が正常に処理され、DB 整合性が保たれていること。
-4. **テスト**: `docs/requirements.md` のセキュリティ・境界値要件を満たしていること。
+1. **アカウント編集**: プロフィール画面で名前とメールを変更し、リロード後も反映されていること。
+2. **メール認証**: 新規登録時、ログに出力された動的なコードを入力して登録が完了すること。
+3. **プラン反映**: Stripe テスト決済後、ユーザーのプラン種別が DB 上で正しく（例: Basic）更新されること。
+4. **表示統合**: レビュー画面および投稿画面に、モックではない実データが表示されること。
