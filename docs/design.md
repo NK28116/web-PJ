@@ -18,16 +18,21 @@
 
 ---
 
-## 2. GCPインフラ & CI/CD パイプライン (Phase 3 & 4)
+## 2. GCP & Vercel インフラ & CI/CD パイプライン (Phase 3 & 4)
 - **要求**: 安全なデプロイフローと、機密情報の適切な管理（`docs/requirements.md` 2, 5項）
 
 ### 基本設計
-- **実装方針・概要**: GitHub Actions を利用し、特定のパスへの変更時に Cloud Run への自動デプロイを行う。機密情報は Secret Manager で一元管理する。
+- **実装方針・概要**: 
+  - **Backend**: GitHub Actions を利用し、Cloud Run への自動デプロイを行う。機密情報は Secret Manager で管理。
+  - **Frontend**: Vercel を利用し、ブランチベースの自動デプロイを行う。
+    - `develop` ブランチ: ステージング環境
+    - `main` ブランチ: 本番環境
 - **技術・アーキテクチャ**:
-  - CI/CD: GitHub Actions (Path-based trigger)
-  - Cloud: Cloud Run, Artifact Registry, Cloud SQL (Private IP)
-  - Security: GCP Secret Manager
-- **異常系・リスク**: デプロイ時のシークレット注入失敗、VPCネットワーク接続エラー。
+  - CI/CD: GitHub Actions (Backend), Vercel Git Integration (Frontend)
+  - Cloud: Cloud Run, Artifact Registry, Cloud SQL
+  - Hosting: Vercel (Next.js)
+  - Security: GCP Secret Manager, Vercel Environment Variables
+- **異常系・リスク**: デプロイ時のシークレット注入失敗、Vercel/Backend 間 CORS エラー。
 
 ### 詳細設計
 - **実装の概要**: CI/CD ワークフローの YAML 作成、GCP サービスアカウント設定、Secret Manager 連携コードの実装。
