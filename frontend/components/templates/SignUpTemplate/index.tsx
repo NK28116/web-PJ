@@ -1,10 +1,8 @@
 import { StepIndicator } from '@/atoms/StepIndicator';
 import { useAuth } from '@/hooks/useAuth';
+import { apiPost } from '@/utils/api';
 import { useRouter } from 'next/router';
 import React, { useState } from 'react';
-import { MdCheckCircleOutline } from 'react-icons/md';
-
-const MOCK_AUTH_CODE = ['1', '2', '3', '4', '5', '6'];
 const INDUSTRY_OPTIONS = ['飲食', '美容', 'その他'] as const;
 type Industry = typeof INDUSTRY_OPTIONS[number] | '';
 
@@ -41,26 +39,34 @@ export const SignUpTemplate: React.FC = () => {
     return '';
   };
 
-  const handleEmailSubmit = () => {
+  const handleEmailSubmit = async () => {
     setErrorMessage('');
     if (!email) {
       setErrorMessage('※メールアドレスを入力してください');
       return;
     }
-    setSubStep(2);
+    try {
+      await apiPost('/api/auth/send-code', { email });
+      setSubStep(2);
+    } catch {
+      setErrorMessage('認証メールの送信に失敗しました。しばらくしてから再試行してください。');
+    }
   };
 
-  const handleCodeVerify = () => {
+  const handleCodeVerify = async (): Promise<boolean> => {
     setErrorMessage('');
     if (code.some((c) => !c)) {
       setErrorMessage('※6桁の認証コードを入力してください');
-      return;
+      return false;
     }
-    if (code.join('') !== MOCK_AUTH_CODE.join('')) {
+    try {
+      await apiPost('/api/auth/verify-code', { email, code: code.join('') });
+      setSubStep(3);
+      return true;
+    } catch {
       setErrorMessage('認証コードが正しくありません');
-      return;
+      return false;
     }
-    setSubStep(3);
   };
 
   const handleUserInfoSubmit = () => {
@@ -135,7 +141,7 @@ export const SignUpTemplate: React.FC = () => {
                 setCode={setCode}
                 errorMessage={errorMessage}
                 onVerify={handleCodeVerify}
-                onResend={() => {}}
+                onResend={() => { handleEmailSubmit(); }}
                 onResetEmail={() => { setErrorMessage(''); setSubStep(1); }}
               />
             );
@@ -271,7 +277,7 @@ interface SubStep2_2Props {
   code: string[];
   setCode: (c: string[]) => void;
   errorMessage: string;
-  onVerify: () => void;
+  onVerify: () => Promise<boolean>;
   onResend: () => void;
   onResetEmail: () => void;
 }
@@ -309,16 +315,12 @@ const SubStep2_2: React.FC<SubStep2_2Props> = ({
     setTimeout(() => setShowResendNotification(false), 2000);
   };
 
-  // 認証コードが全て入力済みの場合、1秒間成功通知を表示してから遷移
-  const handleVerify = () => {
-    if (code.every((c) => c !== '')) {
+  // 認証コードが全て入力済みの場合、APIで検証してから成功通知を表示
+  const handleVerify = async () => {
+    const success = await onVerify();
+    if (success) {
       setShowVerifyNotification(true);
-      setTimeout(() => {
-        setShowVerifyNotification(false);
-        onVerify();
-      }, 1000);
-    } else {
-      onVerify();
+      setTimeout(() => setShowVerifyNotification(false), 1500);
     }
   };
 

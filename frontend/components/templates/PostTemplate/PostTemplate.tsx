@@ -2,10 +2,11 @@ import { Text } from '@/atoms/Text';
 import { Button } from '@/components/atoms/Button/Button';
 import { Modal } from '@/components/organisms/Modal';
 import { BaseTemplate } from '@/templates/BaseTemplate';
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { PostDetailModal } from './PostDetailModal';
 import { PostListItem } from './PostListItem';
 import { PostGridItem } from './PostGridItem';
+import { useInstagramMedia } from '@/hooks/useInstagramMedia';
 import privatePostImg from '../../../test/mock/post/privatePost.png';
 import publicPostImg from '../../../test/mock/post/publicPost.png';
 
@@ -144,9 +145,35 @@ const formatDate = (dateString: string): string => {
   return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`;
 };
 
+// Instagram メディアを Post 型にマップする
+const mapInstagramToPosts = (media: import('@/types/api').InstagramMediaItem[]): Post[] =>
+  media.map((item, i) => ({
+    id: i,
+    bgColor: ['#2D3748', '#4FD1C5', '#3182CE', '#E53E3E'][i % 4],
+    title: item.caption?.slice(0, 40) || 'Instagram投稿',
+    content: item.caption || '',
+    tags: '',
+    rate: 0,
+    views: 0,
+    likes: item.like_count,
+    comments: item.comment_count,
+    date: item.timestamp,
+    username: '',
+    status: '表示中',
+    isNew: new Date(item.timestamp) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+    imageUrl: item.media_url,
+  }));
+
 export const PostTemplate: React.FC<PostTemplateProps> = () => {
-  // ダミーデータをuseStateで管理
+  const { media, loading: mediaLoading } = useInstagramMedia();
+  // Instagram実データがある場合はそれを使用、なければモックを表示
   const [posts, setPosts] = useState<Post[]>(() => generateMockPosts());
+
+  useEffect(() => {
+    if (media.length > 0) {
+      setPosts(mapInstagramToPosts(media));
+    }
+  }, [media]);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [open, setOpen] = useState(false);
