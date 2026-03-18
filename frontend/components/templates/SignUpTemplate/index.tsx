@@ -103,7 +103,7 @@ export const SignUpTemplate: React.FC = () => {
   };
 
   const handleFinish = () => {
-    register(email, wyzeId);
+    register(email, password);
     router.replace('/home');
   };
 

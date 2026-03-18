@@ -11,8 +11,9 @@ export interface BaseComponentProps {
 }
 
 export interface ClickableProps {
-  onClick?: () => void;
+  onClick?: (e: React.MouseEvent<HTMLButtonElement>) => void;
   disabled?: boolean;
+  form?: string;
 }
 
 export interface FormElementProps {

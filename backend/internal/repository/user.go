@@ -66,6 +66,14 @@ func (r *UserRepository) UpdateStripeInfo(userID, customerID, subscriptionID str
 	return err
 }
 
+func (r *UserRepository) UpdateCustomerID(userID, customerID string) error {
+	_, err := r.db.Exec(
+		"UPDATE users SET stripe_customer_id = $1, updated_at = NOW() WHERE id = $2",
+		customerID, userID,
+	)
+	return err
+}
+
 func (r *UserRepository) UpdateSubscriptionStatus(subscriptionID, status string) error {
 	_, err := r.db.Exec(
 		"UPDATE users SET subscription_status = $1, updated_at = NOW() WHERE stripe_subscription_id = $2",
