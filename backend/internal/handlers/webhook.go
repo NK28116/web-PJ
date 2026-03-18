@@ -24,8 +24,11 @@ func StripeWebhook(cfg *config.Config, userRepo *repository.UserRepository) gin.
 		}
 
 		sigHeader := c.GetHeader("Stripe-Signature")
-		event, err := webhook.ConstructEvent(payload, sigHeader, cfg.StripeWebhookSecret)
+		event, err := webhook.ConstructEventWithOptions(payload, sigHeader, cfg.StripeWebhookSecret, webhook.ConstructEventOptions{
+			IgnoreAPIVersionMismatch: true,
+		})
 		if err != nil {
+			log.Printf("[webhook] ConstructEvent error: %v", err)
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid signature"})
 			return
 		}
