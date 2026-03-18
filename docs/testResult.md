@@ -114,7 +114,7 @@ Trigger succeeded! Check dashboard for event details.
 ```
 
 ```
-026-03-19 01:32:35   --> payment_method.attached [evt_1TCN1L2LUnmFOZdS4mNGlBbz]
+2026-03-19 01:32:35   --> payment_method.attached [evt_1TCN1L2LUnmFOZdS4mNGlBbz]
 2026-03-19 01:32:35  <--  [200] POST http://localhost:8080/api/webhooks/stripe [evt_1TCN1L2LUnmFOZdS4mNGlBbz]
 2026-03-19 01:32:35   --> customer.created [evt_1TCN1L2LUnmFOZdS7BiZ3gIA]
 2026-03-19 01:32:35  <--  [200] POST http://localhost:8080/api/webhooks/stripe [evt_1TCN1L2LUnmFOZdS7BiZ3gIA]
