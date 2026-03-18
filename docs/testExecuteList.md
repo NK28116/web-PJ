@@ -44,7 +44,7 @@ npm run dev -- -p 3001
 docker compose logs backend | grep "Verification Code"
 ```
 **期待結果**: 「[Verification Code] for [email]: 123456」のようなログが出力されていること。
-4. **スマホ特有の確認**: 
+4. **スマホ特特有の確認**: 
     - [ ] 認証コード入力欄にフォーカスした際、数字キーボードが正しく表示されるか。
     - [ ] キーボードが表示された状態で「送信」や「次へ」ボタンが画面外に押し出され、スクロール不能にならないか。
 5. ログで確認した6桁のコードを入力し、登録を完了。
@@ -131,7 +131,7 @@ stripe trigger customer.subscription.deleted
 
 ## 7. デプロイ不達・エラー時の確認
 - **Frontend**: Vercel のデプロイログを確認し、Root Directory が frontend になっているか。
-- **Backend**: Cloud Run のログを確認し、PORT=8080 で Listen しているか。
+- **Backend**: Google Cloud Run のログを確認し、PORT=8080 で Listen しているか。
 
 ---
 
