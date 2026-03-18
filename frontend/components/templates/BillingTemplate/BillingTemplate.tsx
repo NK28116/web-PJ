@@ -30,7 +30,29 @@ const MOCK_NEXT_PAYMENT = {
   amount: 33000,
 };
 
-const STRIPE_PRICE_ID = process.env.NEXT_PUBLIC_STRIPE_PRICE_ID || 'price_standard';
+const PLANS = [
+  {
+    id: 'light',
+    name: 'Light',
+    description: '連携重視',
+    price: 10000,
+    priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_LIGHT || '',
+  },
+  {
+    id: 'basic',
+    name: 'Basic',
+    description: '自動化重視',
+    price: 29800,
+    priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_BASIC || '',
+  },
+  {
+    id: 'pro',
+    name: 'Pro',
+    description: '戦略重視',
+    price: 59800,
+    priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_PRO || '',
+  },
+];
 
 const formatCurrency = (amount: number): string => {
   return `¥${new Intl.NumberFormat('ja-JP').format(amount)}`;
@@ -148,6 +170,7 @@ export const BillingTemplate: React.FC<BillingTemplateProps> = ({
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [showCardForm, setShowCardForm] = useState(false);
   const [formSubmitting, setFormSubmitting] = useState(false);
+  const [selectedPlanId, setSelectedPlanId] = useState<string>(PLANS[0].id);
 
   const isAnyLoading = billingLoading || pmLoading || formSubmitting;
 
@@ -175,7 +198,9 @@ export const BillingTemplate: React.FC<BillingTemplateProps> = ({
   };
 
   const handleCheckout = () => {
-    startCheckout(STRIPE_PRICE_ID);
+    const plan = PLANS.find((p) => p.id === selectedPlanId);
+    if (!plan || !plan.priceId) return;
+    startCheckout(plan.priceId);
   };
 
   const handleExportPDF = (payment: PaymentHistory) => {
@@ -280,7 +305,7 @@ export const BillingTemplate: React.FC<BillingTemplateProps> = ({
             </Elements>
           )}
 
-          <div className="px-4 pb-4 space-y-2">
+          <div className="px-4 pb-4">
             <div className="flex gap-2">
               <Button
                 type={showCardForm ? "submit" : "button"}
@@ -300,10 +325,47 @@ export const BillingTemplate: React.FC<BillingTemplateProps> = ({
                 キャンセル
               </Button>
             </div>
+          </div>
+        </div>
+
+        {/* プラン選択セクション */}
+        <div className="border border-gray-300 bg-white">
+          <div className="border-b border-gray-300 p-3">
+            <Text className="text-[14px] text-black font-normal">プランを選択</Text>
+          </div>
+          <div className="p-4 space-y-2">
+            {PLANS.map((plan) => (
+              <label
+                key={plan.id}
+                className={`flex items-center justify-between p-3 rounded border cursor-pointer ${
+                  selectedPlanId === plan.id
+                    ? 'border-[#00A48D] bg-[#f0faf8]'
+                    : 'border-gray-200'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <input
+                    type="radio"
+                    name="plan"
+                    value={plan.id}
+                    checked={selectedPlanId === plan.id}
+                    onChange={() => setSelectedPlanId(plan.id)}
+                    className="accent-[#00A48D]"
+                  />
+                  <div>
+                    <Text className="text-[14px] text-black font-medium">{plan.name}</Text>
+                    <Text className="text-[12px] text-gray-500">{plan.description}</Text>
+                  </div>
+                </div>
+                <Text className="text-[14px] text-black">{formatCurrency(plan.price)}<span className="text-[11px] text-gray-500">/月</span></Text>
+              </label>
+            ))}
+          </div>
+          <div className="px-4 pb-4">
             <Button
               onClick={handleCheckout}
               className="w-full bg-[#00A48D] text-blue-950 text-[14px] py-2"
-              disabled={isAnyLoading}
+              disabled={isAnyLoading || !PLANS.find((p) => p.id === selectedPlanId)?.priceId}
             >
               {isAnyLoading ? '処理中...' : 'プランに申し込む'}
             </Button>
