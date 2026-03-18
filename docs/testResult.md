@@ -88,3 +88,67 @@
 ---
 **実装・検証完了日**: 2026-03-18
 **実装者**: CSS-28 (Claude Sonnet 4.6)
+
+## 3
+### 3.1
+```
+ stripe listen --forward-to localhost:8080/api/webhooks/stripe
+zsh: correct 'stripe' to 'strip' [nyae]? n
+> Ready! You are using Stripe API Version [2025-07-30.basil]. Your webhook signing secret is whsec_REDACTED (^C to quit)
+```
+
+### 3.2
+```
+stripe trigger customer.subscription.deleted
+Setting up fixture for: customer
+Running fixture for: customer
+Setting up fixture for: product
+Running fixture for: product
+Setting up fixture for: price
+Running fixture for: price
+Setting up fixture for: subscription
+Running fixture for: subscription
+Setting up fixture for: subscription_deleted
+Running fixture for: subscription_deleted
+Trigger succeeded! Check dashboard for event details.
+```
+
+```
+026-03-19 01:32:35   --> payment_method.attached [evt_1TCN1L2LUnmFOZdS4mNGlBbz]
+2026-03-19 01:32:35  <--  [200] POST http://localhost:8080/api/webhooks/stripe [evt_1TCN1L2LUnmFOZdS4mNGlBbz]
+2026-03-19 01:32:35   --> customer.created [evt_1TCN1L2LUnmFOZdS7BiZ3gIA]
+2026-03-19 01:32:35  <--  [200] POST http://localhost:8080/api/webhooks/stripe [evt_1TCN1L2LUnmFOZdS7BiZ3gIA]
+2026-03-19 01:32:36   --> product.created [evt_1TCN1M2LUnmFOZdSyaYnFPqb]
+2026-03-19 01:32:36  <--  [200] POST http://localhost:8080/api/webhooks/stripe [evt_1TCN1M2LUnmFOZdSyaYnFPqb]
+2026-03-19 01:32:37   --> plan.created [evt_1TCN1M2LUnmFOZdSa19LhbW4]
+2026-03-19 01:32:37   --> price.created [evt_1TCN1M2LUnmFOZdSFTbjHNWc]
+2026-03-19 01:32:37  <--  [200] POST http://localhost:8080/api/webhooks/stripe [evt_1TCN1M2LUnmFOZdSFTbjHNWc]
+2026-03-19 01:32:37  <--  [200] POST http://localhost:8080/api/webhooks/stripe [evt_1TCN1M2LUnmFOZdSa19LhbW4]
+2026-03-19 01:32:41   --> charge.succeeded [evt_3TCN1P2LUnmFOZdS0xo7WoR3]
+2026-03-19 01:32:41  <--  [200] POST http://localhost:8080/api/webhooks/stripe [evt_3TCN1P2LUnmFOZdS0xo7WoR3]
+2026-03-19 01:32:42   --> customer.updated [evt_1TCN1R2LUnmFOZdS82MgTAyO]
+2026-03-19 01:32:42  <--  [200] POST http://localhost:8080/api/webhooks/stripe [evt_1TCN1R2LUnmFOZdS82MgTAyO]
+2026-03-19 01:32:42   --> customer.subscription.created [evt_1TCN1R2LUnmFOZdSmw6kVWL7]
+2026-03-19 01:32:42  <--  [200] POST http://localhost:8080/api/webhooks/stripe [evt_1TCN1R2LUnmFOZdSmw6kVWL7]
+2026-03-19 01:32:42   --> payment_intent.succeeded [evt_3TCN1P2LUnmFOZdS0YGvuXys]
+2026-03-19 01:32:42  <--  [200] POST http://localhost:8080/api/webhooks/stripe [evt_3TCN1P2LUnmFOZdS0YGvuXys]
+2026-03-19 01:32:42   --> payment_intent.created [evt_3TCN1P2LUnmFOZdS0s91qBgw]
+2026-03-19 01:32:42  <--  [200] POST http://localhost:8080/api/webhooks/stripe [evt_3TCN1P2LUnmFOZdS0s91qBgw]
+2026-03-19 01:32:42   --> invoice.created [evt_1TCN1S2LUnmFOZdSeZj7jfHw]
+2026-03-19 01:32:42  <--  [200] POST http://localhost:8080/api/webhooks/stripe [evt_1TCN1S2LUnmFOZdSeZj7jfHw]
+2026-03-19 01:32:42   --> invoice.finalized [evt_1TCN1S2LUnmFOZdSM9wP6g4f]
+2026-03-19 01:32:42  <--  [200] POST http://localhost:8080/api/webhooks/stripe [evt_1TCN1S2LUnmFOZdSM9wP6g4f]
+2026-03-19 01:32:42   --> invoice.paid [evt_1TCN1S2LUnmFOZdSWkEQh6BP]
+2026-03-19 01:32:42  <--  [200] POST http://localhost:8080/api/webhooks/stripe [evt_1TCN1S2LUnmFOZdSWkEQh6BP]
+2026-03-19 01:32:43   --> invoice.payment_succeeded [evt_1TCN1S2LUnmFOZdSCPqmtql2]
+2026-03-19 01:32:43  <--  [200] POST http://localhost:8080/api/webhooks/stripe [evt_1TCN1S2LUnmFOZdSCPqmtql2]
+2026-03-19 01:32:43   --> customer.subscription.deleted [evt_1TCN1T2LUnmFOZdSHNLhDjOL]
+2026-03-19 01:32:43  <--  [200] POST http://localhost:8080/api/webhooks/stripe [evt_1TCN1T2LUnmFOZdSHNLhDjOL]
+2026-03-19 01:33:04   --> invoice_payment.paid [evt_1TCN1o2LUnmFOZdSipsXHdbw]
+2026-03-19 01:33:04  <--  [200] POST http://localhost:8080/api/webhooks/stripe [evt_1TCN1o2LUnmFOZdSipsXHdbw]
+2026-03-19 01:34:05   --> billing_portal.configuration.created [evt_1TCN2n2LUnmFOZdSfSyYz9Et]
+2026-03-19 01:34:05  <--  [200] POST http://localhost:8080/api/webhooks/stripe [evt_1TCN2n2LUnmFOZdSfSyYz9Et]
+2026-03-19 01:34:05   --> billing_portal.session.created [evt_1TCN2n2LUnmFOZdSJHxMIv1w]
+2026-03-19 01:34:05  <--  [200] POST http://localhost:8080/api/webhooks/stripe [evt_1TCN2n2LUnmFOZdSJHxMIv1w]
+
+```

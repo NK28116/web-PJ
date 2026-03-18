@@ -8,78 +8,74 @@
 ## 1. 事前準備
 
 ### 1.1 環境変数の設定
-`.env` または `.env.local` に以下のキーが設定されていることを確認してください。
+`.env` または `.env.local` に以下のキーが正しく設定されていることを確認してください。
 - `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`: Stripe 公開可能キー
 - `STRIPE_SECRET_KEY`: Stripe シークレットキー
-- `STRIPE_WEBHOOK_SECRET`: Webhook 署名検証用シークレット
+- `STRIPE_WEBHOOK_SECRET`: Webhook 署名検証用シークレット（`stripe listen` 実行時に表示される `whsec_...`）
+- `MOCK_MODE`: `false`（Stripeの実動作を確認する場合）
 
-### 1.2 バックエンドの起動
-Docker またはローカルでバックエンドが起動しており、DB と通信できる状態にしてください。
+### 1.2 バックエンド・フロントエンドの起動
 ```bash
+# バックエンド (Docker)
 docker compose up -d
+
+# フロントエンド (ポート3001で起動する場合)
+cd frontend
+export NEXT_PUBLIC_API_URL=http://localhost:8080
+npm run dev -- -p 3001
 ```
 
 ---
 
 ## 2. 手動検証手順 (Frontend / UI)
 
-### 2.1 カード情報の登録 (SetupIntent フロー)
-1. ブラウザで `/billing` ページを開きます。
-2. 「登録クレジットカード情報」セクションの **編集（鉛筆アイコン）** をクリックします。
-3. 表示されたフォームに、Stripe のテストカード番号（例: 4242 4242 4242 4242）を入力して「カードを登録する」をクリックします。
+### 2.1 カード情報の新規登録 (SetupIntent フロー)
+1. ブラウザで `http://localhost:3001/billing` を開きます。
+2. 「カードを登録する」ボタンをクリックし、登録フォームを表示します。
+3. カード番号入力欄にテストカード（例: `4242 4242 4242 4242`）を入力します。
+4. 入力完了後、右側の **「確定」ボタン** が有効になることを確認し、クリックします。
 **期待結果**:
-- 「カードを登録しました」という成功メッセージが表示されること。
-- 登録したカード（Brand, 下4桁）が一覧に即座に反映されること。
+- 「登録できました」という成功メッセージが表示されること。
+- 登録したカード（Brand, 下4桁）が一覧に即座に表示されること。
+- 「検証状況」エリアに Stripe SDK の接続ステータスが表示されていること。
 
-### 2.2 保存済みカードの管理
-1. 登録されたカードの右側にある **ゴミ箱アイコン** をクリックします。
+### 2.2 保存済みカードの削除
+1. 表示されたカードの右側にある **ゴミ箱アイコン** をクリックします。
 2. 確認ダイアログで「OK」を選択します。
 **期待結果**:
-- カードが一覧から削除されること。
-- Stripe Dashboard 上でも、該当する PaymentMethod が Customer から Detach されていること。
+- カードが一覧から削除され、未登録状態（ぼかし表示）に戻ること。
 
 ---
 
 ## 3. Webhook 検証 (Backend / Subscription)
 
 ### 3.1 Webhook の疎通確認 (Stripe CLI を使用)
-実際の決済イベントをシミュレートします。
+API バージョンの不一致が解消されているか確認します。
 ```bash
 # 1. Stripe CLI で Webhook をローカルに転送
 stripe listen --forward-to localhost:8080/api/webhooks/stripe
 
 # 2. 別のターミナルで、サブスクリプション削除イベントを発生させる
-# ※実際にはユーザーの subscription_id が必要ですが、トリガーで疎通確認は可能です
 stripe trigger customer.subscription.deleted
 ```
 **期待結果**:
-- バックエンドのログに `stripe webhook: subscription.deleted subscription=sub_...` が出力されること。
-- データベースの `users` テーブルにおいて、該当ユーザーの `role` が `free` に、`subscription_status` が `canceled` に更新されていること。
+- ターミナルの `stripe listen` ログに `200 OK` が表示されること。
+- バックエンドのログに `stripe webhook: subscription.deleted ...` が出力されること。
+- DB 内のユーザーの `role` が `free` にロールバックされること。
 
 ---
 
-## 4. API エンドポイントの直接検証 (開発者向け)
+## 4. 異常系・セキュリティ検証
 
-### 4.1 SetupIntent の取得
-```bash
-curl -H "Authorization: Bearer <JWT_TOKEN>" -X POST http://localhost:8080/api/billing/setup-intent
-```
-**期待結果**: `client_secret` が返却されること。
+### 4.1 無効なカードの入力
+1. 意図的にエラーになるカード番号（例: `4000 0000 0000 0002`）を入力し、「確定」をクリックします。
+**期待結果**:
+- 「このカードは有効ではありません」または具体的なエラー理由が表示されること。
 
-### 4.2 保存済みカードの一覧取得
-```bash
-curl -H "Authorization: Bearer <JWT_TOKEN>" http://localhost:8080/api/billing/payment-methods
-```
-**期待結果**: 登録済みのカード情報が JSON 配列で返却されること。
-
----
-
-## 5. 自動テストの実行
-
-```bash
-# フロントエンドのテスト (87/87 pass を確認済み)
-cd frontend && npm test
-```
+### 4.2 未認証アクセス
+1. ログアウトした状態で `http://localhost:8080/api/billing/payment-methods` にアクセスを試みます。
+**期待結果**:
+- `401 Unauthorized` が返却されること。
 
 ---
 
