@@ -47,11 +47,25 @@ func CreateSetupIntent(stripeSvc *service.StripeService, userRepo *repository.Us
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "user not found"})
 			return
 		}
-		if user.StripeCustomerID == nil || *user.StripeCustomerID == "" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "stripe customer not found"})
-			return
+
+		customerID := ""
+		if user.StripeCustomerID != nil && *user.StripeCustomerID != "" {
+			customerID = *user.StripeCustomerID
+		} else {
+			// カスタマーが存在しない場合は自動生成
+			newID, err := stripeSvc.CreateCustomer(user.Email, user.ID)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create stripe customer"})
+				return
+			}
+			if err := userRepo.UpdateCustomerID(user.ID, newID); err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update user customer id"})
+				return
+			}
+			customerID = newID
 		}
-		secret, err := stripeSvc.CreateSetupIntent(*user.StripeCustomerID)
+
+		secret, err := stripeSvc.CreateSetupIntent(customerID)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create setup intent"})
 			return

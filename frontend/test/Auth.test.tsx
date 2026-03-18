@@ -21,6 +21,7 @@ import { LoginTemplate } from '../components/templates/LoginTemplate';
 import { SplashScreen } from '../components/templates/SplashScreen';
 import { AuthGuard } from '../components/auth/AuthGuard';
 import { useAuth } from '../hooks/useAuth';
+import { apiPost } from '../utils/api';
 
 const mockPush = jest.fn();
 const mockReplace = jest.fn();
@@ -33,21 +34,31 @@ jest.mock('next/router', () => ({
   }),
 }));
 
+// api ユーティリティのモック
+jest.mock('../utils/api', () => ({
+  apiPost: jest.fn(),
+  apiGet: jest.fn(),
+}));
+
+const mockApiPost = apiPost as jest.Mock;
+
 beforeEach(() => {
   localStorage.clear();
   mockPush.mockClear();
   mockReplace.mockClear();
+  mockApiPost.mockClear();
 });
 
 /* ────────────────── LoginTemplate ────────────────── */
 describe('LoginTemplate - ログインフロー', () => {
-  test('メールとパスワードが未入力の場合エラーメッセージが表示されること', () => {
+  test('メールとパスワードが未入力の場合エラーメッセージが表示されること', async () => {
     render(<LoginTemplate />);
     fireEvent.click(screen.getByRole('button', { name: 'ログイン' }));
-    expect(screen.getByText('※未入力の箇所があります')).toBeInTheDocument();
+    expect(await screen.findByText('※未入力の箇所があります')).toBeInTheDocument();
   });
 
-  test('誤った認証情報でログインするとエラーメッセージが表示されること', () => {
+  test('誤った認証情報でログインするとエラーメッセージが表示されること', async () => {
+    mockApiPost.mockRejectedValue(new Error('Unauthorized'));
     render(<LoginTemplate />);
 
     fireEvent.change(screen.getByPlaceholderText('Wyze ID ,メールアドレス'), {
@@ -58,10 +69,14 @@ describe('LoginTemplate - ログインフロー', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: 'ログイン' }));
 
-    expect(screen.getByText('ログインに失敗しました')).toBeInTheDocument();
+    expect(await screen.findByText('ログインに失敗しました')).toBeInTheDocument();
   });
 
-  test('正しい入力でログインするとトークンが保存されること', () => {
+  test('正しい入力でログインするとトークンが保存されること', async () => {
+    mockApiPost.mockResolvedValue({
+      token: 'real_jwt_token',
+      user: { id: 'user_123', email: 'test@example.com', role: 'user' }
+    });
     render(<LoginTemplate />);
 
     fireEvent.change(screen.getByPlaceholderText('Wyze ID ,メールアドレス'), {
@@ -72,10 +87,16 @@ describe('LoginTemplate - ログインフロー', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: 'ログイン' }));
 
-    expect(localStorage.getItem('auth_token')).toBe('mock_token');
+    await waitFor(() => {
+      expect(localStorage.getItem('auth_token')).toBe('real_jwt_token');
+    });
   });
 
-  test('正しい入力でログインすると /home へ遷移すること', () => {
+  test('正しい入力でログインすると /home へ遷移すること', async () => {
+    mockApiPost.mockResolvedValue({
+      token: 'real_jwt_token',
+      user: { id: 'user_123', email: 'test@example.com', role: 'user' }
+    });
     render(<LoginTemplate />);
 
     fireEvent.change(screen.getByPlaceholderText('Wyze ID ,メールアドレス'), {
@@ -86,7 +107,9 @@ describe('LoginTemplate - ログインフロー', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: 'ログイン' }));
 
-    expect(mockPush).toHaveBeenCalledWith('/home');
+    await waitFor(() => {
+      expect(mockPush).toHaveBeenCalledWith('/home');
+    });
   });
 
   test('新規登録ボタンで /signup へ遷移すること', () => {

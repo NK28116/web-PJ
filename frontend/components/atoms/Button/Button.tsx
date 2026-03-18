@@ -35,12 +35,12 @@ const sizeClasses: Record<Size, string> = {
 
 const variantClasses: Record<ButtonVariant, Record<Variant, string>> = {
   solid: {
-    primary: 'bg-primary-600 text-white hover:bg-primary-700',
-    secondary: 'bg-secondary-600 text-white hover:bg-secondary-700',
-    success: 'bg-green-600 text-white hover:bg-green-700',
-    warning: 'bg-yellow-600 text-white hover:bg-yellow-700',
-    error: 'bg-red-600 text-white hover:bg-red-700',
-    info: 'bg-blue-600 text-white hover:bg-blue-700',
+    primary: 'bg-primary-600 text-black hover:bg-primary-700',
+    secondary: 'bg-secondary-600 text-black hover:bg-secondary-700',
+    success: 'bg-green-600 text-black hover:bg-green-700',
+    warning: 'bg-yellow-600 text-black hover:bg-yellow-700',
+    error: 'bg-red-600 text-black hover:bg-red-700',
+    info: 'bg-blue-600 text-black hover:bg-blue-700',
   },
   outline: {
     primary: 'border-2 border-primary-600 text-primary-600 hover:bg-primary-50',
@@ -83,9 +83,10 @@ export const Button: React.FC<ButtonProps> = ({
   type = 'button',
   fullWidth = false,
   disabled = false,
-  onClick = () => alert('※現在開発中です'),
+  onClick,
   className,
   style,
+  form,
 }) => {
   const variantStyle =
     variant && color ? variantClasses[variant][color] :
@@ -93,11 +94,14 @@ export const Button: React.FC<ButtonProps> = ({
     color ? variantClasses['solid'][color] :
     'border border-black text-black bg-transparent hover:bg-gray-50';
 
+  const defaultOnClick = () => alert('※現在開発中です');
+
   return (
     <button
       type={type}
-      onClick={onClick}
+      onClick={onClick || defaultOnClick}
       disabled={disabled}
+      form={form}
       className={cn(
         'font-medium rounded-lg transition-colors duration-200',
         'focus:outline-none focus:ring-2 focus:ring-offset-2',

@@ -4,6 +4,7 @@ import (
 	"github.com/stripe/stripe-go/v76"
 	portalsession "github.com/stripe/stripe-go/v76/billingportal/session"
 	"github.com/stripe/stripe-go/v76/checkout/session"
+	"github.com/stripe/stripe-go/v76/customer"
 	"github.com/stripe/stripe-go/v76/paymentmethod"
 	"github.com/stripe/stripe-go/v76/setupintent"
 	"webSystemPJ/backend/internal/config"
@@ -41,6 +42,21 @@ func (s *StripeService) CreateCheckoutSession(userID, priceID string) (string, e
 	}
 
 	return sess.URL, nil
+}
+
+// CreateCustomer は Stripe 上に顧客を作成する
+func (s *StripeService) CreateCustomer(email, userID string) (string, error) {
+	params := &stripe.CustomerParams{
+		Email: stripe.String(email),
+		Metadata: map[string]string{
+			"user_id": userID,
+		},
+	}
+	cus, err := customer.New(params)
+	if err != nil {
+		return "", err
+	}
+	return cus.ID, nil
 }
 
 // CreateSetupIntent はカード保存用の SetupIntent を作成する

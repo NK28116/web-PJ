@@ -82,6 +82,15 @@ export interface PortalResponse {
   url: string;
 }
 
+export interface LoginResponse {
+  token: string;
+  user: {
+    id: string;
+    email: string;
+    role: string;
+  };
+}
+
 export interface SetupIntentResponse {
   client_secret: string;
 }

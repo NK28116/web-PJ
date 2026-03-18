@@ -9,12 +9,17 @@ export const useBilling = () => {
   const [pmLoading, setPmLoading] = useState(false);
 
   const fetchPaymentMethods = useCallback(async () => {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || '(未設定→fallback)';
+    console.log('[useBilling] NEXT_PUBLIC_API_URL:', apiUrl);
+    console.log('[useBilling] GET /api/billing/payment-methods');
     setPmLoading(true);
     try {
       const res = await apiGet<{ payment_methods: PaymentMethod[] }>('/api/billing/payment-methods');
+      console.log('[useBilling] payment-methods OK:', res);
       setPaymentMethods(res.payment_methods ?? []);
-    } catch {
-      // 未契約など Customer 未作成の場合は空配列のまま
+    } catch (err) {
+      console.error('[useBilling] payment-methods failed — err:', err);
+      console.error('[useBilling] err message:', err instanceof Error ? err.message : String(err));
       setPaymentMethods([]);
     } finally {
       setPmLoading(false);
@@ -26,11 +31,25 @@ export const useBilling = () => {
   }, [fetchPaymentMethods]);
 
   const getSetupIntentSecret = useCallback(async (): Promise<string | null> => {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || '(未設定→fallback)';
+    console.log('[useBilling] NEXT_PUBLIC_API_URL:', apiUrl);
+    console.log('[useBilling] POST /api/billing/setup-intent');
     try {
       const res = await apiPost<SetupIntentResponse>('/api/billing/setup-intent');
+      console.log('[useBilling] setup-intent OK:', res);
       return res.client_secret;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'カード登録の準備に失敗しました');
+      console.error('[useBilling] setup-intent failed — FULL ERROR OBJECT:', err);
+      console.error('[useBilling] err type:', Object.prototype.toString.call(err));
+      console.error('[useBilling] err message:', err instanceof Error ? err.message : String(err));
+      const msg = err instanceof Error ? err.message : String(err);
+      
+      if (msg.includes('Failed to fetch')) {
+        const target = process.env.NEXT_PUBLIC_API_URL || 'デフォルト';
+        setError(`サーバーに接続できませんでした。接続先: ${target}`);
+      } else {
+        setError(`カード登録の準備に失敗しました: ${msg}`);
+      }
       return null;
     }
   }, []);
@@ -42,7 +61,8 @@ export const useBilling = () => {
       await apiDelete(`/api/billing/payment-methods/${pmId}`);
       await fetchPaymentMethods();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'カードの削除に失敗しました');
+      console.error('[useBilling] Delete PM failed:', err);
+      setError('カードの削除に失敗しました');
     } finally {
       setLoading(false);
     }
@@ -58,7 +78,7 @@ export const useBilling = () => {
       window.location.assign(res.url);
     } catch (err) {
       console.error('[useBilling] POST /api/billing/checkout failed:', err);
-      setError(err instanceof Error ? err.message : '決済セッションの作成に失敗しました');
+      setError('決済セッションの作成に失敗しました');
       setLoading(false);
     }
   }, []);
@@ -73,7 +93,14 @@ export const useBilling = () => {
       window.location.assign(res.url);
     } catch (err) {
       console.error('[useBilling] POST /api/billing/portal failed:', err);
-      setError(err instanceof Error ? err.message : 'ポータルの作成に失敗しました');
+      const msg = err instanceof Error ? err.message : '';
+      if (msg.includes('400') || msg.includes('customer not found')) {
+        setError('カードが登録されていません');
+      } else if (msg.includes('Failed to fetch')) {
+        setError('サーバーに接続できませんでした');
+      } else {
+        setError('ポータルの作成に失敗しました');
+      }
       setLoading(false);
     }
   }, []);

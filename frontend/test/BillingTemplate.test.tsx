@@ -127,25 +127,26 @@ describe('BillingTemplate - 戻るボタン', () => {
   })
 })
 
-describe('BillingTemplate - カード変更ボタンの動作', () => {
+describe('BillingTemplate - カード登録・変更・キャンセルボタンの動作', () => {
   beforeEach(() => {
     mockOpenPortal.mockClear()
+    mockBack.mockClear()
   })
 
-  test('「カード情報を変更する」クリックで openPortal が呼ばれること', () => {
+  test('「カードを登録する」クリックでカード登録フォームが表示されること', () => {
     render(<BillingTemplate />)
 
-    fireEvent.click(screen.getByText('カード情報を変更する'))
-
-    expect(mockOpenPortal).toHaveBeenCalledTimes(1)
-  })
-
-  test('カード編集アイコンクリックでカード登録フォームが表示されること', () => {
-    render(<BillingTemplate />)
-
-    fireEvent.click(screen.getByLabelText('カード情報を編集'))
+    fireEvent.click(screen.getByText('カードを登録する'))
 
     expect(screen.getByTestId('card-element')).toBeInTheDocument()
+  })
+
+  test('「キャンセル」クリックで router.back() が呼ばれること（フォーム非表示時）', () => {
+    render(<BillingTemplate />)
+
+    fireEvent.click(screen.getByText('キャンセル'))
+
+    expect(mockBack).toHaveBeenCalledTimes(1)
   })
 })
 
