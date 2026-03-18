@@ -4,8 +4,12 @@ import { apiPost } from '@/utils/api';
 import { useRouter } from 'next/router';
 import React, { useState } from 'react';
 import { MdCheckCircleOutline } from 'react-icons/md';
+
 const INDUSTRY_OPTIONS = ['飲食', '美容', 'その他'] as const;
 type Industry = typeof INDUSTRY_OPTIONS[number] | '';
+
+// MOCK_AUTH_CODE を定義 (開発用)
+const MOCK_AUTH_CODE = ['1', '2', '3', '4', '5', '6'];
 
 export const SignUpTemplate: React.FC = () => {
   // 外部ステップ: 1=登録方法選択 / 2=アカウント情報入力 / 3=登録完了
@@ -542,9 +546,6 @@ const SubStep2_3: React.FC<SubStep2_3Props> = ({
       <p className="text-white text-[11px] w-full mb-3">
         半角小文字・半角大文字・数字のうち2種類以上を含めてください
       </p>
-            {errorMessage && (
-        <p className="text-red-400 text-[13px] mt-1">{errorMessage}</p>
-      )}
 
       {/* パスワード確認 */}
       <div className="w-full h-10 bg-[#D9D9D9] border border-black rounded-[5px] flex items-center px-3 mb-4">
@@ -563,9 +564,6 @@ const SubStep2_3: React.FC<SubStep2_3Props> = ({
           {showConfirm ? '非表示' : '表示'}
         </button>
       </div>
-            {errorMessage && (
-        <p className="text-red-400 text-[13px] mt-1">{errorMessage}</p>
-      )}
 
       {/* ニックネーム */}
       <p className="text-white text-sm font-normal w-full mb-1">ニックネーム</p>
@@ -576,9 +574,6 @@ const SubStep2_3: React.FC<SubStep2_3Props> = ({
         onChange={(e) => setNickname(e.target.value)}
         className="w-full h-10 bg-[#D9D9D9] border border-black rounded-[5px] px-3 mb-4 text-black placeholder-[#707070]"
       />
-            {errorMessage && (
-        <p className="text-red-400 text-[13px] mt-1">{errorMessage}</p>
-      )}
 
       {/* 生年月日 */}
       <p className="text-white text-sm font-normal w-full mb-1">生年月日</p>
@@ -601,13 +596,9 @@ const SubStep2_3: React.FC<SubStep2_3Props> = ({
           <option key={opt} value={opt}>{opt}</option>
         ))}
       </select>
-            {errorMessage && (
-        <p className="text-red-400 text-[13px] mt-1">{errorMessage}</p>
-      )}
       <p className="text-white text-[11px] w-full mb-4">
         ※Googleビジネスプロフィールへの投稿カテゴリ設定に利用します。最も近い業種を選択してください。
       </p>
-      
 
       {/* 店舗名 */}
       <p className="text-white text-sm font-normal w-full mb-1">店舗名 <span className="text-red-400">※必須</span></p>
@@ -618,9 +609,6 @@ const SubStep2_3: React.FC<SubStep2_3Props> = ({
         onChange={(e) => setShopName(e.target.value)}
         className="w-full h-10 bg-[#D9D9D9] border border-black rounded-[5px] px-3 mb-1 text-black placeholder-[#707070]"
       />
-            {errorMessage && (
-        <p className="text-red-400 text-[13px] mt-1">{errorMessage}</p>
-      )}
       <p className="text-white text-[11px] w-full mb-4">
         ※最初に連携する主要な店舗名を入力してください。2店舗目以降は、登録完了後の管理画面から追加できます。
       </p>
