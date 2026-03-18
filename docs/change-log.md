@@ -1,5 +1,28 @@
 # 変更ログ
 
+## 2026-03-19 (Phase 11 補足: 課金プラン選択UI実装)
+
+### 概要
+Light / Basic / Pro の3プラン選択UIを BillingTemplate に実装。ベータ価格でのラジオボタン選択 → Stripe Checkout 遷移フローを整備。
+
+### 実施内容
+
+#### 1. フロントエンド — BillingTemplate プラン選択UI追加 (`frontend/components/templates/BillingTemplate/BillingTemplate.tsx`)
+- `PLANS` 定数追加: Light（¥10,000）/ Basic（¥29,800）/ Pro（¥59,800）ベータ価格と各 Price ID env var を定義
+- プラン選択ラジオボタンセクションを追加（カードセクションとお支払い履歴の間）
+- `handleCheckout` を選択プランの `priceId` を使用するよう変更
+- Price ID が未設定の場合は「プランに申し込む」ボタンを disabled に制御
+
+#### 2. 環境変数追加 (`frontend/.env.local`)
+- `NEXT_PUBLIC_STRIPE_PRICE_ID_LIGHT`, `NEXT_PUBLIC_STRIPE_PRICE_ID_BASIC`, `NEXT_PUBLIC_STRIPE_PRICE_ID_PRO` のプレースホルダー追加
+- Stripe Dashboard で Price 作成後に設定
+
+#### 3. テスト追加 (`frontend/test/BillingTemplate.test.tsx`)
+- プラン選択 3 件追加（3プラン表示 / 月額表示 / デフォルト選択）
+- 90/90 パス
+
+---
+
 ## 2026-03-18 (Phase 11: Stripe カード管理 & Webhook サブスクリプション制御)
 
 ### 概要
