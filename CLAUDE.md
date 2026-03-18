@@ -4,7 +4,32 @@
 
 ---
 
-## 最新の実装 (2026-03-18) — Phase 11: Stripe カード管理 & Webhook サブスクリプション制御
+## 最新の実装 (2026-03-18) — Phase 11 追加: Webhook 署名検証修正・STRIPE_WEBHOOK_SECRET 設定
+
+### フェーズ / タスク
+**Phase 11 追加: Webhook API バージョン不一致解消・STRIPE_WEBHOOK_SECRET ローカル設定**
+
+### 実装した変更
+
+#### バックエンド
+- `handlers/webhook.go`: `webhook.ConstructEvent` → `webhook.ConstructEventWithOptions` に変更し `IgnoreAPIVersionMismatch: true` を設定
+  - **理由**: Stripe CLI が送信するイベントの API Version (`2025-07-30.basil`) と `stripe-go v76` が期待するバージョン (`2023-10-16`) の不一致により全イベントが 400 になっていた
+- `backend/internal/middleware/cors.go`: `allowedOrigins` に `http://localhost:3001` を追加
+
+#### 環境設定
+- `.env`: `STRIPE_WEBHOOK_SECRET=whsec_...` を追加（Stripe CLI `stripe listen` で取得）
+
+### 検証結果
+- `customer.subscription.created` → DB 更新 ✅
+- `customer.subscription.deleted` → `role='free'` ロールバック ✅
+
+### 注意事項
+- `STRIPE_WEBHOOK_SECRET` はローカル開発用（`stripe listen` 実行中のみ有効）
+- 本番用は Stripe Dashboard で別途 Webhook Endpoint を作成してシークレットを取得する
+
+---
+
+## 過去の実装 (2026-03-18) — Phase 11: Stripe カード管理 & Webhook サブスクリプション制御
 
 ### フェーズ / タスク
 **Phase 11: Stripe Elements カード管理・SetupIntent フロー・Webhook ライフサイクル管理 (task-to-claude.md 準拠)**
