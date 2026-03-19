@@ -2,7 +2,7 @@ name: CD Staging
 
 on:
   push:
-    branches: [main, infraGCPAndCloud] # 検証のため infraGCPAndCloud も一時的に追加
+    branches: [develop] # 検証のため infraGCPAndCloud も一時的に追加
 
 env:
   PROJECT_ID: wyze-develop-staging
