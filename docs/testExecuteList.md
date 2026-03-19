@@ -9,7 +9,7 @@
 ## 1. 環境接続情報
 
 ### 1.1 ステージング環境 (Vercel / Cloud Run)
-- **Frontend (Vercel)**: https://web-pj-develop.vercel.app (またはプロジェクトURL)
+- **Frontend (Vercel)**:web-pj-three.vercel.app(有効になり次第stg.wyze-project.com)
 - **Backend (Cloud Run)**: https://backend-611370943102.us-east1.run.app
 - **検証端末**: iPhone (Safari) / Android (Chrome) の実機ブラウザ。
 
