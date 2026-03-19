@@ -28,14 +28,30 @@ jest.mock('next/router', () => ({
   }),
 }))
 
+// Stripe のモック
+jest.mock('@stripe/react-stripe-js', () => ({
+  Elements: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  CardElement: () => <div data-testid="card-element" />,
+  useStripe: () => null,
+  useElements: () => null,
+}))
+jest.mock('@stripe/stripe-js', () => ({
+  loadStripe: () => Promise.resolve(null),
+}))
+
 // useBilling のモック
 const mockOpenPortal = jest.fn()
 jest.mock('../hooks/useBilling', () => ({
   useBilling: () => ({
     startCheckout: jest.fn(),
     openPortal: mockOpenPortal,
+    getSetupIntentSecret: jest.fn(),
+    deletePaymentMethod: jest.fn(),
+    paymentMethods: [],
+    pmLoading: false,
     loading: false,
     error: null,
+    refetchPaymentMethods: jest.fn(),
   }),
 }))
 
@@ -111,25 +127,53 @@ describe('BillingTemplate - 戻るボタン', () => {
   })
 })
 
-describe('BillingTemplate - カード変更ボタンの動作', () => {
+describe('BillingTemplate - プラン選択', () => {
+  test('3つのプラン（Light/Basic/Pro）が表示されること', () => {
+    render(<BillingTemplate />)
+
+    expect(screen.getByText('Light')).toBeInTheDocument()
+    expect(screen.getByText('Basic')).toBeInTheDocument()
+    expect(screen.getByText('Pro')).toBeInTheDocument()
+  })
+
+  test('プランの月額が表示されること', () => {
+    render(<BillingTemplate />)
+
+    expect(screen.getByText('¥10,000')).toBeInTheDocument()
+    expect(screen.getByText('¥29,800')).toBeInTheDocument()
+    expect(screen.getByText('¥59,800')).toBeInTheDocument()
+  })
+
+  test('デフォルトで Light プランが選択されていること', () => {
+    render(<BillingTemplate />)
+
+    const radios = screen.getAllByRole('radio')
+    expect(radios[0]).toBeChecked()
+    expect(radios[1]).not.toBeChecked()
+    expect(radios[2]).not.toBeChecked()
+  })
+})
+
+describe('BillingTemplate - カード登録・変更・キャンセルボタンの動作', () => {
   beforeEach(() => {
     mockOpenPortal.mockClear()
+    mockBack.mockClear()
   })
 
-  test('「カード情報を変更する」クリックで openPortal が呼ばれること', () => {
+  test('「カードを登録する」クリックでカード登録フォームが表示されること', () => {
     render(<BillingTemplate />)
 
-    fireEvent.click(screen.getByText('カード情報を変更する'))
+    fireEvent.click(screen.getByText('カードを登録する'))
 
-    expect(mockOpenPortal).toHaveBeenCalledTimes(1)
+    expect(screen.getByTestId('card-element')).toBeInTheDocument()
   })
 
-  test('カード編集アイコンクリックで openPortal が呼ばれること', () => {
+  test('「キャンセル」クリックで router.back() が呼ばれること（フォーム非表示時）', () => {
     render(<BillingTemplate />)
 
-    fireEvent.click(screen.getByLabelText('カード情報を編集'))
+    fireEvent.click(screen.getByText('キャンセル'))
 
-    expect(mockOpenPortal).toHaveBeenCalledTimes(1)
+    expect(mockBack).toHaveBeenCalledTimes(1)
   })
 })
 

@@ -1,12 +1,11 @@
-import { MOCK_ADMIN, MOCK_USER, MOCK_USER_A, MOCK_USER_B } from '@/test/mock/authMockData';
 import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
+import { apiPost } from '@/utils/api';
+import type { LoginResponse } from '@/types/api';
 
 const AUTH_TOKEN_KEY = 'auth_token';
 const USER_EMAIL_KEY = 'user_email';
 const USER_WYZE_ID_KEY = 'user_wyze_id';
-
-const VALID_MOCK_USERS = [MOCK_USER, MOCK_ADMIN, MOCK_USER_A, MOCK_USER_B];
 
 export interface User {
   email: string | null;
@@ -18,32 +17,40 @@ export const useAuth = () => {
   const [user, setUser] = useState<User>({ email: null, wyzeId: null });
 
   useEffect(() => {
-    // クライアントサイドでのみ実行
     const email = localStorage.getItem(USER_EMAIL_KEY);
     const wyzeId = localStorage.getItem(USER_WYZE_ID_KEY);
     setUser({ email, wyzeId });
   }, []);
 
-  const login = (email: string, password: string): boolean => {
+  const login = async (email: string, password: string): Promise<boolean> => {
     if (!email || !password) return false;
-    const matched = VALID_MOCK_USERS.find(
-      (u) => u.email === email && u.password === password
-    );
-    if (!matched) return false;
-
-    localStorage.setItem(AUTH_TOKEN_KEY, 'mock_token');
-    localStorage.setItem(USER_EMAIL_KEY, email);
-    localStorage.setItem(USER_WYZE_ID_KEY, 'mock_user_id');
-    setUser({ email, wyzeId: 'mock_user_id' });
-    return true;
+    try {
+      const res = await apiPost<LoginResponse>('/login', { email, password });
+      localStorage.setItem(AUTH_TOKEN_KEY, res.token);
+      localStorage.setItem(USER_EMAIL_KEY, res.user.email);
+      localStorage.setItem(USER_WYZE_ID_KEY, res.user.id);
+      setUser({ email: res.user.email, wyzeId: res.user.id });
+      return true;
+    } catch (err) {
+      console.error('[useAuth] Login failed:', err);
+      return false;
+    }
   };
 
-  const register = (email: string, wyzeId: string) => {
-    // モック登録: トークンとユーザー情報を保存
-    localStorage.setItem(AUTH_TOKEN_KEY, 'mock_token');
-    localStorage.setItem(USER_EMAIL_KEY, email);
-    localStorage.setItem(USER_WYZE_ID_KEY, wyzeId);
-    setUser({ email, wyzeId });
+  const register = async (email: string, password?: string) => {
+    try {
+      // パスワードがない場合はデフォルト値を設定（SignUpTemplate側の制約に合わせる）
+      const res = await apiPost<LoginResponse>('/register', { 
+        email, 
+        password: password || 'password12345' 
+      });
+      localStorage.setItem(AUTH_TOKEN_KEY, res.token);
+      localStorage.setItem(USER_EMAIL_KEY, res.user.email);
+      localStorage.setItem(USER_WYZE_ID_KEY, res.user.id);
+      setUser({ email: res.user.email, wyzeId: res.user.id });
+    } catch (err) {
+      console.error('[useAuth] Register failed:', err);
+    }
   };
 
   const logout = () => {

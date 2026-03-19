@@ -5,6 +5,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/router';
 import { MdKeyboardArrowLeft, MdNotifications, MdMenu } from 'react-icons/md';
 import { BsThreeDotsVertical } from 'react-icons/bs';
+import { useProfile } from '@/hooks/useProfile';
 
 interface AccountData {
   profile: {
@@ -60,10 +61,13 @@ export const AccountTemplate: React.FC<AccountTemplateProps> = ({
   onTabChange,
 }) => {
   const router = useRouter();
+  const { profile: apiProfile, loading: profileLoading, error: profileError, updateProfile } = useProfile();
+
   const [profile, setProfile] = useState(MOCK_ACCOUNT_DATA.profile);
   const [owner, setOwner] = useState(MOCK_ACCOUNT_DATA.owner);
   const [notifications, setNotifications] = useState(MOCK_ACCOUNT_DATA.notifications);
   const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [isEditingOwner, setIsEditingOwner] = useState(false);
@@ -72,12 +76,22 @@ export const AccountTemplate: React.FC<AccountTemplateProps> = ({
 
   // 編集用の一時State
   const [editProfile, setEditProfile] = useState(profile);
-  const [editOwner, setEditOwner] = useState(owner);
+  const [editOwner, setEditOwner] = useState({
+    name: apiProfile?.nickname ?? owner.name,
+    email: apiProfile?.email ?? owner.email,
+  });
+
+  // APIプロフィールが取得されたら反映
+  React.useEffect(() => {
+    if (apiProfile) {
+      setOwner((prev) => ({ ...prev, name: apiProfile.nickname || prev.name, email: apiProfile.email }));
+      setEditOwner((prev) => ({ ...prev, name: apiProfile.nickname || prev.name, email: apiProfile.email }));
+    }
+  }, [apiProfile]);
 
   const handleSaveProfile = () => {
     setProfile(editProfile);
     setIsEditingProfile(false);
-    console.log('Save Profile', editProfile);
   };
 
   const handleCancelProfile = () => {
@@ -85,15 +99,24 @@ export const AccountTemplate: React.FC<AccountTemplateProps> = ({
     setIsEditingProfile(false);
   };
 
-  const handleSaveOwner = () => {
-    setOwner(editOwner);
-    setIsEditingOwner(false);
-    console.log('Save Owner', editOwner);
+  const handleSaveOwner = async () => {
+    setSaveError(null);
+    const success = await updateProfile(
+      editOwner.name,
+      editOwner.email !== (apiProfile?.email ?? '') ? editOwner.email : undefined,
+    );
+    if (success) {
+      setOwner(editOwner);
+      setIsEditingOwner(false);
+    } else if (profileError) {
+      setSaveError(profileError);
+    }
   };
 
   const handleCancelOwner = () => {
     setEditOwner(owner);
     setIsEditingOwner(false);
+    setSaveError(null);
   };
 
   const handleToggleNotification = (key: NotificationKey) => {
@@ -281,6 +304,9 @@ export const AccountTemplate: React.FC<AccountTemplateProps> = ({
                     />
                   </div>
                 </div>
+                {saveError && (
+                  <p className="text-red-500 text-[12px] mt-1">{saveError}</p>
+                )}
                 <div className="flex gap-3 pt-3">
                   <Button
                     onClick={handleCancelOwner}
@@ -290,9 +316,10 @@ export const AccountTemplate: React.FC<AccountTemplateProps> = ({
                   </Button>
                   <Button
                     onClick={handleSaveOwner}
+                    disabled={profileLoading}
                     className="flex-1 bg-[#00A48D] text-blue-600 text-[14px] py-2"
                   >
-                    保存
+                    {profileLoading ? '保存中...' : '保存'}
                   </Button>
                 </div>
               </>

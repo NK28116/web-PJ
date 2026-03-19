@@ -9,6 +9,7 @@ import (
 func isOriginAllowed(origin string) bool {
 	allowedOrigins := []string{
 		"http://localhost:3000",
+		"http://localhost:3001",
 		"https://frontend-611370943102.us-east1.run.app",
 		"https://wyze-system.com",
 	}

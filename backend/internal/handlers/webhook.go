@@ -24,8 +24,11 @@ func StripeWebhook(cfg *config.Config, userRepo *repository.UserRepository) gin.
 		}
 
 		sigHeader := c.GetHeader("Stripe-Signature")
-		event, err := webhook.ConstructEvent(payload, sigHeader, cfg.StripeWebhookSecret)
+		event, err := webhook.ConstructEventWithOptions(payload, sigHeader, cfg.StripeWebhookSecret, webhook.ConstructEventOptions{
+			IgnoreAPIVersionMismatch: true,
+		})
 		if err != nil {
+			log.Printf("[webhook] ConstructEvent error: %v", err)
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid signature"})
 			return
 		}
@@ -67,19 +70,44 @@ func StripeWebhook(cfg *config.Config, userRepo *repository.UserRepository) gin.
 				return
 			}
 
-		case "customer.subscription.updated", "customer.subscription.deleted":
+		case "customer.subscription.created", "customer.subscription.updated":
 			var subscription stripe.Subscription
-			err := json.Unmarshal(event.Data.Raw, &subscription)
-			if err != nil {
+			if err := json.Unmarshal(event.Data.Raw, &subscription); err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{"error": "Error parsing subscription"})
 				return
 			}
-
 			status := string(subscription.Status)
 			log.Printf("stripe webhook: %s subscription=%s status=%s", event.Type, subscription.ID, status)
 			if err := userRepo.UpdateSubscriptionStatus(subscription.ID, status); err != nil {
 				log.Printf("stripe webhook: UpdateSubscriptionStatus error: %v", err)
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update subscription status"})
+				return
+			}
+			// price_id からプラン区分を判定して plan_tier を更新
+			if len(subscription.Items.Data) > 0 {
+				priceID := subscription.Items.Data[0].Price.ID
+				planTier := "light"
+				switch priceID {
+				case cfg.StripePriceIDBasic:
+					planTier = "basic"
+				case cfg.StripePriceIDPro:
+					planTier = "pro"
+				}
+				if err := userRepo.UpdatePlanTierBySubscription(subscription.ID, planTier); err != nil {
+					log.Printf("stripe webhook: UpdatePlanTierBySubscription error: %v", err)
+				}
+			}
+
+		case "customer.subscription.deleted":
+			var subscription stripe.Subscription
+			if err := json.Unmarshal(event.Data.Raw, &subscription); err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "Error parsing subscription"})
+				return
+			}
+			log.Printf("stripe webhook: subscription.deleted subscription=%s", subscription.ID)
+			if err := userRepo.CancelSubscription(subscription.ID); err != nil {
+				log.Printf("stripe webhook: CancelSubscription error: %v", err)
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to cancel subscription"})
 				return
 			}
 		}

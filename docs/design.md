@@ -18,16 +18,21 @@
 
 ---
 
-## 2. GCPインフラ & CI/CD パイプライン (Phase 3 & 4)
+## 2. GCP & Vercel インフラ & CI/CD パイプライン (Phase 3 & 4)
 - **要求**: 安全なデプロイフローと、機密情報の適切な管理（`docs/requirements.md` 2, 5項）
 
 ### 基本設計
-- **実装方針・概要**: GitHub Actions を利用し、特定のパスへの変更時に Cloud Run への自動デプロイを行う。機密情報は Secret Manager で一元管理する。
+- **実装方針・概要**: 
+  - **Backend**: GitHub Actions を利用し、Cloud Run への自動デプロイを行う。機密情報は Secret Manager で管理。
+  - **Frontend**: Vercel を利用し、ブランチベースの自動デプロイを行う。
+    - `develop` ブランチ: ステージング環境
+    - `main` ブランチ: 本番環境
 - **技術・アーキテクチャ**:
-  - CI/CD: GitHub Actions (Path-based trigger)
-  - Cloud: Cloud Run, Artifact Registry, Cloud SQL (Private IP)
-  - Security: GCP Secret Manager
-- **異常系・リスク**: デプロイ時のシークレット注入失敗、VPCネットワーク接続エラー。
+  - CI/CD: GitHub Actions (Backend), Vercel Git Integration (Frontend)
+  - Cloud: Cloud Run, Artifact Registry, Cloud SQL
+  - Hosting: Vercel (Next.js)
+  - Security: GCP Secret Manager, Vercel Environment Variables
+- **異常系・リスク**: デプロイ時のシークレット注入失敗、Vercel/Backend 間 CORS エラー。
 
 ### 詳細設計
 - **実装の概要**: CI/CD ワークフローの YAML 作成、GCP サービスアカウント設定、Secret Manager 連携コードの実装。
@@ -70,30 +75,50 @@
 
 ---
 
-## 6. ステージング検証 & 実機連携 (Phase 8)
-- **要求**: 本番環境（GCP/Vercel）での外部 API 連携の完遂と、決済から領収書発行までの実運用フローの検証（`docs/requirements.md` 3, 5項）
+## 5. アカウント管理 & プロフィール編集 (Phase 7)
+- **要求**: ユーザー自身によるアカウント名（ニックネーム）およびメールアドレスの変更機能（Issue #30 A項）
+
+### 基本設計
+- **実装方針・概要**: 認証済みユーザーに対し、自身のプロフィールの取得と更新を行う API を提供。フロントエンドには編集モード（フォーム）を実装し、即時反映を可能にする。
+- **技術・アーキテクチャ**:
+  - API: `GET /api/user/profile`, `PATCH /api/user/profile`
+  - Frontend: `AccountTemplate` での `useState` 管理と保存ボタン。
+- **異常系・リスク**: メールアドレス重複、不正な形式の入力。
+
+---
+
+## 6. レポート統計・分析ロジック (Phase 8)
+- **要求**: Google/Instagram データの統合表示、指標計算、およびモック動作（`docs/requirements.md` 2項, APIモック定義）
 
 ### 基本設計
 - **実装方針・概要**: 
-  - バックエンドに実装済みの Google/Instagram API をフロントエンド（Review/Report 画面）へ統合する。
-  - Stripe Checkout をフロントエンドの `BillingTemplate` と疎通させ、実際のテスト決済フローを構築する。
-  - Stripe の支払い完了イベント（Webhook）をトリガーに、指定のテンプレートに基づいた領収書 PDF 生成機能を実装する。
-  - 使用する領収書はdocs/Receiptに格納
-    - 未完成
-    - docs/Receipt/receiptTemplate.xlsx を参考に変数にできる部分は抽出しておく
+  - バックエンドで両プラットフォームのデータを取得・正規化し、フロントエンドに提供する。
+  - 来店誘導率計算: `統合アクション総数 / 統合プロフィール閲覧総数` を算出。
 - **技術・アーキテクチャ**:
-  - Integration: SWR または React Query による API フェッチ
-  - Payment: Stripe SDK (Frontend), Stripe Webhook (Backend)
-  - Document: `jspdf` または `react-pdf` によるクライアントサイド PDF 生成
-- **異常系・リスク**: 
-  - 外部 API（Meta/Google）の認可エラー、リダイレクト URL の不一致。
-  - Stripe Webhook の遅延や受信失敗による契約状態の不整合。
+  - Logic: 統合・計算ロジック（分母0考慮）。
+  - UI: `useReport` フックによるデータ取得。
 
-### 詳細設計
-- **実装の概要**: 
-  - `ReviewTemplate` / `ReportTemplate` での API 呼び出し実装。
-  - `BillingTemplate` への Stripe Checkout 遷移ロジック追加。
-  - MoneyForward テンプレート風の領収書生成ロジックの実装。
-  - GCP/Meta/Stripe 管理画面での本番（ステージング）用 URL の設定確認。
-- **コミットメッセージ**: `feat: integrate real API data and implement stripe payment with receipt generation`
-- **行数目安**: 200~300行程度 (Size: L)
+---
+
+## 7. 本番用メール認証シーケンス (Phase 9)
+- **要求**: 新規登録時のランダム認証コード送信と検証（Issue #30 A項）
+
+### 基本設計
+- **実装方針・概要**: 6桁のランダム数字を生成し、DB または Redis に一時保存。メール送信 API（SendGrid 等）を介してユーザーに通知。
+- **技術・アーキテクチャ**:
+  - Flow: `POST /api/auth/send-verification` -> `POST /api/auth/verify-code`
+- **異常系・リスク**: コードの期限切れ、メール不達。
+
+---
+
+## 8. ステージング検証 & 実機連携 (Phase 10)
+- **要求**: 本番環境（GCP/Vercel）での外部 API 連携の完遂と、全プラン（Light/Basic/Pro）の動作検証（Issue #30 B項）
+
+### 基本設計
+- **実装方針・概要**: 
+  - バックエンドに実装済みの Google/Instagram API をフロントエンド画面へ統合。
+  - Stripe Checkout を詳細プラン（Light/Basic/Pro）に対応させ、領収書発行までのフローを検証。
+- **技術・アーキテクチャ**:
+  - Integration: SWR または React Query
+  - Payment: Stripe Price ID によるプラン制御
+- **異常系・リスク**: 本番環境固有の認可エラー、リダイレクト URL 不一致。

@@ -1,79 +1,139 @@
-# テスト実行手順書 (Task 1: モノレポ基盤 & ローカルDB構築)
+# テスト実行手順書 (統合検証用)
 
 ## 概要
-
-本ドキュメントは、2026-03-07 に実施された Task 1 の不足実装（ユーザ登録 API およびデータベース設定）を検証するための手順を定義します。
+本ドキュメントは、各環境（ステージング・ローカル）における全機能の統合検証手順を定義します。
+特に GitHub Issue #30 に基づく最終統合機能（動的メール認証、プロフィール編集、詳細プラン管理、実データ表示）に加え、Stripe Elements を用いたカード登録、保存済みカード의 管理、および **領収書 PDF の動的生成** をスマートフォン実機検証を含めて網羅します。
 
 ---
 
-## 1. 自動テスト実行方法 (バックエンド)
+## 1. 環境接続情報
 
-バックエンドのロジックを検証するための自動テストを実行します。
+### 1.1 ステージング環境 (Vercel / Cloud Run)
+- **Frontend (Vercel)**:web-pj-three.vercel.app(有効になり次第stg.wyze-project.com)
+- **Backend (Cloud Run)**: https://backend-611370943102.us-east1.run.app
+- **検証端末**: iPhone (Safari) / Android (Chrome) の実機ブラウザ。
 
-### 必要な環境
-- Go: 1.21以上
-- Docker / Docker Compose
+### 1.2 ローカル環境 (Docker / Node.js)
+#### 1.2.1 環境変数の設定
+`.env` または `.env.local` に以下のキーが正しく設定されていることを確認してください。
+- `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`: Stripe 公開可能キー
+- `STRIPE_SECRET_KEY`: Stripe シークレットキー
+- `STRIPE_WEBHOOK_SECRET`: Webhook 署名検証用シークレット（`stripe listen` 実行時に表示される `whsec_...`）
+- `MOCK_MODE`: `false`（実動作を確認する場合）
 
-### 実行コマンド
+#### 1.2.2 起動手順
 ```bash
-# バックエンドのテスト実行
-cd backend
-go test ./internal/handlers/...
+# バックエンド (Docker)
+docker compose up -d
+
+# フロントエンド (ポート3001で起動する場合)
+cd frontend
+export NEXT_PUBLIC_API_URL=http://localhost:8080
+npm run dev -- -p 3001
 ```
 
 ---
 
-## 2. 手動検証手順 (バックエンド API)
+## 2. 動的メール認証 & 新規登録 (Sign Up)
 
-今回実装された `/register` エンドポイントを、ローカル環境で直接叩いて動作確認する手順です。
-事前に `docker-compose up -d` で環境を起動し、DB（PostgreSQL 16）が正常に動作していることを確認してください。
-
-### 2.1 新規ユーザ登録 (正常系)
-以下のコマンドで、新しいユーザーを作成します。
+### 2.1 認証コードの取得と入力
+1. スマホまたはブラウザで `/signup` を開き、ステップ2まで進む。
+2. 有効なメールアドレスを入力して「送信」をクリック。
+3. **バックエンドのログ** を確認し、生成されたコードを特定します。
 ```bash
-curl -X POST http://localhost:8080/register \
-     -H "Content-Type: application/json" \
-     -d '{"email": "newuser@example.com", "password": "password123"}'
+docker compose logs backend | grep "Verification Code"
+```
+**期待結果**: 「[Verification Code] for [email]: 123456」のようなログが出力されていること。
+4. **スマホ特有の確認**: 
+    - [ ] 認証コード入力欄にフォーカスした際、数字キーボードが正しく表示されるか。
+    - [ ] キーボードが表示された状態で「送信」や「次へ」ボタンが画面外に押し出され、スクロール不能にならないか。
+5. ログで確認した6桁のコードを入力し、登録を完了。
+
+---
+
+## 3. アカウント管理 & プロフィール編集
+
+### 3.1 プロフィールの更新
+1. `/account` を開き、ニックネームまたはメールアドレスを書き換え、「保存」をクリック。
+2. **スマホ特有の確認**:
+    - [ ] 入力フィールドが指でタップしやすい高さ（44px以上）を確保しているか。
+    - [ ] 保存ボタンが親指で届く位置にあり、誤タップしにくい配置か。
+**期待結果**:
+- 「プロフィールを更新しました」と表示されること。
+- 画面をリロードしても変更後の情報が保持されていること。
+
+### 3.2 メールアドレス重複チェック
+1. 既に存在する他のユーザーのメールアドレスに変更して保存を試みる。
+**期待結果**: 「このメールアドレスは既に使用されています」等のエラーが表示されること。
+
+---
+
+## 4. Stripe 課金・プラン・領収書検証
+
+### 4.1 カード情報の登録 & 削除 (Stripe SetupIntent)
+1. `/billing` を開き、「カードを登録する」をクリック。
+2. テストカード（例: `4242 4242 4242 4242`）を入力し、**「確定」ボタン** をクリック。
+**期待結果**:
+- 「登録できました」と表示され、カード情報（下4桁）が即座に反映されること。
+
+### 4.2 プラン種別の同期 (Tier)
+1. `/billing` からプランに申し込む（または `stripe trigger` を使用）。
+**期待結果**:
+- 決済完了後、アプリへのリダイレクトがスムーズに行われること。
+- `plan_tier` が `light`, `basic`, `pro` のいずれかに更新されていること。
+
+### 4.3 Webhook 疎通 & ロールバック検証
+```bash
+# Stripe CLI で Webhook をローカルに転送
+stripe listen --forward-to localhost:8080/api/webhooks/stripe
+
+# サブスクリプション削除イベントを発生させる
+stripe trigger customer.subscription.deleted
 ```
 **期待結果**:
-- HTTPステータス: `201 Created`
-- レスポンスボディ: JWTトークン (`token`) とユーザー情報 (`user`) が返却されること。
-- データベース: `users` テーブルにハッシュ化されたパスワードでレコードが作成されていること。
+- バックエンドログに `subscription.deleted` が出力され、ユーザーの `role` が `free` に戻ること。
 
-### 2.2 重複登録チェック (異常系)
-同じメールアドレスで再度登録を試みます。
-```bash
-curl -X POST http://localhost:8080/register \
-     -H "Content-Type: application/json" \
-     -d '{"email": "newuser@example.com", "password": "password123"}'
-```
-**期待結果**:
-- HTTPステータス: `409 Conflict`
-- レスポンスボディ: `{"error": "email already registered"}` が返却されること。
-
-### 2.3 入力バリデーションチェック (異常系)
-パスワードが 8 文字未満の場合の挙動を確認します。
-```bash
-curl -X POST http://localhost:8080/register \
-     -H "Content-Type: application/json" \
-     -d '{"email": "test-fail@example.com", "password": "short"}'
-```
-**期待結果**:
-- HTTPステータス: `400 Bad Request`
-- レスポンスボディ: `{"error": "invalid request"}` が返却されること。
+### 4.4 領収書 PDF 検証 (実機ダウンロード)
+1. 「お支払い履歴」の **「PDF」ボタン** をクリック。
+2. **スマホ特有の確認**:
+    - [ ] iOS (Safari) で「ファイル」アプリに保存、またはプレビューが表示されるか。
+    - [ ] Android (Chrome) でダウンロード完了が表示され、PDF 内の文字が判読可能か。
+3. **変数反映の確認**: 宛名（メールアドレス）、金額、但し書き、領収書番号が正しく反映されているか確認。
 
 ---
 
-## 3. インフラ設定の確認
+## 5. 外部コンテンツ & UI/UX チェック
 
-### 3.1 PostgreSQL バージョンの確認
-コンテナ内で PostgreSQL のバージョンを確認します。
-```bash
-docker compose exec db psql -U user -d db_name -c "SELECT version();"
-```
-**期待結果**: 出力結果に `PostgreSQL 16.x` が含まれていること。
+### 5.1 Instagram 投稿の表示
+1. Instagram 連携済みの状態で `/post` 画面を開く。
+2. `MOCK_MODE=false` であることを確認。
+**期待結果**: プレースホルダーではなく、API から取得された実際の投稿写真が表示されること。
+
+### 5.2 UI/UX モバイルチェックリスト
+- [ ] **無効なカード**: エラーメッセージ「このカードは有効ではありません」が正しく表示されるか。
+- [ ] **未認証アクセス**: ログアウト状態で制限エリアにアクセスした際、`401 Unauthorized` またはログイン画面へ遷移するか。
+- [ ] **ナビゲーション**: ハンバーガーメニューが片手で操作可能か。
+- [ ] **スクロール**: 長いレポート画面でカクつき（ジャンク）がないか。
 
 ---
 
-**最終更新日**: 2026-03-07
-**作成者**: Gemini CLI
+## 6. トラブルシューティング
+
+### 6.1 領収書 PDF のトラブルシューティング
+- **日本語が文字化け（□になる）場合**: jsPDF に日本語フォント（TTF）が読み込まれていない可能性があります。`frontend/utils/generateReceipt.ts` 内のフォント設定を確認してください。
+- **文字の位置がズレている場合**: `frontend/utils/generateReceipt.ts` の `generateReceiptPDF` 関数内の座標数値を微調整してください。
+
+### 6.2 Phase 12 関連のトラブルシューティング
+- **認証コードがログに出ない**: `MOCK_MODE` を確認。バックエンドのログで `POST /api/auth/send-code` が 200 を返しているか確認。
+- **プロフィールが保存されない**: DB マイグレーションが実施済み（`users.nickname` カラムが存在するか）を確認。
+
+---
+
+## 7. デプロイ不達・エラー時の確認
+- **Frontend**: Vercel のデプロイログを確認し、Root Directory が frontend になっているか。
+- **Backend**: Google Cloud Run のログを確認し、PORT=8080 で Listen しているか。
+
+---
+
+**最終更新日**: 2026-03-19
+**作成者**: 河崎 紗夜 (Gemini CLI)

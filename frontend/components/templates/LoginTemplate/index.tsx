@@ -27,21 +27,21 @@ export const LoginTemplate: React.FC = () => {
     window.location.assign(API_URL + '/api/auth/google/login');
   };
 
-  const handleDevLogin = () => {
-    const success = login(MOCK_USER.email, MOCK_USER.password);
+  const handleDevLogin = async () => {
+    const success = await login(MOCK_USER.email, MOCK_USER.password);
     if (success) {
       router.push('/home');
     }
   };
 
-  const handleDevLoginAs = (email: string, password: string) => {
-    const success = login(email, password);
+  const handleDevLoginAs = async (email: string, password: string) => {
+    const success = await login(email, password);
     if (success) {
       router.push('/home');
     }
   };
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     setErrorMessage('');
 
     if (!email || !password) {
@@ -49,7 +49,7 @@ export const LoginTemplate: React.FC = () => {
       return;
     }
 
-    const success = login(email, password);
+    const success = await login(email, password);
     if (success) {
       router.push('/home');
     } else {
@@ -64,7 +64,7 @@ export const LoginTemplate: React.FC = () => {
 
       {/* ブランドロゴ */}
       <p
-        className="text-white text-[33px] font-normal mt-[18px] mb-[19px]"
+        className="text-black text-[33px] font-normal mt-[18px] mb-[19px]"
         style={{ fontFamily: "Kdam Thmor Pro, serif" }}
       >
         Wyze
@@ -125,7 +125,7 @@ export const LoginTemplate: React.FC = () => {
       {/* 新規登録ボタン */}
       <button
         onClick={() => router.push('/signup')}
-        className="w-[85%] bg-[#006355] text-white text-sm font-bold py-[10px] rounded-[5px] border border-black mt-6 mb-4"
+        className="w-[85%] bg-[#006355] text-black text-sm font-bold py-[10px] rounded-[5px] border border-black mt-6 mb-4"
       >
         新規登録
       </button>

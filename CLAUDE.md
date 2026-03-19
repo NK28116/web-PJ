@@ -4,7 +4,63 @@
 
 ---
 
-## 最新の実装 (2026-03-16) — Phase 9 v8: Cloud Run 実行用 SA への Secret Manager アクセス権付与
+## 最新の実装 (2026-03-18) — Phase 11 追加: Webhook 署名検証修正・STRIPE_WEBHOOK_SECRET 設定
+
+### フェーズ / タスク
+**Phase 11 追加: Webhook API バージョン不一致解消・STRIPE_WEBHOOK_SECRET ローカル設定**
+
+### 実装した変更
+
+#### バックエンド
+- `handlers/webhook.go`: `webhook.ConstructEvent` → `webhook.ConstructEventWithOptions` に変更し `IgnoreAPIVersionMismatch: true` を設定
+  - **理由**: Stripe CLI が送信するイベントの API Version (`2025-07-30.basil`) と `stripe-go v76` が期待するバージョン (`2023-10-16`) の不一致により全イベントが 400 になっていた
+- `backend/internal/middleware/cors.go`: `allowedOrigins` に `http://localhost:3001` を追加
+
+#### 環境設定
+- `.env`: `STRIPE_WEBHOOK_SECRET=whsec_...` を追加（Stripe CLI `stripe listen` で取得）
+
+### 検証結果
+- `customer.subscription.created` → DB 更新 ✅
+- `customer.subscription.deleted` → `role='free'` ロールバック ✅
+
+### 注意事項
+- `STRIPE_WEBHOOK_SECRET` はローカル開発用（`stripe listen` 実行中のみ有効）
+- 本番用は Stripe Dashboard で別途 Webhook Endpoint を作成してシークレットを取得する
+
+---
+
+## 過去の実装 (2026-03-18) — Phase 11: Stripe カード管理 & Webhook サブスクリプション制御
+
+### フェーズ / タスク
+**Phase 11: Stripe Elements カード管理・SetupIntent フロー・Webhook ライフサイクル管理 (task-to-claude.md 準拠)**
+
+### 実装した変更
+
+#### バックエンド
+- `stripe_service.go`: `CreateSetupIntent`, `ListPaymentMethods`, `DetachPaymentMethod`, `PaymentMethodItem` 追加
+- `handlers/billing.go`: `POST /api/billing/setup-intent`, `GET /api/billing/payment-methods`, `DELETE /api/billing/payment-methods/:id` ハンドラ追加
+- `handlers/webhook.go`: `customer.subscription.created` ケース追加; `deleted` で `CancelSubscription` 呼び出し
+- `repository/user.go`: `CancelSubscription(subscriptionID string) error` 追加 — `subscription_status='canceled'`, `role='free'` をセット
+- `cmd/server/main.go`: 3 エンドポイント登録
+
+#### フロントエンド
+- `types/api.ts`: `SetupIntentResponse`, `PaymentMethod` 型追加
+- `utils/api.ts`: `apiDelete<T>` 追加（204 No Content 対応）
+- `hooks/useBilling.ts`: `fetchPaymentMethods`, `getSetupIntentSecret`, `deletePaymentMethod`, `paymentMethods`, `pmLoading`, `refetchPaymentMethods` 追加
+- `BillingTemplate.tsx`: Stripe Elements 統合 — `CardSetupForm` (SetupIntent フロー), 保存済みカード一覧 + 削除ボタン
+- `package.json`: `@stripe/react-stripe-js ^5.6.1`, `@stripe/stripe-js ^8.10.0` 追加
+
+#### テスト修正
+- `BillingTemplate.test.tsx`: Stripe / useBilling モック更新
+- `ReportTemplate.test.tsx`: TypeScript エラー解消 (`!!data`)
+
+### 注意事項
+- `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` を `.env.local` に設定が必要
+- フロントエンドテスト: 87/87 パス
+
+---
+
+## 過去の実装 (2026-03-16) — Phase 9 v8: Cloud Run 実行用 SA への Secret Manager アクセス権付与
 
 ### フェーズ / タスク
 **Phase 9 v8: `Permission denied on secret` エラー解消 (task-to-claude.md Task 4 新規追加項目)**
