@@ -61,6 +61,16 @@ func testConfig() *config.Config {
 	}
 }
 
+// mockVerificationRepository はテスト用の認証リポジトリモック
+type mockVerificationRepository struct {
+	isVerified bool
+	err        error
+}
+
+func (m *mockVerificationRepository) IsVerified(_ string) (bool, error) {
+	return m.isVerified, m.err
+}
+
 func TestLogin_Success(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
@@ -196,8 +206,9 @@ func TestRegister_Success(t *testing.T) {
 			Role:  "user",
 		},
 	}
+	mockVerifyRepo := &mockVerificationRepository{isVerified: true}
 	r := gin.New()
-	r.POST("/register", handlers.Register(testConfig(), mockRepo))
+	r.POST("/register", handlers.Register(testConfig(), mockRepo, mockVerifyRepo))
 
 	body, _ := json.Marshal(map[string]string{
 		"email":    "new@example.com",
@@ -226,8 +237,9 @@ func TestRegister_DuplicateEmail(t *testing.T) {
 	mockRepo := &flexibleMockUserRepository{
 		findByEmailUser: &models.User{ID: "existing-id", Email: "dup@example.com", Role: "user"},
 	}
+	mockVerifyRepo := &mockVerificationRepository{isVerified: true}
 	r := gin.New()
-	r.POST("/register", handlers.Register(testConfig(), mockRepo))
+	r.POST("/register", handlers.Register(testConfig(), mockRepo, mockVerifyRepo))
 
 	body, _ := json.Marshal(map[string]string{
 		"email":    "dup@example.com",
@@ -247,8 +259,9 @@ func TestRegister_InvalidRequest_ShortPassword(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	mockRepo := &flexibleMockUserRepository{}
+	mockVerifyRepo := &mockVerificationRepository{isVerified: true}
 	r := gin.New()
-	r.POST("/register", handlers.Register(testConfig(), mockRepo))
+	r.POST("/register", handlers.Register(testConfig(), mockRepo, mockVerifyRepo))
 
 	// min=8 に満たない7文字パスワード
 	body, _ := json.Marshal(map[string]string{
@@ -269,8 +282,9 @@ func TestRegister_InvalidRequest_NoEmail(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	mockRepo := &flexibleMockUserRepository{}
+	mockVerifyRepo := &mockVerificationRepository{isVerified: true}
 	r := gin.New()
-	r.POST("/register", handlers.Register(testConfig(), mockRepo))
+	r.POST("/register", handlers.Register(testConfig(), mockRepo, mockVerifyRepo))
 
 	body, _ := json.Marshal(map[string]string{
 		"password": "password123",

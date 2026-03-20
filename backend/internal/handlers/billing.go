@@ -116,6 +116,59 @@ func DeletePaymentMethod(stripeSvc *service.StripeService) gin.HandlerFunc {
 	}
 }
 
+// GetInvoices はユーザーの支払い履歴を返す
+func GetInvoices(stripeSvc *service.StripeService, userRepo *repository.UserRepository) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		userID := c.GetString("user_id")
+		if userID == "" {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+			return
+		}
+		user, err := userRepo.FindByID(userID)
+		if err != nil || user == nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "user not found"})
+			return
+		}
+		if user.StripeCustomerID == nil || *user.StripeCustomerID == "" {
+			c.JSON(http.StatusOK, gin.H{"invoices": []struct{}{}})
+			return
+		}
+		invoices, err := stripeSvc.ListInvoices(*user.StripeCustomerID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list invoices"})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"invoices": invoices})
+	}
+}
+
+// GetUpcoming は次回請求情報を返す
+func GetUpcoming(stripeSvc *service.StripeService, userRepo *repository.UserRepository) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		userID := c.GetString("user_id")
+		if userID == "" {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+			return
+		}
+		user, err := userRepo.FindByID(userID)
+		if err != nil || user == nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "user not found"})
+			return
+		}
+		if user.StripeCustomerID == nil || *user.StripeCustomerID == "" {
+			c.JSON(http.StatusOK, gin.H{"upcoming": nil})
+			return
+		}
+		upcoming, err := stripeSvc.GetUpcomingInvoice(*user.StripeCustomerID)
+		if err != nil {
+			// サブスクリプションがない場合など
+			c.JSON(http.StatusOK, gin.H{"upcoming": nil})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"upcoming": upcoming})
+	}
+}
+
 func CreatePortalSession(stripeSvc *service.StripeService, userRepo *repository.UserRepository) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		userID := c.GetString("user_id")

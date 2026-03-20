@@ -8,6 +8,10 @@ type UserRepositoryInterface interface {
 	Create(email, hashedPassword, role string) (*models.User, error)
 }
 
+type VerificationRepositoryInterface interface {
+	IsVerified(email string) (bool, error)
+}
+
 type PostRepositoryInterface interface {
 	GetAll(userID string) ([]models.Post, error)
 	GetByID(userID, postID string) (*models.Post, error)

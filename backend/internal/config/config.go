@@ -27,10 +27,22 @@ type Config struct {
 	StripeSecretKey     string
 	StripeWebhookSecret string
 
-	// Stripe Plan Price IDs
+	// Stripe Plan Price IDs (legacy / backward compat)
 	StripePriceIDLight string
 	StripePriceIDBasic string
 	StripePriceIDPro   string
+
+	// Stripe Plan Price IDs (per plan × per phase)
+	StripePriceIDLightBeta   string
+	StripePriceIDLightLaunch string
+	StripePriceIDLightGrowth string
+	StripePriceIDBasicBeta   string
+	StripePriceIDBasicLaunch string
+	StripePriceIDBasicGrowth string
+	StripePriceIDProBeta     string
+	StripePriceIDProLaunch   string
+	StripePriceIDProGrowth   string
+	StripePriceIDStagingTest string
 }
 
 func Load() *Config {
@@ -58,6 +70,17 @@ func Load() *Config {
 		StripePriceIDLight: getEnv("STRIPE_PRICE_ID_LIGHT", ""),
 		StripePriceIDBasic: getEnv("STRIPE_PRICE_ID_BASIC", ""),
 		StripePriceIDPro:   getEnv("STRIPE_PRICE_ID_PRO", ""),
+
+		StripePriceIDLightBeta:   getEnv("STRIPE_PRICE_ID_LIGHT_BETA", ""),
+		StripePriceIDLightLaunch: getEnv("STRIPE_PRICE_ID_LIGHT_LAUNCH", ""),
+		StripePriceIDLightGrowth: getEnv("STRIPE_PRICE_ID_LIGHT_GROWTH", ""),
+		StripePriceIDBasicBeta:   getEnv("STRIPE_PRICE_ID_BASIC_BETA", ""),
+		StripePriceIDBasicLaunch: getEnv("STRIPE_PRICE_ID_BASIC_LAUNCH", ""),
+		StripePriceIDBasicGrowth: getEnv("STRIPE_PRICE_ID_BASIC_GROWTH", ""),
+		StripePriceIDProBeta:     getEnv("STRIPE_PRICE_ID_PRO_BETA", ""),
+		StripePriceIDProLaunch:   getEnv("STRIPE_PRICE_ID_PRO_LAUNCH", ""),
+		StripePriceIDProGrowth:   getEnv("STRIPE_PRICE_ID_PRO_GROWTH", ""),
+		StripePriceIDStagingTest: getEnv("STRIPE_PRICE_ID_STAGING_TEST", ""),
 	}
 }
 

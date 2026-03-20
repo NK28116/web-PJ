@@ -6,6 +6,7 @@ import (
 	"github.com/stripe/stripe-go/v76/checkout/session"
 	"github.com/stripe/stripe-go/v76/customer"
 	"github.com/stripe/stripe-go/v76/paymentmethod"
+	"github.com/stripe/stripe-go/v76/invoice"
 	"github.com/stripe/stripe-go/v76/setupintent"
 	"webSystemPJ/backend/internal/config"
 )
@@ -109,6 +110,77 @@ func (s *StripeService) ListPaymentMethods(customerID string) ([]PaymentMethodIt
 func (s *StripeService) DetachPaymentMethod(pmID string) error {
 	_, err := paymentmethod.Detach(pmID, nil)
 	return err
+}
+
+// InvoiceItem は支払い履歴の返却用構造体
+type InvoiceItem struct {
+	ID            string `json:"id"`
+	AmountPaid    int64  `json:"amount_paid"`
+	Currency      string `json:"currency"`
+	Status        string `json:"status"`
+	Created       int64  `json:"created"`
+	InvoicePDFURL string `json:"invoice_pdf_url"`
+	HostedURL     string `json:"hosted_url"`
+	PlanName      string `json:"plan_name"`
+}
+
+// UpcomingInvoice は次回請求の返却用構造体
+type UpcomingInvoice struct {
+	AmountDue       int64  `json:"amount_due"`
+	Currency        string `json:"currency"`
+	NextPaymentDate int64  `json:"next_payment_date"`
+}
+
+// ListInvoices はCustomerの決済履歴を取得する
+func (s *StripeService) ListInvoices(customerID string) ([]InvoiceItem, error) {
+	params := &stripe.InvoiceListParams{
+		Customer: stripe.String(customerID),
+	}
+	params.Filters.AddFilter("limit", "", "10")
+	iter := invoice.List(params)
+	var items []InvoiceItem
+	for iter.Next() {
+		inv := iter.Invoice()
+		planName := ""
+		if len(inv.Lines.Data) > 0 && inv.Lines.Data[0].Description != "" {
+			planName = inv.Lines.Data[0].Description
+		}
+		item := InvoiceItem{
+			ID:         inv.ID,
+			AmountPaid: inv.AmountPaid,
+			Currency:   string(inv.Currency),
+			Status:     string(inv.Status),
+			Created:    inv.Created,
+			PlanName:   planName,
+		}
+		if inv.InvoicePDF != "" {
+			item.InvoicePDFURL = inv.InvoicePDF
+		}
+		if inv.HostedInvoiceURL != "" {
+			item.HostedURL = inv.HostedInvoiceURL
+		}
+		items = append(items, item)
+	}
+	if err := iter.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+// GetUpcomingInvoice は次回請求情報を取得する
+func (s *StripeService) GetUpcomingInvoice(customerID string) (*UpcomingInvoice, error) {
+	params := &stripe.InvoiceUpcomingParams{
+		Customer: stripe.String(customerID),
+	}
+	inv, err := invoice.Upcoming(params)
+	if err != nil {
+		return nil, err
+	}
+	return &UpcomingInvoice{
+		AmountDue:       inv.AmountDue,
+		Currency:        string(inv.Currency),
+		NextPaymentDate: inv.PeriodEnd,
+	}, nil
 }
 
 func (s *StripeService) CreatePortalSession(customerID string) (string, error) {

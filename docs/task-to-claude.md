@@ -88,3 +88,87 @@ GitHub Issue #30「Staging検証」の要件に基づき、未実装のアカウ
 2. **メール認証**: 新規登録時、ログに出力された動的なコードを入力して登録が完了すること。
 3. **プラン反映**: Stripe テスト決済後、ユーザーのプラン種別が DB 上で正しく（例: Basic）更新されること。
 4. **表示統合**: レビュー画面および投稿画面に、モックではない実データが表示されること。
+
+---
+
+# 実装指示書 (Phase 13: Staging環境リリース最終統合)
+
+## 概要
+Staging環境（Vercel + Cloud Run）を完全に動作させるための、環境変数および外部連携の最終設定を完遂してください。
+
+## 1. バックエンド (Cloud Run) 環境変数の更新
+
+### 要求事項
+- **FRONTEND_URL**: `http://localhost:3000` から `https://web-pj-three.vercel.app` (またはカスタムドメイン) に変更。
+- **Stripe Price IDs**: 以下の 10 個の ID を環境変数として追加（GCP Secret Manager または Cloud Run 直接設定）。
+  - `STRIPE_PRICE_ID_LIGHT_BETA`: `price_1TCfJ92LUnmFOZdSIip48gnK`
+  - `STRIPE_PRICE_ID_LIGHT_LAUNCH`: `price_1TCfJA2LUnmFOZdSFZ1h59mR`
+  - `STRIPE_PRICE_ID_LIGHT_GROWTH`: `price_1TCfJA2LUnmFOZdSIKl2XwL1`
+  - `STRIPE_PRICE_ID_BASIC_BETA`: `price_1TCfJB2LUnmFOZdSrGUixjM9`
+  - `STRIPE_PRICE_ID_BASIC_LAUNCH`: `price_1TCfJB2LUnmFOZdSFWnFWint`
+  - `STRIPE_PRICE_ID_BASIC_GROWTH`: `price_1TCfJC2LUnmFOZdSDAul8EQ6`
+  - `STRIPE_PRICE_ID_PRO_BETA`: `price_1TCfJC2LUnmFOZdSfCqz6uai`
+  - `STRIPE_PRICE_ID_PRO_LAUNCH`: `price_1TCfJC2LUnmFOZdSbe2BuuQc`
+  - `STRIPE_PRICE_ID_PRO_GROWTH`: `price_1TCfJD2LUnmFOZdSAjDsq1ig`
+  - `STRIPE_PRICE_ID_STAGING_TEST`: `price_1TCfJD2LUnmFOZdSLIYBgrWW`
+- **STRIPE_WEBHOOK_SECRET**: Stripe ダッシュボードで作成した Webhook シークレットを設定。
+
+## 2. Stripe Webhook の作成と疎通確認
+
+### 要求事項
+- **エンドポイント登録**: Stripe ダッシュボード (Test Mode) にて、以下の URL を登録。
+  - URL: `https://backend-611370943102.us-east1.run.app/api/stripe/webhook`
+  - イベント: `checkout.session.completed`, `customer.subscription.deleted`, `customer.subscription.updated`
+- **疎通確認**: Stripe CLI (`stripe listen`) またはテスト決済を行い、バックエンドのログに Webhook 受信記録が残ることを確認。
+
+## 3. Vercel (Frontend) の最終適用
+
+### 要求事項
+- **環境変数の反映**: 先ほど Vercel CLI で登録した Price ID 群が `vercel env ls` で正しく反映されているか確認。
+- **再ビルド・デプロイ**: `vercel deploy --prod` を実行し、フロントエンド側で `process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_...` が正しく読み込まれているか、Billing 画面で確認。
+
+## 4. Google / Instagram Auth のリダイレクト URI 修正
+
+### 要求事項
+- **Google Cloud Console**: 承認済みのリダイレクト URI に `https://backend-611370943102.us-east1.run.app/api/auth/google/callback` が含まれているか確認。
+- **Facebook for Developers**: アプリの設定で、ステージングのドメイン (`web-pj-three.vercel.app`) をアプリドメインに追加し、有効な OAuth リダイレクト URI を更新。
+
+## 完了定義 (Definition of Done)
+1. **決済疎通**: Staging 環境の Billing 画面から Checkout を開始し、テストカードで決済完了後、トップページにリダイレクトされること。
+2. **プラン反映**: 決済完了後, ユーザーのアカウント画面でプランが（例：Light Beta 等に）更新されていること。
+3. **ソーシャルログイン**: Google ログインボタンから Staging 環境へのログインが正常に完了すること。
+
+---
+
+# 実装指示書 (Phase 14: 決済履歴 API & 次回請求情報の統合)
+
+## 概要
+Stripe API を直接呼び出し、ユーザーに実際の支払い履歴と次回の請求予定を提示する機能を実装してください。
+
+## 1. バックエンド (Go) API エンドポイントの実装
+
+### 要求事項
+- **GET /api/billing/invoices**:
+  - ユーザーの `stripe_customer_id` を基に Stripe `invoices.List` を実行。
+  - `limit: 10` で最新の履歴を取得。
+  - レスポンス: `id`, `amount`, `status`, `created_at`, `invoice_pdf_url` (Stripe リンク)。
+- **GET /api/billing/upcoming**:
+  - Stripe `invoices.RetrieveUpcoming` を実行。
+  - レスポンス: `next_payment_date`, `amount`, `currency`。
+  - サブスクリプションが存在しない場合は 404 または null を返す。
+
+## 2. フロントエンド (Next.js) の統合
+
+### 要求事項
+- **hooks/useBilling.ts**:
+  - `fetchInvoices` および `fetchUpcoming` 関数を実装。
+  - `MOCK_MODE=false` の場合にこれらの API を呼び出すよう制御。
+- **components/templates/BillingTemplate/BillingTemplate.tsx**:
+  - **クレジットカード情報ブロックの直下**に「次回のご請求予定」セクションを新設。
+  - 履歴テーブルの「領収書」ボタンを、Stripe から取得した `invoice_pdf_url` への外部リンクに変更。
+  - モックデータ (`MOCK_PAYMENT_HISTORY`) を API から取得した実データに差し替え。
+
+## 完了定義 (Definition of Done)
+1. **履歴表示**: Billing 画面の「支払い履歴」に、実際の Stripe 決済履歴が最大 10 件表示されること。
+2. **領収書アクセス**: 履歴の「領収書」ボタンをクリックすると、Stripe が生成した PDF が別タブで開くこと。
+3. **次回請求**: クレジットカード情報の下に、次回の決済予定日と金額が正しく表示されること。

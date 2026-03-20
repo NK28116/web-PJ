@@ -26,6 +26,22 @@ func (r *VerificationRepository) Create(email, code string, expiresAt time.Time)
 	return err
 }
 
+// IsVerified はメールアドレスが認証済み（使用済みコードあり）かを返す。
+func (r *VerificationRepository) IsVerified(email string) (bool, error) {
+	var id string
+	err := r.db.QueryRow(
+		"SELECT id FROM email_verifications WHERE email = $1 AND used = true ORDER BY created_at DESC LIMIT 1",
+		email,
+	).Scan(&id)
+	if err == sql.ErrNoRows {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
 // Verify は認証コードを検証し、有効であれば使用済みにして true を返す。
 func (r *VerificationRepository) Verify(email, code string) (bool, error) {
 	var id string

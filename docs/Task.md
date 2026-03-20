@@ -213,3 +213,119 @@ instagramとGoogle Business Profileは今後の拡充を見据えた実装やド
 ### 検証環境
 - **Frontend URL:** `https://web-pj-three.vercel.app/`
 - **Backend URL:** `https://backend-611370943102.us-east1.run.app`
+
+---
+
+## Phase 12: Staging検証に向けた最終統合
+
+### Task 1: アカウント・プロフィール編集機能
+- [x] Backend: `GET /PUT /api/user/profile` 実装
+- [x] Frontend: `useProfile` hook 実装
+- [x] Frontend: `AccountTemplate` に編集モード実装
+
+### Task 2: 本番用メール認証シーケンス
+- [x] Backend: 6桁認証コード生成・DB保存（10分有効期限）
+- [x] Backend: Staging ログ出力（`【Verification Code】`）
+- [x] Frontend: `SignUpTemplate` に認証コード入力ステップ実装
+- [x] Backend: `/register` にメール認証済みチェック追加（未認証→403）
+
+### Task 3: 3段階プラン & サブスクリプション制御
+- [x] Backend: `plan_tier` カラム追加（migration 000007）
+- [x] Backend: Webhook で price_id → plan_tier マッピング
+- [x] Frontend: `BillingTemplate` に現在プラン表示を追加
+- [x] Frontend: `CurrentFeaturesTemplate` を実API（`useProfile`）連携に変更
+- [x] **Stripe Price ID 環境変数設定** — Secret Manager に10個登録済み
+
+### Task 4: 外部コンテンツの表示統合 & 領収書対応
+- [x] Frontend: `useReviews` に `NEXT_PUBLIC_MOCK_MODE` 切替ロジック追加
+- [x] Frontend: `useInstagramMedia` に `NEXT_PUBLIC_MOCK_MODE` 切替ロジック追加
+- [x] Frontend: `PostTemplate` はハイブリッド方式（実データ優先、なければモック）で対応済み
+- [x] Frontend: 領収書 PDF 生成（`generateReceipt.ts` / jsPDF）実装済み
+- [x] **決済履歴 API 実装（Stripe Invoice 取得）** — Phase 14 で実装完了
+- [ ] **Google / Instagram 外部サービス設定** — マスター作業（下記参照）
+
+---
+
+## Phase 13: Staging環境リリース最終統合
+
+### 1. Cloud Run 環境変数の更新 ✅ 完了
+- [x] `FRONTEND_URL` → `https://web-pj-three.vercel.app`（プレーン環境変数）
+- [x] Stripe Price ID 10個 → Secret Manager に登録済み
+- [x] Cloud Run デプロイ済み（revision `backend-00021-75z`）
+
+### 2. Stripe Webhook の作成
+
+1. [Stripe Dashboard](https://dashboard.stripe.com/test/webhooks) → 「エンドポイントを追加」
+2. URL: `https://backend-611370943102.us-east1.run.app/api/webhooks/stripe`
+3. イベント選択:
+   - `checkout.session.completed`
+   - `customer.subscription.created`
+   - `customer.subscription.updated`
+   - `customer.subscription.deleted`
+4. 作成後、「署名シークレット」(`whsec_...`) をコピー → Secret Manager に `STRIPE_WEBHOOK_SECRET` として登録
+
+### 3. Vercel フロントエンド環境変数
+
+**Vercel Dashboard または CLI で以下を登録：**
+
+| 変数名 | 値 |
+|---|---|
+| `NEXT_PUBLIC_STRIPE_PRICE_ID_LIGHT` | `price_1TCfJ92LUnmFOZdSIip48gnK` |
+| `NEXT_PUBLIC_STRIPE_PRICE_ID_BASIC` | `price_1TCfJB2LUnmFOZdSrGUixjM9` |
+| `NEXT_PUBLIC_STRIPE_PRICE_ID_PRO` | `price_1TCfJC2LUnmFOZdSfCqz6uai` |
+| `NEXT_PUBLIC_MOCK_MODE` | `false` |
+
+設定後、再デプロイが必要です。
+
+### 4. Google / Instagram OAuth リダイレクト URI 確認
+
+- **Google Cloud Console** → OAuth 2.0 クライアント → 承認済みリダイレクト URI に以下が含まれること:
+  - `https://backend-611370943102.us-east1.run.app/api/auth/google/callback`
+- **Meta for Developers** → アプリ設定:
+  - アプリドメインに `web-pj-three.vercel.app` を追加
+  - 有効なOAuth リダイレクト URI: `https://backend-611370943102.us-east1.run.app/api/auth/instagram/callback`
+
+### 5. 疎通確認チェックリスト
+
+- [ ] Google ログインボタン → ダッシュボード遷移
+- [ ] Billing 画面で Light/Basic/Pro の3プラン表示 & 価格表示
+- [ ] テストカード (`4242 4242 4242 4242`) で Stripe Checkout 完了
+- [ ] Checkout 完了後、`/billing?checkout=success` にリダイレクト
+- [ ] アカウント画面でプランが更新されていること（例: `light`）
+- [ ] Review 画面に Google 口コミが表示されること
+- [ ] Post 画面に Instagram 投稿が表示されること
+
+---
+
+## Phase 14: 決済履歴 API & 次回請求情報の統合 ✅ 完了
+
+- [x] Backend: `GET /api/billing/invoices` — Stripe Invoice 最新10件取得
+- [x] Backend: `GET /api/billing/upcoming` — 次回請求情報取得
+- [x] Frontend: `useBilling` に `fetchInvoices` / `fetchUpcoming` 追加
+- [x] Frontend: `BillingTemplate` モックデータ → 実データ切替
+- [x] Frontend: PDF ボタン → Stripe PDF URL 優先、フォールバックで `generateReceiptPDF`
+
+---
+
+## 残りのマスター手動作業
+
+### Stripe Webhook 登録（未完了）
+1. [Stripe Dashboard](https://dashboard.stripe.com/test/webhooks) → 「エンドポイントを追加」
+2. URL: `https://backend-611370943102.us-east1.run.app/api/webhooks/stripe`
+3. イベント: `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`
+4. 署名シークレット → Secret Manager に `STRIPE_WEBHOOK_SECRET` として登録
+5. Cloud Run 再デプロイ
+
+### Vercel 環境変数（未完了）
+| 変数名 | 値 |
+|---|---|
+| `NEXT_PUBLIC_STRIPE_PRICE_ID_LIGHT` | `price_1TCfJ92LUnmFOZdSIip48gnK` |
+| `NEXT_PUBLIC_STRIPE_PRICE_ID_BASIC` | `price_1TCfJB2LUnmFOZdSrGUixjM9` |
+| `NEXT_PUBLIC_STRIPE_PRICE_ID_PRO` | `price_1TCfJC2LUnmFOZdSfCqz6uai` |
+| `NEXT_PUBLIC_MOCK_MODE` | `false` |
+
+設定後、Vercel 再デプロイが必要。
+
+### Google / Instagram OAuth リダイレクト URI 確認（未完了）
+- **Google Cloud Console**: `https://backend-611370943102.us-east1.run.app/api/auth/google/callback`
+- **Meta for Developers**: ドメイン `web-pj-three.vercel.app` + リダイレクト URI `https://backend-611370943102.us-east1.run.app/api/auth/instagram/callback`

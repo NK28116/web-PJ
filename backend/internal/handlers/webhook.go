@@ -86,13 +86,22 @@ func StripeWebhook(cfg *config.Config, userRepo *repository.UserRepository) gin.
 			// price_id からプラン区分を判定して plan_tier を更新
 			if len(subscription.Items.Data) > 0 {
 				priceID := subscription.Items.Data[0].Price.ID
-				planTier := "light"
+				planTier := "light" // default
+
+				// Basic plan prices (all phases)
 				switch priceID {
-				case cfg.StripePriceIDBasic:
+				case cfg.StripePriceIDBasic,
+					cfg.StripePriceIDBasicBeta,
+					cfg.StripePriceIDBasicLaunch,
+					cfg.StripePriceIDBasicGrowth:
 					planTier = "basic"
-				case cfg.StripePriceIDPro:
+				case cfg.StripePriceIDPro,
+					cfg.StripePriceIDProBeta,
+					cfg.StripePriceIDProLaunch,
+					cfg.StripePriceIDProGrowth:
 					planTier = "pro"
 				}
+
 				if err := userRepo.UpdatePlanTierBySubscription(subscription.ID, planTier); err != nil {
 					log.Printf("stripe webhook: UpdatePlanTierBySubscription error: %v", err)
 				}

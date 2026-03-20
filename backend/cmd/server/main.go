@@ -54,7 +54,7 @@ func main() {
 		})
 	})
 	r.GET("/health", handlers.Health)
-	r.POST("/register", handlers.Register(cfg, userRepo))
+	r.POST("/register", handlers.Register(cfg, userRepo, verifyRepo))
 	r.POST("/login", handlers.Login(cfg, userRepo))
 	r.POST("/api/auth/send-code", handlers.SendVerificationCode(verifyRepo))
 	r.POST("/api/auth/verify-code", handlers.VerifyCode(verifyRepo))
@@ -104,6 +104,8 @@ func main() {
 		protected.POST("/api/billing/setup-intent", handlers.CreateSetupIntent(stripeSvc, userRepo))
 		protected.GET("/api/billing/payment-methods", handlers.GetPaymentMethods(stripeSvc, userRepo))
 		protected.DELETE("/api/billing/payment-methods/:id", handlers.DeletePaymentMethod(stripeSvc))
+		protected.GET("/api/billing/invoices", handlers.GetInvoices(stripeSvc, userRepo))
+		protected.GET("/api/billing/upcoming", handlers.GetUpcoming(stripeSvc, userRepo))
 	}
 
 	log.Printf("server starting on :%s", cfg.Port)

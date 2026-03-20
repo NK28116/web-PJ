@@ -34,11 +34,22 @@ type registerRequest struct {
 	Password string `json:"password" binding:"required,min=8"`
 }
 
-func Register(cfg *config.Config, userRepo repository.UserRepositoryInterface) gin.HandlerFunc {
+func Register(cfg *config.Config, userRepo repository.UserRepositoryInterface, verifyRepo repository.VerificationRepositoryInterface) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req registerRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+			return
+		}
+
+		// メール認証済みチェック
+		verified, err := verifyRepo.IsVerified(req.Email)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+			return
+		}
+		if !verified {
+			c.JSON(http.StatusForbidden, gin.H{"error": "email not verified"})
 			return
 		}
 

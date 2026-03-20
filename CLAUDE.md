@@ -4,7 +4,187 @@
 
 ---
 
-## 最新の実装 (2026-03-18) — Phase 11 追加: Webhook 署名検証修正・STRIPE_WEBHOOK_SECRET 設定
+## 最新の実装 (2026-03-20) — Phase 13 & 14: Price ID 10個対応 & 決済履歴API実装
+
+### フェーズ / タスク
+**Phase 13: Staging環境リリース最終統合 — Price ID 10個対応・Cloud Run 再デプロイ**
+**Phase 14: 決済履歴 API & 次回請求情報の統合**
+
+### 実装した変更
+
+#### Phase 13: Price ID 3個→10個拡張
+
+##### `backend/internal/config/config.go`
+- 既存3フィールド（`StripePriceIDLight/Basic/Pro`）を後方互換のため維持
+- 10個の新フィールド追加: `LightBeta/Launch/Growth`, `BasicBeta/Launch/Growth`, `ProBeta/Launch/Growth`, `StagingTest`
+- 対応する `getEnv()` を `Load()` に追加
+
+##### `backend/internal/handlers/webhook.go`
+- `price_id → plan_tier` マッピングを拡張: レガシー3個 + フェーズ別9個の全てで正しくプラン判定
+- Basic: `cfg.StripePriceIDBasic`, `BasicBeta`, `BasicLaunch`, `BasicGrowth` → `"basic"`
+- Pro: `cfg.StripePriceIDPro`, `ProBeta`, `ProLaunch`, `ProGrowth` → `"pro"`
+- それ以外（Light系含む）→ `"light"`（デフォルト）
+
+##### `.github/workflows/cd-staging.yml`
+- `--set-env-vars` 追加: `FRONTEND_URL`, `GIN_MODE`, `GOOGLE_REDIRECT_URL`, `INSTAGRAM_REDIRECT_URL`
+- `--set-secrets` に10個の Price ID シークレット + `STRIPE_WEBHOOK_SECRET` を追加
+- `FRONTEND_URL` を `--set-secrets` から `--set-env-vars` に移動（Secret Manager ではなくプレーン環境変数のため）
+
+##### GCP Secret Manager
+- 10個の Price ID シークレットを新規作成（`STRIPE_PRICE_ID_LIGHT_BETA` ～ `STRIPE_PRICE_ID_STAGING_TEST`）
+
+#### Phase 14: 決済履歴API
+
+##### `backend/internal/service/stripe_service.go`
+- `InvoiceItem` / `UpcomingInvoice` 構造体追加
+- `ListInvoices(customerID)`: Stripe `invoices.List` で最新10件取得（ID, 金額, PDF URL 等）
+- `GetUpcomingInvoice(customerID)`: Stripe `invoices.Upcoming` で次回請求情報取得
+
+##### `backend/internal/handlers/billing.go`
+- `GetInvoices`: `GET /api/billing/invoices` — ユーザーの支払い履歴を返却
+- `GetUpcoming`: `GET /api/billing/upcoming` — 次回請求情報を返却（サブスクなしは null）
+
+##### `backend/cmd/server/main.go`
+- `GET /api/billing/invoices` と `GET /api/billing/upcoming` をルート登録
+
+##### `frontend/types/api.ts`
+- `InvoiceItem`, `UpcomingInvoice` 型追加
+
+##### `frontend/hooks/useBilling.ts`
+- `fetchInvoices`: `/api/billing/invoices` + `/api/billing/upcoming` を並列取得
+- `invoices`, `invoicesLoading`, `upcoming`, `refetchInvoices` を返却に追加
+- `IS_MOCK` チェック: モック時は空配列/null を返却
+
+##### `frontend/components/templates/BillingTemplate/BillingTemplate.tsx`
+- 支払い履歴: `MOCK_PAYMENT_HISTORY` → 実データ優先（`invoices` が存在すれば使用）
+- PDF ボタン: `invoicePdfUrl` があれば Stripe PDF を別タブで開く、なければ `generateReceiptPDF` フォールバック
+- 次回お支払い: `upcoming` データがあれば実データ表示、なければ「予定はありません」
+
+##### テスト修正
+- `BillingTemplate.test.tsx`: `invoices`, `invoicesLoading`, `upcoming`, `refetchInvoices` モック追加
+- 次回お支払いテストを「予定はありません」表示に変更（テスト環境では upcoming=null）
+
+### 検証結果
+- フロントエンドテスト 90/90 パス
+- Go ビルド成功
+- Cloud Run デプロイ成功（revision `backend-00021-75z`）
+- Vercel デプロイ成功
+
+### 注意事項（マスター作業）
+- Stripe Dashboard で Webhook エンドポイント登録が必要: `https://backend-611370943102.us-east1.run.app/api/webhooks/stripe`
+- `STRIPE_WEBHOOK_SECRET` を Secret Manager に登録後、Cloud Run 再デプロイが必要
+- Vercel 環境変数 `NEXT_PUBLIC_MOCK_MODE=false` の設定が必要
+- Google/Instagram OAuth リダイレクト URI の確認が必要
+
+---
+
+## 過去の実装 (2026-03-20) — Phase 12 Task 4: 外部コンテンツ MOCK_MODE 切替 & Task.md 作成
+
+### フェーズ / タスク
+**Phase 12 Task 4: 外部コンテンツの表示統合 — `NEXT_PUBLIC_MOCK_MODE` によるモック/実データ切替**
+
+### 実装した変更
+
+#### `frontend/hooks/useReviews.ts`
+- `NEXT_PUBLIC_MOCK_MODE` 環境変数チェックを追加
+- `IS_MOCK === true` の場合、`reviewMockData` を返却して API 呼び出しをスキップ
+- ステージング環境では `NEXT_PUBLIC_MOCK_MODE=false` で実 API を使用
+
+#### `frontend/hooks/useInstagramMedia.ts`
+- `NEXT_PUBLIC_MOCK_MODE` 環境変数チェックを追加
+- `IS_MOCK === true` の場合、空配列を返却して API 呼び出しをスキップ
+
+#### `docs/Task.md`
+- Phase 12 の全タスク完了状況を追記
+- Phase 13（マスター手動作業）を新規追加：Cloud Run 環境変数、Stripe Webhook 設定、Vercel 環境変数、OAuth リダイレクト URI
+- 疎通確認チェックリストを追加
+- 未実装・要設計判断セクション（Stripe Invoice API）を追加
+
+### 確認済み（変更不要と判断したもの）
+
+| ファイル | 確認内容 | 状態 |
+|---|---|---|
+| `PostTemplate` | ハイブリッド方式（`useInstagramMedia` → 空の場合 `generateMockPosts` フォールバック）| ✅ 既存ロジックで対応済み |
+| `generateReceipt.ts` | 領収書 PDF 生成（jsPDF）| ✅ Phase 11 で実装済み |
+
+### 検証結果
+- フロントエンドテスト 90/90 パス
+
+### 注意事項
+- `NEXT_PUBLIC_MOCK_MODE` は Vercel 環境変数として `false` を設定する必要あり（マスター作業）
+- 決済履歴 API（Stripe Invoice 取得）は設計判断が必要なため未実装
+
+---
+
+## 過去の実装 (2026-03-20) — Phase 12 Task 3: BillingTemplate 現在プラン表示 & CurrentFeaturesTemplate 実API連携
+
+### フェーズ / タスク
+**Phase 12 Task 3: 3段階プラン & サブスクリプション制御 — UI を実API連携に変更**
+
+### 実装した変更
+
+#### `frontend/components/templates/BillingTemplate/BillingTemplate.tsx`
+- `useProfile()` フックを統合し、現在のプランを取得
+- プラン選択セクション上部に「現在のプラン」表示を追加（`plan_tier !== 'free'` 時のみ）
+- 契約中プランのラジオボタンを無効化し「現在のプラン」ラベルを表示
+- セクション見出しを動的変更（「プランを選択」/「プランを変更」）
+
+#### `frontend/components/templates/CurrentFeaturesTemplate/CurrentFeaturesTemplate.tsx`
+- `useProfile()` フックを統合し、`plan_tier` からプラン状態を動的取得
+- ハードコードされた `PLAN_DATA` を `PLAN_DISPLAY` マップに変更（Light/Basic/Pro 対応）
+- `planStatus` を `useState` から `useProfile` 由来の算出値に変更（`free` → `inactive`, それ以外 → `active`）
+- `PRICE_IDS` を環境変数（`NEXT_PUBLIC_STRIPE_PRICE_ID_*`）から取得するよう変更
+- プラン変更ブロックを動的化：現在プランより上位のみ表示
+
+#### テスト修正
+- `CurrentFeaturesTemplate.test.tsx`: `useBilling` / `useProfile` モック追加、「未契約」複数箇所対応
+- `BillingTemplate.test.tsx`: `useProfile` モック追加
+
+### 検証結果
+- フロントエンドテスト 90/90 パス
+- Go ビルド成功
+
+---
+
+## 過去の実装 (2026-03-19) — Phase 12 Task 2: /register エンドポイントにメール認証済みチェック追加
+
+### フェーズ / タスク
+**Phase 12 Task 2: 本番用メール認証シーケンス — `/register` にメール認証済みチェックを追加**
+
+### 実装した変更
+
+#### `backend/internal/repository/verification.go`
+- `IsVerified(email string) (bool, error)` メソッド追加
+  - `email_verifications` テーブルから `used = true` のレコードを検索
+  - メール認証コード検証済み（`/api/auth/verify-code` 成功済み）かどうかを判定
+
+#### `backend/internal/repository/interfaces.go`
+- `VerificationRepositoryInterface` インターフェース追加（`IsVerified` メソッド定義）
+  - テスト時のモック差し替えを可能にする
+
+#### `backend/internal/handlers/auth.go`
+- `Register` ハンドラの引数に `verifyRepo repository.VerificationRepositoryInterface` を追加
+- ユーザー作成前に `verifyRepo.IsVerified(req.Email)` を呼び出し
+- 未認証の場合 `403 Forbidden` (`"email not verified"`) を返却
+
+#### `backend/cmd/server/main.go`
+- `Register(cfg, userRepo)` → `Register(cfg, userRepo, verifyRepo)` に変更
+
+#### `backend/internal/handlers/auth_test.go`
+- `mockVerificationRepository` 構造体追加（`isVerified bool` で制御）
+- 全4テスト（Success, DuplicateEmail, ShortPassword, NoEmail）に `mockVerifyRepo` を追加
+
+### 検証結果
+- `go build ./...` → 成功
+- `TestRegister_Success` / `TestRegister_DuplicateEmail` / `TestRegister_InvalidRequest_ShortPassword` / `TestRegister_InvalidRequest_NoEmail` → 全パス
+
+### 注意事項
+- メール認証なしで `/register` を直接呼ぶと `403` が返る（セキュリティ強化）
+- フロントエンドの `SignUpTemplate` は既に `/api/auth/send-code` → `/api/auth/verify-code` → `/register` の順で呼び出しているため変更不要
+
+---
+
+## 過去の実装 (2026-03-18) — Phase 11 追加: Webhook 署名検証修正・STRIPE_WEBHOOK_SECRET 設定
 
 ### フェーズ / タスク
 **Phase 11 追加: Webhook API バージョン不一致解消・STRIPE_WEBHOOK_SECRET ローカル設定**
