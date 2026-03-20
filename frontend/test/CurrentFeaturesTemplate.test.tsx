@@ -38,11 +38,38 @@ jest.mock('../components/organisms/SideMenu', () => ({
   ),
 }))
 
+// useBillingのモック
+jest.mock('../hooks/useBilling', () => ({
+  useBilling: () => ({
+    startCheckout: jest.fn(),
+    openPortal: jest.fn(),
+    getSetupIntentSecret: jest.fn(),
+    deletePaymentMethod: jest.fn(),
+    paymentMethods: [],
+    pmLoading: false,
+    loading: false,
+    error: null,
+    refetchPaymentMethods: jest.fn(),
+  }),
+}))
+
+// useProfileのモック（デフォルト: 未契約）
+jest.mock('../hooks/useProfile', () => ({
+  useProfile: () => ({
+    profile: { id: '1', email: 'test@example.com', nickname: 'test', role: 'user', plan_tier: 'free' },
+    loading: false,
+    error: null,
+    refetch: jest.fn(),
+    updateProfile: jest.fn(),
+  }),
+}))
+
 describe('CurrentFeaturesTemplate - 初期表示の確認', () => {
   test('ステータスが「未契約」であること', () => {
     render(<CurrentFeaturesTemplate />)
 
-    expect(screen.getByText('未契約')).toBeInTheDocument()
+    const badges = screen.getAllByText('未契約')
+    expect(badges.length).toBeGreaterThanOrEqual(1)
     expect(screen.queryByText('契約中')).not.toBeInTheDocument()
   })
 
@@ -52,11 +79,10 @@ describe('CurrentFeaturesTemplate - 初期表示の確認', () => {
     expect(screen.getByText('契約する')).toBeInTheDocument()
   })
 
-  test('契約期間が非表示であること', () => {
+  test('未契約状態で自動更新が非表示であること', () => {
     render(<CurrentFeaturesTemplate />)
 
-    expect(screen.queryByText('契約期間')).not.toBeInTheDocument()
-    expect(screen.queryByText('2026/01/01 - 2026/12/31')).not.toBeInTheDocument()
+    expect(screen.queryByText('自動更新')).not.toBeInTheDocument()
   })
 })
 
@@ -88,21 +114,17 @@ describe('CurrentFeaturesTemplate - 解約フローの確認', () => {
     // 解約をクリック
     fireEvent.click(screen.getByText('解約'))
 
-    // ステータスが「未契約」に変化
-    expect(screen.getByText('未契約')).toBeInTheDocument()
+    // ステータスが「未契約」のまま
+    const badges = screen.getAllByText('未契約')
+    expect(badges.length).toBeGreaterThanOrEqual(1)
     expect(screen.queryByText('契約中')).not.toBeInTheDocument()
   })
 
-  test('解約後、更新日と契約期間が非表示になること', () => {
+  test('未契約状態では自動更新が非表示であること', () => {
     render(<CurrentFeaturesTemplate />)
 
-    // メニューを開いて解約
-    fireEvent.click(screen.getByLabelText('メニュー'))
-    fireEvent.click(screen.getByText('解約'))
-
-    // 契約期間と更新日が非表示
-    expect(screen.queryByText('契約期間')).not.toBeInTheDocument()
-    expect(screen.queryByText('更新日')).not.toBeInTheDocument()
+    // 未契約のため自動更新表示なし
+    expect(screen.queryByText('自動更新')).not.toBeInTheDocument()
   })
 
   test('未契約状態では「契約する」ボタンが常に表示されること', () => {
@@ -130,9 +152,9 @@ describe('CurrentFeaturesTemplate - 自動更新停止フローの確認', () =>
     // 自動更新を停止
     fireEvent.click(screen.getByText('自動更新を停止'))
 
-    // planStatusがinactiveのため更新日セクション自体が非表示
-    expect(screen.queryByText('自動更新が設定されていません')).not.toBeInTheDocument()
-    expect(screen.queryByText(/2027\/01\/01/)).not.toBeInTheDocument()
+    // planStatusがinactiveのため自動更新セクション自体が非表示
+    expect(screen.queryByText('停止中')).not.toBeInTheDocument()
+    expect(screen.queryByText('有効')).not.toBeInTheDocument()
   })
 
   test('未契約状態で自動更新停止を押してもステータスは「未契約」のままであること', () => {
@@ -143,7 +165,8 @@ describe('CurrentFeaturesTemplate - 自動更新停止フローの確認', () =>
     fireEvent.click(screen.getByText('自動更新を停止'))
 
     // ステータスは「未契約」のまま
-    expect(screen.getByText('未契約')).toBeInTheDocument()
+    const badges = screen.getAllByText('未契約')
+    expect(badges.length).toBeGreaterThanOrEqual(1)
     expect(screen.queryByText('契約中')).not.toBeInTheDocument()
   })
 })

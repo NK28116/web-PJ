@@ -2,20 +2,21 @@ import { Button } from '@/atoms/Button';
 import { Text } from '@/atoms/Text';
 import { BaseTemplate } from '@/templates/BaseTemplate';
 import { useBilling } from '@/hooks/useBilling';
+import { useProfile } from '@/hooks/useProfile';
 import React, { useState } from 'react';
 import { BsThreeDotsVertical } from 'react-icons/bs';
 
 type PlanStatus = 'active' | 'inactive';
 
-const PLAN_DATA = {
-  name: 'Light プラン',
-  price: '30,000',
+const PLAN_DISPLAY: Record<string, { name: string; price: string }> = {
+  light: { name: 'Light プラン', price: '10,000' },
+  basic: { name: 'Basic プラン', price: '29,800' },
+  pro: { name: 'Pro プラン', price: '59,800' },
+};
+
+const PLAN_DATA_DEFAULT = {
   currency: '円(税抜)',
-  interval: '年契約',
-  paymentMethod: 'Web口座振替',
-  startDate: '2026/01/01',
-  endDate: '2026/12/31',
-  nextRenewalDate: '2027/01/01',
+  paymentMethod: 'クレジットカード',
 };
 
 export interface CurrentFeaturesTemplateProps {
@@ -29,19 +30,23 @@ export const CurrentFeaturesTemplate: React.FC<CurrentFeaturesTemplateProps> = (
   activeTab,
   onTabChange,
 }) => {
-  const [planStatus, setPlanStatus] = useState<PlanStatus>('inactive');
+  const { profile } = useProfile();
+  const planTier = profile?.plan_tier || 'free';
+  const planStatus: PlanStatus = planTier !== 'free' ? 'active' : 'inactive';
+  const planInfo = PLAN_DISPLAY[planTier] || { name: '未契約', price: '0' };
+
   const [isAutoRenewal, setIsAutoRenewal] = useState(true);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { startCheckout, loading: billingLoading, error: billingError } = useBilling();
 
   const PRICE_IDS = {
-    light: 'price_light_plan',
-    basic: 'price_basic_plan',
-    pro: 'price_pro_plan',
+    light: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_LIGHT || '',
+    basic: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_BASIC || '',
+    pro: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_PRO || '',
   } as const;
 
   const handleCancel = () => {
-    setPlanStatus('inactive');
+    // TODO: Stripe Portal経由で解約API呼び出し
     setIsAutoRenewal(false);
     setIsMenuOpen(false);
   };
@@ -76,7 +81,7 @@ export const CurrentFeaturesTemplate: React.FC<CurrentFeaturesTemplateProps> = (
             </div>
             <div className="flex items-center gap-2">
                 <Text className="text-[16px] text-black font-normal">
-                    {PLAN_DATA.name}
+                    {planInfo.name}
                 </Text>
                 {planStatus === 'active' ? (
                   <div className="border border-[#00A48D] text-[#00A48D] px-2 py-0.5 text-[12px]">
@@ -118,27 +123,21 @@ export const CurrentFeaturesTemplate: React.FC<CurrentFeaturesTemplateProps> = (
 
         {/* 契約情報ブロック */}
         <div className="border border-gray-300 p-4 space-y-3 bg-white">
-            {planStatus === 'active' && (
-              <div className="flex justify-between">
-                  <Text className="text-[14px] text-black">契約期間</Text>
-                  <Text className="text-[14px] text-black">{PLAN_DATA.startDate} - {PLAN_DATA.endDate}</Text>
-              </div>
-            )}
             <div className="flex justify-between">
                 <Text className="text-[14px] text-black">月額料金</Text>
-                <Text className="text-[14px] text-black">{PLAN_DATA.price} {PLAN_DATA.currency}</Text>
+                <Text className="text-[14px] text-black">{planInfo.price} {PLAN_DATA_DEFAULT.currency}</Text>
             </div>
             <div className="flex justify-between">
                 <Text className="text-[14px] text-black">支払方法</Text>
-                <Text className="text-[14px] text-black">{PLAN_DATA.paymentMethod}</Text>
+                <Text className="text-[14px] text-black">{PLAN_DATA_DEFAULT.paymentMethod}</Text>
             </div>
             {planStatus === 'active' && (
               <div className="flex justify-between">
-                  <Text className="text-[14px] text-black">更新日</Text>
+                  <Text className="text-[14px] text-black">自動更新</Text>
                   {isAutoRenewal ? (
-                    <Text className="text-[14px] text-black">{PLAN_DATA.nextRenewalDate} (自動更新)</Text>
+                    <Text className="text-[14px] text-[#00A48D]">有効</Text>
                   ) : (
-                    <Text className="text-[14px] text-red-500">自動更新が設定されていません</Text>
+                    <Text className="text-[14px] text-red-500">停止中</Text>
                   )}
               </div>
             )}
@@ -150,38 +149,36 @@ export const CurrentFeaturesTemplate: React.FC<CurrentFeaturesTemplateProps> = (
           </div>
         )}
 
-        {/* プラン変更ブロック */}
-        <div className="border border-gray-300 bg-white">
-             <div className="border-b border-gray-300 p-2">
+        {/* プラン変更ブロック（契約中のみ表示） */}
+        {planStatus === 'active' && (() => {
+          const tierOrder = ['light', 'basic', 'pro'];
+          const currentIdx = tierOrder.indexOf(planTier);
+          const upgradePlans = tierOrder
+            .filter((_, i) => i > currentIdx)
+            .map((id) => ({ id, ...PLAN_DISPLAY[id], priceId: PRICE_IDS[id as keyof typeof PRICE_IDS] }));
+          if (upgradePlans.length === 0) return null;
+          return (
+            <div className="border border-gray-300 bg-white">
+              <div className="border-b border-gray-300 p-2">
                 <Text className="text-[14px] text-black">プラン変更</Text>
-             </div>
-             <div className="p-4 space-y-2">
-                <div className="flex items-center gap-3">
-                    <Text>
-                      Basic プラン
-                    </Text>
+              </div>
+              <div className="p-4 space-y-2">
+                {upgradePlans.map((plan) => (
+                  <div key={plan.id} className="flex items-center justify-between">
+                    <Text className="text-[14px] text-black">{plan.name}（¥{plan.price}/月）</Text>
                     <Button
                       className="text-[14px] text-black"
-                      onClick={() => handleUpgrade(PRICE_IDS.basic)}
+                      onClick={() => handleUpgrade(plan.priceId)}
                       disabled={billingLoading}
                     >
                       {billingLoading ? '処理中...' : 'アップグレード'}
                     </Button>
-                </div>
-                <div className="flex items-center gap-3">
-                    <Text>
-                      Pro プラン
-                    </Text>
-                    <Button
-                      className="text-[14px] text-black"
-                      onClick={() => handleUpgrade(PRICE_IDS.pro)}
-                      disabled={billingLoading}
-                    >
-                      {billingLoading ? '処理中...' : 'アップグレード'}
-                    </Button>
-                </div>
-             </div>
-        </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* 契約するボタン (未契約時のみ) */}
         {planStatus === 'inactive' && (

@@ -2,6 +2,9 @@ import { useCallback, useEffect, useState } from 'react';
 import { apiGet, apiPost } from '@/utils/api';
 import type { GoogleReview } from '@/types/api';
 import type { Review } from '@/test/mock/reviewMock';
+import { reviewMockData } from '@/test/mock/reviewMock';
+
+const IS_MOCK = process.env.NEXT_PUBLIC_MOCK_MODE === 'true';
 
 function toReview(r: GoogleReview): Review {
   return {
@@ -31,6 +34,10 @@ export const useReviews = () => {
     setLoading(true);
     setError(null);
     try {
+      if (IS_MOCK) {
+        setReviews(reviewMockData);
+        return;
+      }
       const data = await apiGet<GoogleReview[]>('/api/google/reviews');
       console.log('[useReviews] GET /api/google/reviews:', { count: data.length, data });
       setReviews(data.map(toReview));

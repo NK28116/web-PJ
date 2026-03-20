@@ -52,6 +52,10 @@ jest.mock('../hooks/useBilling', () => ({
     loading: false,
     error: null,
     refetchPaymentMethods: jest.fn(),
+    invoices: [],
+    invoicesLoading: false,
+    upcoming: null,
+    refetchInvoices: jest.fn(),
   }),
 }))
 
@@ -59,6 +63,17 @@ jest.mock('../hooks/useBilling', () => ({
 const mockGenerateReceiptPDF = jest.fn()
 jest.mock('../utils/generateReceipt', () => ({
   generateReceiptPDF: (...args: unknown[]) => mockGenerateReceiptPDF(...args),
+}))
+
+// useProfileのモック
+jest.mock('../hooks/useProfile', () => ({
+  useProfile: () => ({
+    profile: { id: '1', email: 'test@example.com', nickname: 'test', role: 'user', plan_tier: 'free' },
+    loading: false,
+    error: null,
+    refetch: jest.fn(),
+    updateProfile: jest.fn(),
+  }),
 }))
 
 // BaseTemplateのモック
@@ -108,7 +123,7 @@ describe('BillingTemplate - レンダリング確認', () => {
   test('次回お支払い情報が表示されること', () => {
     render(<BillingTemplate />)
 
-    expect(screen.getByText(/次回のお支払い：2026\/02\/01/)).toBeInTheDocument()
+    expect(screen.getByText('次回のお支払い予定はありません')).toBeInTheDocument()
   })
 })
 

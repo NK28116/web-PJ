@@ -2,6 +2,7 @@ import { Button } from '@/atoms/Button';
 import { Text } from '@/atoms/Text';
 import { BaseTemplate } from '@/templates/BaseTemplate';
 import { useBilling } from '@/hooks/useBilling';
+import { useProfile } from '@/hooks/useProfile';
 import { generateReceiptPDF } from '@/utils/generateReceipt';
 import React, { useState } from 'react';
 import { useRouter } from 'next/router';
@@ -28,6 +29,13 @@ const MOCK_PAYMENT_HISTORY: PaymentHistory[] = [
 const MOCK_NEXT_PAYMENT = {
   date: '2026/02/01',
   amount: 33000,
+};
+
+const IS_MOCK = process.env.NEXT_PUBLIC_MOCK_MODE === 'true';
+
+const formatDate = (unix: number): string => {
+  const d = new Date(unix * 1000);
+  return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`;
 };
 
 const PLANS = [
@@ -166,7 +174,11 @@ export const BillingTemplate: React.FC<BillingTemplateProps> = ({
     loading: billingLoading,
     error: billingError,
     refetchPaymentMethods,
+    invoices,
+    invoicesLoading,
+    upcoming,
   } = useBilling();
+  const { profile } = useProfile();
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [showCardForm, setShowCardForm] = useState(false);
   const [formSubmitting, setFormSubmitting] = useState(false);
@@ -204,6 +216,10 @@ export const BillingTemplate: React.FC<BillingTemplateProps> = ({
   };
 
   const handleExportPDF = (payment: PaymentHistory) => {
+    if (payment.invoicePdfUrl) {
+      window.open(payment.invoicePdfUrl, '_blank');
+      return;
+    }
     const userEmail = typeof window !== 'undefined' ? localStorage.getItem('user_email') || '' : '';
     generateReceiptPDF({
       paymentDate: payment.date,
@@ -213,6 +229,18 @@ export const BillingTemplate: React.FC<BillingTemplateProps> = ({
       receiptNumber: payment.invoiceId,
     });
   };
+
+  // 実データまたはモックデータの支払い履歴
+  const paymentHistory: PaymentHistory[] = (!IS_MOCK && invoices.length > 0)
+    ? invoices.map((inv) => ({
+        id: inv.id,
+        date: formatDate(inv.created),
+        amount: inv.amount_paid,
+        planName: inv.plan_name || 'Subscription',
+        invoiceId: inv.id,
+        invoicePdfUrl: inv.invoice_pdf_url,
+      }))
+    : MOCK_PAYMENT_HISTORY;
 
   return (
     <BaseTemplate
@@ -328,43 +356,67 @@ export const BillingTemplate: React.FC<BillingTemplateProps> = ({
           </div>
         </div>
 
+        {/* 現在のプラン表示 */}
+        {profile?.plan_tier && profile.plan_tier !== 'free' && (
+          <div className="border border-[#00A48D] bg-[#f0faf8] p-4 flex items-center justify-between">
+            <div>
+              <Text className="text-[12px] text-gray-500">現在のプラン</Text>
+              <Text className="text-[16px] text-black font-medium capitalize">{profile.plan_tier} プラン</Text>
+            </div>
+            <div className="border border-[#00A48D] text-[#00A48D] px-2 py-0.5 text-[12px]">
+              契約中
+            </div>
+          </div>
+        )}
+
         {/* プラン選択セクション */}
         <div className="border border-gray-300 bg-white">
           <div className="border-b border-gray-300 p-3">
-            <Text className="text-[14px] text-black font-normal">プランを選択</Text>
+            <Text className="text-[14px] text-black font-normal">
+              {profile?.plan_tier && profile.plan_tier !== 'free' ? 'プランを変更' : 'プランを選択'}
+            </Text>
           </div>
           <div className="p-4 space-y-2">
-            {PLANS.map((plan) => (
-              <label
-                key={plan.id}
-                className={`flex items-center justify-between p-3 rounded border cursor-pointer ${
-                  selectedPlanId === plan.id
-                    ? 'border-[#00A48D] bg-[#f0faf8]'
-                    : 'border-gray-200'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <input
-                    type="radio"
-                    name="plan"
-                    value={plan.id}
-                    checked={selectedPlanId === plan.id}
-                    onChange={() => setSelectedPlanId(plan.id)}
-                    className="accent-[#00A48D]"
-                  />
-                  <div>
-                    <Text className="text-[14px] text-black font-medium">{plan.name}</Text>
-                    <Text className="text-[12px] text-gray-500">{plan.description}</Text>
+            {PLANS.map((plan) => {
+              const isCurrent = profile?.plan_tier === plan.id;
+              return (
+                <label
+                  key={plan.id}
+                  className={`flex items-center justify-between p-3 rounded border ${
+                    isCurrent
+                      ? 'border-gray-200 bg-gray-50 cursor-default'
+                      : selectedPlanId === plan.id
+                        ? 'border-[#00A48D] bg-[#f0faf8] cursor-pointer'
+                        : 'border-gray-200 cursor-pointer'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="radio"
+                      name="plan"
+                      value={plan.id}
+                      checked={selectedPlanId === plan.id}
+                      onChange={() => !isCurrent && setSelectedPlanId(plan.id)}
+                      disabled={isCurrent}
+                      className="accent-[#00A48D]"
+                    />
+                    <div>
+                      <Text className={`text-[14px] font-medium ${isCurrent ? 'text-gray-400' : 'text-black'}`}>
+                        {plan.name}
+                        {isCurrent && <span className="ml-2 text-[11px] text-[#00A48D]">現在のプラン</span>}
+                      </Text>
+                      <Text className="text-[12px] text-gray-500">{plan.description}</Text>
+                    </div>
                   </div>
-                </div>
-                <Text className="text-[14px] text-black">{formatCurrency(plan.price)}<span className="text-[11px] text-gray-500">/月</span></Text>
-              </label>
-            ))}
+                  <Text className={`text-[14px] ${isCurrent ? 'text-gray-400' : 'text-black'}`}>{formatCurrency(plan.price)}<span className="text-[11px] text-gray-500">/月</span></Text>
+                </label>
+              );
+            })}
           </div>
           <div className="px-4 pb-4">
             <Button
               onClick={handleCheckout}
-              className="w-full bg-[#00A48D] text-blue-950 text-[14px] py-2"
+              className="w-full bg-[#00A48D] text-black text-[14px] py-2"
               disabled={isAnyLoading || !PLANS.find((p) => p.id === selectedPlanId)?.priceId}
             >
               {isAnyLoading ? '処理中...' : 'プランに申し込む'}
@@ -378,7 +430,8 @@ export const BillingTemplate: React.FC<BillingTemplateProps> = ({
             <Text className="text-[14px] text-black font-normal">お支払い履歴（請求書・領収書）</Text>
           </div>
           <div className="p-4 space-y-3">
-            {MOCK_PAYMENT_HISTORY.map((item) => (
+            {invoicesLoading && <Text className="text-[13px] text-gray-400">読み込み中...</Text>}
+            {paymentHistory.map((item) => (
               <div key={item.id} className="flex items-center justify-between">
                 <Text className="text-[14px] text-black">{item.date}</Text>
                 <div className="flex items-center gap-3">
@@ -395,7 +448,11 @@ export const BillingTemplate: React.FC<BillingTemplateProps> = ({
           </div>
           {/* 次回お支払い */}
           <div className="border-t border-gray-300 p-4 text-center">
-            {MOCK_NEXT_PAYMENT ? (
+            {!IS_MOCK && upcoming ? (
+              <Text className="text-[14px] text-gray-500">
+                次回のお支払い：{formatDate(upcoming.next_payment_date)} {formatCurrency(upcoming.amount_due)}
+              </Text>
+            ) : IS_MOCK && MOCK_NEXT_PAYMENT ? (
               <Text className="text-[14px] text-gray-500">
                 次回のお支払い：{MOCK_NEXT_PAYMENT.date} {formatCurrency(MOCK_NEXT_PAYMENT.amount)}
               </Text>

@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { apiGet } from '@/utils/api';
 import type { InstagramMediaItem } from '@/types/api';
 
+const IS_MOCK = process.env.NEXT_PUBLIC_MOCK_MODE === 'true';
+
 export const useInstagramMedia = () => {
   const [media, setMedia] = useState<InstagramMediaItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -11,6 +13,10 @@ export const useInstagramMedia = () => {
     setLoading(true);
     setError(null);
     try {
+      if (IS_MOCK) {
+        setMedia([]);
+        return;
+      }
       const data = await apiGet<InstagramMediaItem[]>('/api/instagram/media');
       console.log('[useInstagramMedia] GET /api/instagram/media:', { count: data.length, data });
       setMedia(data);

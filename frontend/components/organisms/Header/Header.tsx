@@ -126,17 +126,22 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* ロゴテキスト */}
           <div className="relative z-10 flex items-center justify-between h-[54px] px-[18px]">
-            <Text
-              as="h1"
-              className="text-[24px] leading-[1.546em]"
-              style={{
-                fontFamily: "'Kdam Thmor Pro', sans-serif",
-                fontWeight: 400,
-                color: '#FFFAFA',
-              }}
-            >
-              wyze
-            </Text>
+            <div className="flex items-center gap-2">
+              <Text
+                as="h1"
+                className="text-[24px] leading-[1.546em]"
+                style={{
+                  fontFamily: "'Kdam Thmor Pro', sans-serif",
+                  fontWeight: 400,
+                  color: '#FFFAFA',
+                }}
+              >
+                wyze
+              </Text>
+              {process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_REF === 'develop' && (
+                <span className="text-gray-500 text-[11px]">deploy from develop</span>
+              )}
+            </div>
             {/* 通知・メニューを右側にまとめて配置 */}
             <div className="flex items-center gap-4">
               {/* 通知アイコン */}

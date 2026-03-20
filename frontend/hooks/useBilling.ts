@@ -1,12 +1,17 @@
 import { useCallback, useEffect, useState } from 'react';
 import { apiDelete, apiGet, apiPost } from '@/utils/api';
-import type { CheckoutResponse, PaymentMethod, PortalResponse, SetupIntentResponse } from '@/types/api';
+import type { CheckoutResponse, InvoiceItem, PaymentMethod, PortalResponse, SetupIntentResponse, UpcomingInvoice } from '@/types/api';
+
+const IS_MOCK = process.env.NEXT_PUBLIC_MOCK_MODE === 'true';
 
 export const useBilling = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [pmLoading, setPmLoading] = useState(false);
+  const [invoices, setInvoices] = useState<InvoiceItem[]>([]);
+  const [invoicesLoading, setInvoicesLoading] = useState(false);
+  const [upcoming, setUpcoming] = useState<UpcomingInvoice | null>(null);
 
   const fetchPaymentMethods = useCallback(async () => {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || '(未設定→fallback)';
@@ -26,9 +31,33 @@ export const useBilling = () => {
     }
   }, []);
 
+  const fetchInvoices = useCallback(async () => {
+    if (IS_MOCK) {
+      setInvoices([]);
+      setUpcoming(null);
+      return;
+    }
+    setInvoicesLoading(true);
+    try {
+      const [invRes, upRes] = await Promise.all([
+        apiGet<{ invoices: InvoiceItem[] }>('/api/billing/invoices'),
+        apiGet<{ upcoming: UpcomingInvoice | null }>('/api/billing/upcoming'),
+      ]);
+      setInvoices(invRes.invoices ?? []);
+      setUpcoming(upRes.upcoming ?? null);
+    } catch (err) {
+      console.error('[useBilling] fetchInvoices failed:', err);
+      setInvoices([]);
+      setUpcoming(null);
+    } finally {
+      setInvoicesLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchPaymentMethods();
-  }, [fetchPaymentMethods]);
+    fetchInvoices();
+  }, [fetchPaymentMethods, fetchInvoices]);
 
   const getSetupIntentSecret = useCallback(async (): Promise<string | null> => {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || '(未設定→fallback)';
@@ -115,5 +144,9 @@ export const useBilling = () => {
     loading,
     error,
     refetchPaymentMethods: fetchPaymentMethods,
+    invoices,
+    invoicesLoading,
+    upcoming,
+    refetchInvoices: fetchInvoices,
   };
 };

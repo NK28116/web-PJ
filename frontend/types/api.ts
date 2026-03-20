@@ -111,3 +111,21 @@ export interface PaymentMethod {
   exp_month: number;
   exp_year: number;
 }
+
+// Billing Invoices
+export interface InvoiceItem {
+  id: string;
+  amount_paid: number;
+  currency: string;
+  status: string;
+  created: number;
+  invoice_pdf_url: string;
+  hosted_url: string;
+  plan_name: string;
+}
+
+export interface UpcomingInvoice {
+  amount_due: number;
+  currency: string;
+  next_payment_date: number;
+}
