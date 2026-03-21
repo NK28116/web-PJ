@@ -33,9 +33,9 @@ func (r *UserRepository) FindByEmail(email string) (*models.User, error) {
 func (r *UserRepository) FindByID(id string) (*models.User, error) {
 	var user models.User
 	err := r.db.QueryRow(
-		"SELECT id, email, role, nickname, plan_tier, stripe_customer_id, stripe_subscription_id, subscription_status, created_at, updated_at FROM users WHERE id = $1",
+		"SELECT id, email, role, nickname, shop_name, plan_tier, stripe_customer_id, stripe_subscription_id, subscription_status, created_at, updated_at FROM users WHERE id = $1",
 		id,
-	).Scan(&user.ID, &user.Email, &user.Role, &user.Nickname, &user.PlanTier, &user.StripeCustomerID, &user.StripeSubscriptionID, &user.SubscriptionStatus, &user.CreatedAt, &user.UpdatedAt)
+	).Scan(&user.ID, &user.Email, &user.Role, &user.Nickname, &user.ShopName, &user.PlanTier, &user.StripeCustomerID, &user.StripeSubscriptionID, &user.SubscriptionStatus, &user.CreatedAt, &user.UpdatedAt)
 
 	if err == sql.ErrNoRows {
 		return nil, nil
@@ -58,17 +58,17 @@ func (r *UserRepository) Create(email, hashedPassword, role string) (*models.Use
 	return &user, nil
 }
 
-func (r *UserRepository) UpdateProfile(id, nickname, email string) error {
+func (r *UserRepository) UpdateProfile(id, nickname, email, shopName string) error {
 	if email != "" {
 		_, err := r.db.Exec(
-			"UPDATE users SET nickname = $1, email = $2, updated_at = NOW() WHERE id = $3",
-			nickname, email, id,
+			"UPDATE users SET nickname = $1, email = $2, shop_name = $3, updated_at = NOW() WHERE id = $4",
+			nickname, email, shopName, id,
 		)
 		return err
 	}
 	_, err := r.db.Exec(
-		"UPDATE users SET nickname = $1, updated_at = NOW() WHERE id = $2",
-		nickname, id,
+		"UPDATE users SET nickname = $1, shop_name = $2, updated_at = NOW() WHERE id = $3",
+		nickname, shopName, id,
 	)
 	return err
 }

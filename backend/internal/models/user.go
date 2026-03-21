@@ -7,6 +7,7 @@ type User struct {
 	Email                string    `db:"email" json:"email"`
 	Password             string    `db:"password" json:"-"`
 	Nickname             string    `db:"nickname" json:"nickname"`
+	ShopName             string    `db:"shop_name" json:"shop_name"`
 	Role                 string    `db:"role" json:"role"`
 	PlanTier             string    `db:"plan_tier" json:"plan_tier"`
 	StripeCustomerID     *string   `db:"stripe_customer_id" json:"stripe_customer_id"`

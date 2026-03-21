@@ -19,6 +19,7 @@ export const SignUpTemplate: React.FC = () => {
 
   const [email, setEmail] = useState('');
   const [code, setCode] = useState(['', '', '', '', '', '']);
+  const [serverCode, setServerCode] = useState('');
   const [nickname, setNickname] = useState('');
   const [password, setPassword] = useState('');
   const [passwordConfirm, setPasswordConfirm] = useState('');
@@ -51,7 +52,10 @@ export const SignUpTemplate: React.FC = () => {
       return;
     }
     try {
-      await apiPost('/api/auth/send-code', { email });
+      const res = await apiPost<{ code?: string }>('/api/auth/send-code', { email });
+      if (res.code) {
+        setServerCode(res.code);
+      }
       setSubStep(2);
     } catch {
       setErrorMessage('認証メールの送信に失敗しました。しばらくしてから再試行してください。');
@@ -144,6 +148,7 @@ export const SignUpTemplate: React.FC = () => {
                 email={email}
                 code={code}
                 setCode={setCode}
+                serverCode={serverCode}
                 errorMessage={errorMessage}
                 onVerify={handleCodeVerify}
                 onResend={() => { handleEmailSubmit(); }}
@@ -182,6 +187,7 @@ export const SignUpTemplate: React.FC = () => {
         return null;
     }
   };
+
 
   return (
     <div className="w-full min-h-screen bg-[#B9EAE5] flex flex-col items-center max-w-[393px] mx-auto">
@@ -281,6 +287,7 @@ interface SubStep2_2Props {
   email: string;
   code: string[];
   setCode: (c: string[]) => void;
+  serverCode: string;
   errorMessage: string;
   onVerify: () => Promise<boolean>;
   onResend: () => void;
@@ -291,6 +298,7 @@ const SubStep2_2: React.FC<SubStep2_2Props> = ({
   email,
   code,
   setCode,
+  serverCode,
   errorMessage,
   onVerify,
   onResend,

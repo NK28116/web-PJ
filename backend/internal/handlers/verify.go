@@ -37,7 +37,13 @@ func SendVerificationCode(verifyRepo *repository.VerificationRepository) gin.Han
 		// Staging環境: 実メール送信の代わりにログへ出力
 		log.Printf("【Verification Code】 email=%s code=%s expires=%s", req.Email, code, expiresAt.Format(time.RFC3339))
 
-		c.JSON(http.StatusOK, gin.H{"message": "code sent"})
+		response := gin.H{"message": "code sent"}
+		// ステージング/開発環境では、デバッグパネル表示用にコードをレスポンスに含める
+		if gin.Mode() != gin.ReleaseMode {
+			response["code"] = code
+		}
+
+		c.JSON(http.StatusOK, response)
 	}
 }
 
