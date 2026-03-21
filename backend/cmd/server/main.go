@@ -56,7 +56,7 @@ func main() {
 	r.GET("/health", handlers.Health)
 	r.POST("/register", handlers.Register(cfg, userRepo, verifyRepo))
 	r.POST("/login", handlers.Login(cfg, userRepo))
-	r.POST("/api/auth/send-code", handlers.SendVerificationCode(verifyRepo))
+	r.POST("/api/auth/send-code", handlers.SendVerificationCode(cfg, verifyRepo))
 	r.POST("/api/auth/verify-code", handlers.VerifyCode(verifyRepo))
 	r.POST("/api/webhooks/stripe", handlers.StripeWebhook(cfg, userRepo))
 

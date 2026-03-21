@@ -28,6 +28,7 @@ export const SignUpTemplate: React.FC = () => {
   const [agree, setAgree] = useState(false);
   const [wyzeId, setWyzeId] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
+  const [serverCode, setServerCode] = useState('');
 
   const { register } = useAuth();
   const router = useRouter();
@@ -51,7 +52,10 @@ export const SignUpTemplate: React.FC = () => {
       return;
     }
     try {
-      await apiPost('/api/auth/send-code', { email });
+      const res = await apiPost<{ message: string; code?: string }>('/api/auth/send-code', { email });
+      if (res.code) {
+        setServerCode(res.code);
+      }
       setSubStep(2);
     } catch {
       setErrorMessage('認証メールの送信に失敗しました。しばらくしてから再試行してください。');
@@ -148,6 +152,7 @@ export const SignUpTemplate: React.FC = () => {
                 onVerify={handleCodeVerify}
                 onResend={() => { handleEmailSubmit(); }}
                 onResetEmail={() => { setErrorMessage(''); setSubStep(1); }}
+                serverCode={serverCode}
               />
             );
           case 3:
@@ -285,6 +290,7 @@ interface SubStep2_2Props {
   onVerify: () => Promise<boolean>;
   onResend: () => void;
   onResetEmail: () => void;
+  serverCode?: string;
 }
 
 const SubStep2_2: React.FC<SubStep2_2Props> = ({
@@ -295,6 +301,7 @@ const SubStep2_2: React.FC<SubStep2_2Props> = ({
   onVerify,
   onResend,
   onResetEmail,
+  serverCode,
 }) => {
   const [showResendNotification, setShowResendNotification] = useState(false);
   const [showVerifyNotification, setShowVerifyNotification] = useState(false);
@@ -356,6 +363,14 @@ const SubStep2_2: React.FC<SubStep2_2Props> = ({
 
       {errorMessage && (
         <p className="text-red-400 text-[13px] mt-1">{errorMessage}</p>
+      )}
+
+      {/* サーバーから返された認証コード（非本番環境のみ） */}
+      {serverCode && (
+        <div className="w-full bg-yellow-400/20 border border-yellow-400 rounded px-3 py-2 mt-3 mb-1">
+          <p className="text-yellow-300 text-[11px] font-bold">認証コード（ステージング検証用）</p>
+          <p className="text-white text-lg font-mono font-bold tracking-[0.3em] text-center mt-1">{serverCode}</p>
+        </div>
       )}
 
       {/* DEV_ONLY: 開発用モックコード取得ボタン */}
