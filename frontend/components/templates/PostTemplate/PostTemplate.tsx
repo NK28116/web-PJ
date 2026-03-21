@@ -166,8 +166,7 @@ const mapInstagramToPosts = (media: import('@/types/api').InstagramMediaItem[]):
 
 export const PostTemplate: React.FC<PostTemplateProps> = () => {
   const { media, loading: mediaLoading } = useInstagramMedia();
-  // Instagram実データがある場合はそれを使用、なければモックを表示
-  const [posts, setPosts] = useState<Post[]>(() => generateMockPosts());
+  const [posts, setPosts] = useState<Post[]>([]);
 
   useEffect(() => {
     if (media.length > 0) {
@@ -316,8 +315,22 @@ export const PostTemplate: React.FC<PostTemplateProps> = () => {
           </div>
         </div>
 
-        {/* コンテンツ */}
-        {viewMode === 'grid' ? (
+        {/* Empty State: Instagram 未連携 */}
+        {!mediaLoading && posts.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <div className="text-gray-300 text-5xl mb-4">📷</div>
+            <Text className="text-[16px] text-gray-600 font-medium mb-2">投稿データがありません</Text>
+            <Text className="text-[13px] text-gray-400 mb-4">
+              Instagram を連携すると、投稿データが<br />自動で取り込まれます。
+            </Text>
+            <Button
+              onClick={() => { window.location.href = '/home'; }}
+              className="bg-[#00A48D] text-black text-[14px] py-2 px-6 rounded"
+            >
+              ホームで連携する
+            </Button>
+          </div>
+        ) : viewMode === 'grid' ? (
           <div className="grid grid-cols-3 gap-3 pt-2">
             {sortedPosts.map((post) => (
               <PostGridItem
@@ -340,6 +353,12 @@ export const PostTemplate: React.FC<PostTemplateProps> = () => {
           </div>
         )}
       </div>
+
+      {mediaLoading && (
+        <div className="flex justify-center py-8">
+          <Text className="text-gray-400 text-[14px]">読み込み中...</Text>
+        </div>
+      )}
 
       <PostDetailModal
         isOpen={!!selectedPost}

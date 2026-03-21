@@ -4,7 +4,106 @@
 
 ---
 
-## 最新の実装 (2026-03-20) — Phase 13 & 14: Price ID 10個対応 & 決済履歴API実装
+## 最新の実装 (2026-03-22) — Task 5: ステージング環境 UI/UX 不具合修正・モックデータ排除・サポートページ新規作成
+
+### フェーズ / タスク
+**Task 5: ステージング環境の不具合修正 (task-to-claude.md 準拠)**
+**Task 6: 外部サービス連携の修正 → マスター手動作業（OAuth コンソール設定・Vercel Deployment Protection）**
+
+### 実装した変更
+
+#### Task 5-1: 新規登録・ログイン周りの改善
+
+##### `frontend/styles/globals.css`
+- `body` → `html, body` に変更、`bg-gray-50` → `bg-slate-950` に変更、`min-height: 100vh` 追加
+- **理由:** コンテンツ外の白背景残りを排除
+
+##### `frontend/components/templates/LoginTemplate/index.tsx`
+- メールアドレス・パスワード入力欄に `focus:bg-transparent focus:text-white focus:caret-white focus:border-white focus:outline-none` 追加
+- パスワードコンテナに `focus-within:bg-transparent focus-within:border-white` 追加
+- **理由:** ダーク背景でフォーカス時の入力位置が不明瞭だった
+
+##### `frontend/components/templates/SignUpTemplate/index.tsx`
+- 全入力フィールドに同様の focus スタイル適用（`replace_all` で一括）
+- OTP ペーストハンドラ追加: `onPaste` で6桁数字をクリップボードから一括入力
+- OTP 入力時の自動フォーカス移動（`data-otp-index` 属性で次フィールドへ）
+- デバッグパネル: `process.env.NODE_ENV !== 'production'` 時のみ画面下部に固定表示（認証コード表示 + コピーボタン）
+- **理由:** OTP 手入力の手間削減、ステージングでの認証テスト効率化
+
+#### Task 5-2: モックデータ排除と Empty State 実装
+
+##### `frontend/components/templates/PostTemplate/PostTemplate.tsx`
+- `useState<Post[]>(() => generateMockPosts())` → `useState<Post[]>([])` に変更
+- Instagram 未連携時の Empty State UI 追加（連携 CTA 表示）
+- ローディングインジケーター追加
+
+##### `frontend/components/templates/AccountTemplate/AccountTemplate.tsx`
+- `MOCK_ACCOUNT_DATA` → `EMPTY_ACCOUNT_DATA`（空文字列）に変更
+- `useProfile()` から `shop_name` を同期する `useEffect` を追加
+- オブジェクト参照の変動による無限レンダリングを防止（`apiProfile` → 個別フィールド `apiNickname`, `apiEmail`, `apiShopName` を依存配列に指定）
+- 店舗プロフィールの Empty State（「店舗情報を登録する」リンク付き）
+- 未登録フィールドは `-` 表示
+
+##### `frontend/components/organisms/Header/Header.tsx`
+- `MOCK_NOTIFICATIONS`（5件）→ `INITIAL_NOTIFICATIONS: Notification[] = []` に変更
+- 通知 0 件時はバッジ非表示（既存ロジックで対応済み: `unreadCount > 0 && ...`）
+- サイドメニュー `/help` → `/support` に変更（`<Link>` コンポーネント使用）
+
+##### `frontend/components/templates/BillingTemplate/BillingTemplate.tsx`
+- `cardRegistered` ステート追加: カード登録成功後に即座に blur を解除（`refetchPaymentMethods` は非同期のため）
+- 支払い履歴: モックデータフォールバック削除 → `invoices` が空なら「履歴はありません」表示
+- 次回お支払い: `IS_MOCK` / `MOCK_NEXT_PAYMENT` 参照削除 → `upcoming` データ有無で動的表示
+
+##### `frontend/components/templates/HomeTemplate/HomeTemplate.tsx`
+- 退会動線リンク追加: 店舗一覧下部に `<Link href="/support">退会の申し込みはサポート・ヘルプから</Link>`
+
+#### Task 5-3: サポートヘルプページ新規作成
+
+##### `frontend/components/templates/SupportTemplate/SupportTemplate.tsx` (新規)
+- お問い合わせフォーム（氏名・メール・カテゴリ選択・メッセージ）
+- アカウント削除依頼テンプレート（定型文プリセット）
+- FAQ セクション（3項目）
+- 送信成功状態の表示
+
+##### `frontend/components/templates/SupportTemplate/index.ts` (新規)
+- バレルエクスポート
+
+##### `frontend/pages/support.tsx` (新規)
+- `SupportTemplate` を使用、`next/head` で title 設定
+
+##### `frontend/components/templates/index.ts`
+- `SupportTemplate` / `SupportTemplateProps` エクスポート追加
+
+#### テスト修正
+
+##### `frontend/test/AccountTemplate.test.tsx`
+- `useProfile` モック追加（`shop_name: 'サンプル店舗 渋谷店'` 等）
+- 住所テスト: `getByText('-')` → `getAllByText('-')` に変更（複数の `-` 表示に対応）
+- API プロフィール値の表示確認テスト追加
+
+##### `frontend/test/BillingTemplate.test.tsx`
+- 支払い履歴テスト: 「履歴はありません」表示確認に変更
+- 次回お支払いテスト: 「予定はありません」表示確認に変更
+- PDF ボタンテスト: 履歴なし時は非表示確認
+
+### 検証結果
+- フロントエンドテスト 87/87 パス
+
+### Task 6 について（マスター手動作業）
+以下はコンソール設定変更のため Claude からは実施不可:
+- **Google Cloud Console**: OAuth リダイレクト URI に `stg.wyze-system.com` / `wyze-system.com` を追加
+- **Meta for Developers**: Instagram アプリドメイン・リダイレクト URI 更新
+- **Vercel Deployment Protection**: 有効化
+
+### 注意事項
+1. `globals.css` の `bg-slate-950` はダーク背景前提。ライトテーマ導入時は要調整
+2. OTP ペーストハンドラは数字以外を自動除去（`replace(/[^0-9]/g, '')`)
+3. デバッグパネルは `NODE_ENV !== 'production'` ガード付き。本番では非表示
+4. `AccountTemplate` の useEffect は個別フィールド依存配列で無限レンダリングを回避済み
+
+---
+
+## 過去の実装 (2026-03-20) — Phase 13 & 14: Price ID 10個対応 & 決済履歴API実装
 
 ### フェーズ / タスク
 **Phase 13: Staging環境リリース最終統合 — Price ID 10個対応・Cloud Run 再デプロイ**

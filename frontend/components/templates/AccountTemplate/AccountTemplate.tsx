@@ -24,15 +24,15 @@ interface AccountData {
   };
 }
 
-const MOCK_ACCOUNT_DATA: AccountData = {
+const EMPTY_ACCOUNT_DATA: AccountData = {
   profile: {
-    shopName: 'サンプル店舗 渋谷店',
-    address: '東京都渋谷区神南1-2-3',
-    phone: '03-1234-5678',
+    shopName: '',
+    address: '',
+    phone: '',
   },
   owner: {
-    name: '山田 太郎',
-    email: 'taro.yamada@example.com',
+    name: '',
+    email: '',
   },
   notifications: {
     monthlyReport: true,
@@ -63,9 +63,9 @@ export const AccountTemplate: React.FC<AccountTemplateProps> = ({
   const router = useRouter();
   const { profile: apiProfile, loading: profileLoading, error: profileError, updateProfile } = useProfile();
 
-  const [profile, setProfile] = useState(MOCK_ACCOUNT_DATA.profile);
-  const [owner, setOwner] = useState(MOCK_ACCOUNT_DATA.owner);
-  const [notifications, setNotifications] = useState(MOCK_ACCOUNT_DATA.notifications);
+  const [profile, setProfile] = useState(EMPTY_ACCOUNT_DATA.profile);
+  const [owner, setOwner] = useState(EMPTY_ACCOUNT_DATA.owner);
+  const [notifications, setNotifications] = useState(EMPTY_ACCOUNT_DATA.notifications);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
@@ -81,17 +81,33 @@ export const AccountTemplate: React.FC<AccountTemplateProps> = ({
     email: apiProfile?.email ?? owner.email,
   });
 
-  // APIプロフィールが取得されたら反映
+  // APIプロフィールが取得されたら反映（個別フィールドを依存配列に指定してオブジェクト参照の変動を回避）
+  const apiNickname = apiProfile?.nickname;
+  const apiEmail = apiProfile?.email;
+  const apiShopName = apiProfile?.shop_name;
   React.useEffect(() => {
-    if (apiProfile) {
-      setOwner((prev) => ({ ...prev, name: apiProfile.nickname || prev.name, email: apiProfile.email }));
-      setEditOwner((prev) => ({ ...prev, name: apiProfile.nickname || prev.name, email: apiProfile.email }));
+    if (apiNickname || apiEmail) {
+      setOwner((prev) => ({ ...prev, name: apiNickname || prev.name, email: apiEmail || prev.email }));
+      setEditOwner((prev) => ({ ...prev, name: apiNickname || prev.name, email: apiEmail || prev.email }));
     }
-  }, [apiProfile]);
+    if (apiShopName) {
+      setProfile((prev) => ({ ...prev, shopName: apiShopName }));
+    }
+  }, [apiNickname, apiEmail, apiShopName]);
 
-  const handleSaveProfile = () => {
-    setProfile(editProfile);
-    setIsEditingProfile(false);
+  const handleSaveProfile = async () => {
+    setSaveError(null);
+    const success = await updateProfile(
+      owner.name,
+      undefined,
+      editProfile.shopName,
+    );
+    if (success) {
+      setProfile(editProfile);
+      setIsEditingProfile(false);
+    } else if (profileError) {
+      setSaveError(profileError);
+    }
   };
 
   const handleCancelProfile = () => {
@@ -104,6 +120,7 @@ export const AccountTemplate: React.FC<AccountTemplateProps> = ({
     const success = await updateProfile(
       editOwner.name,
       editOwner.email !== (apiProfile?.email ?? '') ? editOwner.email : undefined,
+      profile.shopName,
     );
     if (success) {
       setOwner(editOwner);
@@ -225,19 +242,32 @@ export const AccountTemplate: React.FC<AccountTemplateProps> = ({
                   </Button>
                 </div>
               </>
+            ) : !profile.shopName && !profile.address && !profile.phone ? (
+              <div className="text-center py-4">
+                <Text className="text-[13px] text-gray-400">店舗情報が未登録です。</Text>
+                <button
+                  onClick={() => {
+                    setEditProfile(profile);
+                    setIsEditingProfile(true);
+                  }}
+                  className="text-[#00A48D] text-[13px] underline mt-2"
+                >
+                  店舗情報を登録する
+                </button>
+              </div>
             ) : (
               <>
                 <div className="flex justify-between">
                   <Text className="text-[14px] text-black">店舗名</Text>
-                  <Text className="text-[14px] text-black">{profile.shopName}</Text>
+                  <Text className="text-[14px] text-black">{profile.shopName || '-'}</Text>
                 </div>
                 <div className="flex justify-between">
                   <Text className="text-[14px] text-black">住所</Text>
-                  <Text className="text-[14px] text-black text-right max-w-[200px]">{profile.address}</Text>
+                  <Text className="text-[14px] text-black text-right max-w-[200px]">{profile.address || '-'}</Text>
                 </div>
                 <div className="flex justify-between">
                   <Text className="text-[14px] text-black">電話番号</Text>
-                  <Text className="text-[14px] text-black">{profile.phone}</Text>
+                  <Text className="text-[14px] text-black">{profile.phone || '-'}</Text>
                 </div>
               </>
             )}

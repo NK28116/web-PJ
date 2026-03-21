@@ -24,6 +24,7 @@ func GetProfile(userRepo *repository.UserRepository) gin.HandlerFunc {
 			"id":        user.ID,
 			"email":     user.Email,
 			"nickname":  user.Nickname,
+			"shop_name": user.ShopName,
 			"role":      user.Role,
 			"plan_tier": user.PlanTier,
 		})
@@ -33,6 +34,7 @@ func GetProfile(userRepo *repository.UserRepository) gin.HandlerFunc {
 type updateProfileRequest struct {
 	Nickname string `json:"nickname"`
 	Email    string `json:"email"`
+	ShopName string `json:"shop_name"`
 }
 
 // UpdateProfile はニックネームとメールアドレスを更新する
@@ -60,7 +62,7 @@ func UpdateProfile(userRepo *repository.UserRepository) gin.HandlerFunc {
 				return
 			}
 		}
-		if err := userRepo.UpdateProfile(userID, req.Nickname, req.Email); err != nil {
+		if err := userRepo.UpdateProfile(userID, req.Nickname, req.Email, req.ShopName); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update profile"})
 			return
 		}
@@ -69,6 +71,7 @@ func UpdateProfile(userRepo *repository.UserRepository) gin.HandlerFunc {
 			"id":        user.ID,
 			"email":     user.Email,
 			"nickname":  user.Nickname,
+			"shop_name": user.ShopName,
 			"role":      user.Role,
 			"plan_tier": user.PlanTier,
 		})

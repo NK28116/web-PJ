@@ -39,6 +39,24 @@ jest.mock('../components/organisms/SideMenu', () => ({
   ),
 }))
 
+// useProfileのモック
+jest.mock('../hooks/useProfile', () => ({
+  useProfile: () => ({
+    profile: {
+      id: '1',
+      email: 'taro.yamada@example.com',
+      nickname: '山田 太郎',
+      role: 'user',
+      plan_tier: 'basic',
+      shop_name: 'サンプル店舗 渋谷店',
+    },
+    loading: false,
+    error: null,
+    refetch: jest.fn(),
+    updateProfile: jest.fn().mockResolvedValue(true),
+  }),
+}))
+
 describe('AccountTemplate - レンダリング確認', () => {
   test('ヘッダーに「店舗・アカウント設定」が表示されること', () => {
     render(<AccountTemplate />)
@@ -62,27 +80,24 @@ describe('AccountTemplate - レンダリング確認', () => {
 })
 
 describe('AccountTemplate - 値の表示確認', () => {
-  test('店舗名が表示されること', () => {
+  test('店舗名がAPIプロフィールから表示されること', () => {
     render(<AccountTemplate />)
     expect(screen.getByText('サンプル店舗 渋谷店')).toBeInTheDocument()
   })
 
-  test('住所が表示されること', () => {
+  test('住所の初期値（未登録時は「-」）が表示されること', () => {
     render(<AccountTemplate />)
-    expect(screen.getByText('東京都渋谷区神南1-2-3')).toBeInTheDocument()
+    // 住所・電話番号等はAPIから取得されないため「-」表示（複数箇所）
+    const dashes = screen.getAllByText('-')
+    expect(dashes.length).toBeGreaterThanOrEqual(1)
   })
 
-  test('電話番号が表示されること', () => {
-    render(<AccountTemplate />)
-    expect(screen.getByText('03-1234-5678')).toBeInTheDocument()
-  })
-
-  test('担当者名が表示されること', () => {
+  test('担当者名がAPIプロフィールから表示されること', () => {
     render(<AccountTemplate />)
     expect(screen.getByText('山田 太郎')).toBeInTheDocument()
   })
 
-  test('メールアドレスが表示されること', () => {
+  test('メールアドレスがAPIプロフィールから表示されること', () => {
     render(<AccountTemplate />)
     expect(screen.getByText('taro.yamada@example.com')).toBeInTheDocument()
   })

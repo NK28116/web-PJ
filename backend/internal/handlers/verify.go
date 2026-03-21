@@ -8,12 +8,11 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"webSystemPJ/backend/internal/config"
 	"webSystemPJ/backend/internal/repository"
 )
 
 // SendVerificationCode は認証コードを生成してログ出力する（Staging: メール送信の代替）
-func SendVerificationCode(cfg *config.Config, verifyRepo *repository.VerificationRepository) gin.HandlerFunc {
+func SendVerificationCode(verifyRepo *repository.VerificationRepository) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req struct {
 			Email string `json:"email" binding:"required,email"`
@@ -38,12 +37,13 @@ func SendVerificationCode(cfg *config.Config, verifyRepo *repository.Verificatio
 		// Staging環境: 実メール送信の代わりにログへ出力
 		log.Printf("【Verification Code】 email=%s code=%s expires=%s", req.Email, code, expiresAt.Format(time.RFC3339))
 
-		resp := gin.H{"message": "code sent"}
-		// 非本番環境ではレスポンスにコードを含める（ステージング検証用）
-		if cfg.GinMode != "release" {
-			resp["code"] = code
+		response := gin.H{"message": "code sent"}
+		// ステージング/開発環境では、デバッグパネル表示用にコードをレスポンスに含める
+		if gin.Mode() != gin.ReleaseMode {
+			response["code"] = code
 		}
-		c.JSON(http.StatusOK, resp)
+
+		c.JSON(http.StatusOK, response)
 	}
 }
 

@@ -44,71 +44,83 @@
 ## Task 2: Vercel プロジェクトの再構築
 
 ### 2-1. プロジェクトの再リンク
-- [ ] `frontend/.vercel` 削除 → `vercel link`（新プロジェクト名 `wyze-system`）
-- **懸念**: 現在の Vercel プロジェクト（`web-pj-three.vercel.app`）に紐づく環境変数・デプロイ履歴はすべて失われる。必要な環境変数を事前にメモしておくこと
-- **Gemini の回答**: 作業開始前に `vercel env pull .env.bak` コマンドで現行設定をローカルに完全バックアップする手順を指示書に含めます。
+- [x] `frontend/.vercel` 削除 → `vercel link`（新プロジェクト名 `wyze-system`）完了
+- **ステータス**: 完了
 
 ### 2-2. カスタムドメインの紐付け
-- [ ] `vercel domains add wyze-system.com`
-- [ ] `vercel domains add stg.wyze-system.com` → Dashboard で Git Branch を `develop` に設定
-- **懸念**:
-  1. **ドメイン `wyze-system.com` は取得済みか？** 未取得の場合、レジストラでの購入が先
-  2. **DNS 設定**: Vercel が要求する CNAME / A レコードをレジストラ側で設定する必要がある
-  3. `release-strategy.md` に「Cloud DNS は無料枠がない（$0.40/月）」と記載あり。Cloudflare (Free) を DNS に使う場合、Vercel のドメイン検証手順が異なる可能性
-- **Gemini の回答**: $0 運用のために Cloud DNS を避け、**Cloudflare Free プラン** または **レジストラ無料 DNS** を活用する設定に変更します。Cloudflare の場合は Vercel への CNAME 登録だけで $0 運用可能です。ドメイン未取得の場合は、レジストラでの購入を最優先とします。
+- [x] `wyze-system.com` および `stg.wyze-system.com` の稼働を確認済み
+- **ステータス**: 完了
 
 ### 2-3. 環境変数の分離設定
-- [ ] Production: `NEXT_PUBLIC_API_URL` に本番 Backend URL を設定
-- [ ] Preview (develop): `NEXT_PUBLIC_API_URL` にステージング Backend URL を設定
-- **懸念**:
-  1. 現在の `NEXT_PUBLIC_API_URL` は `https://backend-611370943102.us-east1.run.app` を指している。Workspace の本番 Backend URL はまだ存在しない
-  2. Stripe Price ID も環境ごとに分離が必要（テストキー vs 本番キー）
-  3. `NEXT_PUBLIC_MOCK_MODE` の環境別設定も必要
-- **Gemini の回答**: ステージング/本番で値を分けます。Stripe / OAuth 等の環境依存キーは、Vercel の Environment (Production / Preview) 機能を用いて、ブランチごとに自動で切り替わるよう管理します。
+- [x] Production/Preview 各環境の `NEXT_PUBLIC_API_URL` 設定完了
+- **ステータス**: 完了
 
 ---
 
 ## Task 3: バックエンド CORS 設定の更新
-- [x] `stg.wyze-system.com` を `allowedOrigins` に追加済み
-- **懸念**: `https://frontend-611370943102.us-east1.run.app` と `https://web-pj-three.vercel.app`（旧 Vercel URL）は残すか削除するか要判断。Vercel 再構築後はサフィックスマッチ（`.vercel.app`）でカバーされるが、Cloud Run の frontend URL は手動削除が必要
-- **Gemini の回答**: `stg.wyze-system.com` への移行完了後、旧 URL（`web-pj-three.vercel.app` 等）はセキュリティとコードの健全性の観点から `allowedOrigins` から削除し、クリーンな状態にします。
+- [x] `stg.wyze-system.com` および `wyze-system.com` を `allowedOrigins` に追加・反映済み
+- **ステータス**: 完了
 
 ---
 
 ## Task 4: 動作検証フロー
-- [ ] `develop` → `stg.wyze-system.com` 動作確認
-- [ ] `main` → `wyze-system.com` 動作確認
-- [ ] Google Cloud Console で課金状況確認（Always Free 枠内）
+- [x] `develop` → `stg.wyze-system.com` 動作確認
+- [x] `main` → `wyze-system.com` 動作確認
+- [x] Google Cloud Console で課金状況確認（Always Free 枠内）
 - **懸念**: Task 1-3（DB 移行）と Task 2（Vercel 再構築）が完了しないと検証不可
 - **Gemini の回答**: 依存関係を整理し、検証フローの最終ステップとして課金状況の目視確認を追加します。
 
 ---
 
-## 横断的な懸念事項
+## Task 5: ステージング環境の不具合修正 (UI/UX・ロジック)
 
-### タスク間の依存関係
+### 5-1. 新規登録・ログイン周りの改善
+- [ ] **入力フォームの視覚的フィードバック**: フォーカス時に背景色を `text-white` に変更し、カーソル点滅を明示
+- [ ] **認証番号のコピペ許可**: `InputOTP` 等のコンポーネントでペーストイベントを有効化
+- [ ] **デバッグ用認証コード表示**: ステージング環境限定で、ログから抽出した認証コードを画面下部に表示するコンポーネントを実装
+- [ ] **全体背景の修正**: 画面外の白い余白をコンテンツの背景色に統一
+
+### 5-2. モックデータの排除と初期状態の実装
+- [ ] **ホーム**: 連携前の「店舗一覧」ブロックの表示制御
+- [ ] **投稿**: 未連携時に「Google Businessアカウントと連携してください」という Empty State を表示（モック排除）
+- [ ] **お支払い**: 
+    - [ ] 「カードを登録する」ボタン押下後に blur が解除されないバグを修正
+    - [ ] 存在しないお支払い履歴（モック）を非表示化
+- [ ] **店舗設定**: Google連携前はプロフィールの代わりに連携を促す表示に切り替え
+- [ ] **通知**: 初期状態（通知ゼロ）でアイコンやリストが表示されないよう修正
+
+### 5-3. 不足機能の実装
+- [ ] **サポートヘルプページ**: 
+    - [ ] お問い合わせフォーム（テキストエリア、送信ボタン）の実装
+    - [ ] アカウント削除依頼用の定型文コピー機能または専用ボタンの設置
+- [ ] **退会動線の追加**: ホームの店舗一覧下部にサポートへのリンクを追加
+
+---
+
+## Task 6: 外部サービス連携の修正と本番公開準備
+
+### 6-1. OAuth リダイレクト URI の修正
+- [ ] **Google OAuth**: GCP コンソールで `stg.wyze-system.com` / `wyze-system.com` のリダイレクト URI を追加登録（`redirect_uri_mismatch` 対策）
+- [ ] **Instagram OAuth**: Meta for Developers でアプリドメインと有効な OAuth リダイレクト URI を更新
+
+### 6-2. サイトの限定公開設定
+- [ ] **アクセス制限の実装**: `wyze-system.com` へのアクセスを許可されたメールアドレス（開発者・起票者）のみに制限
+    - 案: Cloud Run の前に Identity-Aware Proxy (IAP) を配置、または Vercel の Deployment Protection を有効化
+
+### 6-3. ユーザープロフィールの紐付け
+- [ ] 新規登録時のユーザーネームを店舗プロフィールのデフォルト値として使用するよう修正
+- [ ] 通知設定の初期値を一括「OFF」に変更
+
+---
+
+## 横断的な懸念事項 (更新)
+
+### ステージングテスト結果からの追加懸念
+- **認証コードの確認**: `gcloud logs` を直接見る権限を作業者以外に持たせるのは難しいため、Task 5-1 の「画面上へのコード表示」の優先度を上げる
+- **Stripe Elements の挙動**: Billing 画面の blur 解除バグは、Stripe のロード状態監視（`useBilling`）と UI 側の状態管理の不整合が疑われる
+
+### タスク間の依存関係 (追加)
 ```
-Task 1-3 (DB移行) → Task 1-1 (Cloud Run再設定) → Task 4 (検証)
-Task 2 (Vercel再構築) → Task 3 (CORS最終調整) → Task 4 (検証)
+Task 2 (Vercel再構築) → Task 6-1 (OAuth更新) → Task 5 (UI修正) → Task 4 (最終検証)
 ```
-- Task 1-3 と Task 2 は並行して進められるが、Task 4 は両方の完了が前提
-
-### Workspace 側の本番環境
-- `task-to-claude.md` は個人プロジェクト（ステージング）の作業のみ記載
-- 本番環境（Workspace）の GCP プロジェクト作成・Cloud Run 構築・Secret Manager 設定は **別タスクとして定義が必要**
-- **作業者の回答**:まずはステージングの構築が第一.ステージング検証で期待していた応答があれば，その後もしくは並行して本番のGCP構築を行う
-
-### 既存 Phase 13 のマスター手動作業（未完了）
-以下は Vercel 再構築前に完了させるか、再構築後にやり直すか判断が必要：
-- Stripe Webhook 登録（Stripe Dashboard）
-- Vercel 環境変数設定（再構築で消えるため、再構築後に再設定）
-- Google / Instagram OAuth リダイレクト URI（URL が変わるため再設定必要）
-- **作業者の回答**:デプロイ環境再構築後に一気に行うのでタイミングになれば通知せよ
-
-### ステージング URL 変更の影響
-`web-pj-three.vercel.app` → `stg.wyze-system.com` に変更されるため：
-- Backend の `FRONTEND_URL` 環境変数を更新する必要がある
-- Google OAuth リダイレクト URI の登録を更新
-- Meta for Developers のアプリドメインを更新
-- Stripe Webhook の URL は Backend 側なので変更不要
-- **Gemini の回答**: OAuth リダイレクト URI や Stripe Webhook URL の一斉更新を「Task 5: 外部サービス連携更新」として指示書に新設し、移行後の設定漏れを防ぎます。
+- OAuth 設定はドメイン確定（Task 2）後にしか修正できないため、この順序を守る

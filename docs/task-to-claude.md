@@ -1,130 +1,64 @@
-# Claude への実装指示書：インフラ再構築と Always Free 最適化
+# Claude への実装指示書：ステージング環境の不具合修正と外部連携の正常化
 
 ## 目的
-`docs/release-strategy.md` に基づき、Google Cloud の無料枠（Always Free）を最大限に活用したインフラ構成への移行と、Vercel プロジェクトの再構築を CLI を中心に実行してください。
+ドメイン `stg.wyze-system.com` および `wyze-system.com` の稼働は既に確認済みです。
+本指示書に基づき、残る **OAuth 連携エラー（redirect_uri_mismatch 等）の解消**、**UI/UX の不具合修正**、および **モックデータの排除** を実行してください。
 
 ---
 
-## Task 1: Google Cloud インフラの最適化設定
+## Task 6: 外部サービス連携の修正 (最優先)
 
-### 1-1. Cloud Run (API) のデプロイ設定変更
-以下のフラグを付与して、リクエストがない時のコストを $0 に抑えます。
-```bash
-# ステージング環境 (個人 GCP プロジェクト)
-gcloud run deploy backend-stg \
-  --image=[IMAGE_URL] \
-  --min-instances=0 \
-  --max-instances=1 \
-  --cpu-throttling \
-  --memory=256Mi \
-  --region=us-east1 \
-  --allow-unauthenticated
-```
-※本番環境も同様のパラメータを適用してください。
+ドメインが正しいにもかかわらず発生している連携エラーを、各サービスの設定変更によって解消してください。
 
-### 1-2. Artifact Registry のクリーンアップポリシー適用
-500MB の制限を超えないよう、最新の 2 つ以外のイメージを削除するポリシーを設定します。
-```bash
-# cleanup-policy.json の作成
-cat <<EOF > cleanup-policy.json
-[
-  {
-    "name": "keep-latest-two",
-    "action": { "type": "Delete" },
-    "condition": {
-      "tagState": "any",
-      "olderThan": "1s"
-    },
-    "mostRecentVersions": { "keepCount": 2 }
-  }
-]
-EOF
+### 6-1. OAuth リダイレクト URI の更新
+- **Google Cloud Console**: 
+    - `Credentials` > `OAuth 2.0 Client IDs` にて、以下を「承認済みリダイレクト URI」に確実に追加してください。
+      - `https://stg.wyze-system.com/api/auth/callback/google`
+      - `https://wyze-system.com/api/auth/callback/google`
+    - ※`redirect_uri_mismatch` エラーが発生しているため、URI の末尾まで正確に一致させてください。
+- **Meta for Developers**: 
+    - `Instagram Basic Display` > `Settings` にて、`stg.wyze-system.com` および `wyze-system.com` をアプリドメインとして設定し、有効な OAuth リダイレクト URI を更新してください。
 
-# ポリシーの適用
-gcloud artifacts repositories set-cleanup-policies [REPO_NAME] \
-  --project=[PROJECT_ID] \
-  --location=[LOCATION] \
-  --policy=cleanup-policy.json
-```
-
-### 1-3. Compute Engine (e2-micro) への DB 移行準備
-Cloud SQL を廃止し、無料枠の e2-micro インスタンスで PostgreSQL を稼働させます。
-- **GCE インスタンス作成**: `e2-micro`, `us-east1` (Always Free 対象リージョン)
-- **Docker 構成**: `backend/docker-compose.yml` を GCE 上で実行可能な形式に調整。
-- **バックアップ**: `pg_dump` を実行し、無料枠内の Cloud Storage (Standard 5GB) へアップロードするスクリプト `scripts/backup-db.sh` を作成。
-
-#### 【追加】DBeaver 接続のためのセキュリティ設定
-1. **GCP ファイアウォール設定**:
-   - `tcp:22` (SSH) を許可。
-   - ※セキュリティ強化のため、Identity-Aware Proxy (IAP) の IP 範囲 `35.235.240.0/20` からのみを許可する設定を推奨。
-2. **PostgreSQL 設定 (pg_hba.conf)**:
-   - Docker ホスト（SSHトンネル）からの接続を許可するため、`host all all 0.0.0.0/0 md5` 等を適切に設定。
-3. **DBeaver 側の設定 (ユーザーマニュアルへの追記用)**:
-   - **Main タブ**:
-     - Host: `localhost` (トンネル経由のため)
-     - Port: `5432`
-     - Database/Username/Password: 各種環境変数の値を指定。
-   - **SSH タブ**:
-     - `Use SSH Tunnel` を有効化。
-     - Host: GCE の外部 IP。
-     - User: GCE のログインユーザー名。
-     - Authentication: `Private Key` を選択し、GCP の SSH 鍵を指定。
+### 6-2. サイトの限定公開設定
+- **Vercel Deployment Protection**: 
+    - サイトの「アクセスをブロック」された状態（特定の開発者・起票者のみが閲覧可能）を実現するため、Vercel の `Deployment Protection` を有効化してください。
 
 ---
 
-## Task 2: Vercel プロジェクトの再構築 (CLI)
+## Task 5: ステージング環境の不具合修正 (UI/UX・ロジック)
 
-既存の設定をリセットし、`main` と `develop` ブランチを分離して紐付けます。
+### 5-1. 新規登録・ログイン周りの改善
+- **入力フォームの視覚的フィードバック**: 
+    - `focus` 時に背景色を `bg-transparent`（または明色）に変更し、`text-white` と `caret-white` を適用して、入力位置を明示してください。
+- **認証番号のコピペ許可**: 
+    - 6 桁の `InputOTP` 欄で `onPaste` イベントを有効化し、クリップボードからの入力を可能にしてください。
+- **デバッグ用認証コード表示 (ステージング限定)**: 
+    - ステージング（Preview）環境限定で、画面下部に浮遊するデバッグパネルを表示し、ログから抽出した認証コードを確認できる仕組みを実装してください。
+- **全体背景の修正**: 
+    - `_app.tsx` 等で、画面外の「白残り」を排除するため、コンテンツに合わせた背景色（`bg-slate-950` 等）をルートに適用してください。
 
-### 2-1. プロジェクトの再リンク
-```bash
-cd frontend
-rm -rf .vercel
-vercel link # 新しいプロジェクト名 "wyze-system" として作成
-```
+### 5-2. モックデータの排除と初期状態 (Empty State) の実装
+- **ホーム / 投稿 (`/post`) / 店舗設定 (`/account`)**: 
+    - モックデータを完全に削除してください。
+    - 各サービス（Google/Instagram）と未連携の場合は、ダミーデータの代わりに「連携してください」という Empty State を表示してください。
+- **お支払いページ (`/billing`)**: 
+    - **Blur バグ修正**: カード登録成功後に `blur-[3px]` クラスが確実に外れるよう、`useBilling` と連動した状態管理を修正してください。
+    - **履歴モック排除**: 履歴がない場合は「履歴はありません」と表示してください。
+- **通知アイコン**: 通知が 0 件の場合はバッジを表示しないようにしてください。
 
-### 2-2. カスタムドメインの紐付け
-```bash
-# 本番ドメイン (main)
-vercel domains add wyze-system.com
-
-# ステージングドメイン (develop)
-vercel domains add stg.wyze-system.com
-# ※Vercel Dashboard で stg.wyze-system.com の Git Branch を develop に設定する必要があります
-```
-
-### 2-3. 環境変数の分離設定
-```bash
-# Production (main)
-vercel env add NEXT_PUBLIC_API_URL production # 本番用URLを入力
-
-# Preview (develop)
-# vercel env add はデフォルトで全 Preview に適用されるため、
-# 特定のブランチ (develop) 用は Dashboard からの設定を推奨
-```
+### 5-3. サポートヘルプページの実装
+- **新規作成**: `pages/support.tsx`
+- **機能**: 
+    - お問い合わせフォームの実装。
+    - アカウント削除依頼用の定型文を表示。
+- **退会動線**: `home.tsx` の店舗一覧下部に「退会の申し込みはサポートヘルプから」というリンクを追加。
 
 ---
 
-## Task 3: バックエンド CORS 設定の更新
-
-`backend/internal/middleware/cors.go`（または相当するファイル）を修正し、新しいドメインを許可します。
-
-```go
-allowedOrigins := []string{
-    "https://wyze-system.com",
-    "https://stg.wyze-system.com",
-    "http://localhost:3000",
-}
-```
+## 実行優先順位
+1. **Task 6-1**: OAuth 修正（ドメイン稼働済みのため、コンソール設定変更を即時実行）。
+2. **Task 5-1 & 5-2**: UI 修正とモック排除。
+3. **Task 5-3**: サポートページ作成。
 
 ---
-
-## Task 4: 動作検証フローの実行
-
-指示書に従い、以下の順でデプロイを確認してください。
-1. **develop ブランチ**: `git push origin develop` → `https://stg.wyze-system.com` で動作確認。
-2. **main ブランチ**: `git push origin main` → `https://wyze-system.com` で動作確認。
-3. **Always Free 確認**: Google Cloud Console の「お支払い」画面で、課金が発生していないか（無料枠内で収まっているか）をチェック。
-
----
-**注意**: 作業中は `gcloud config set project [PROJECT_ID]` を使用して、個人用と WorkSpace 用のプロジェクトを間違えないよう厳密に切り替えてください。
+**注意**: 全ての修正において、`CLAUDE.md` に記載された規約を遵守し、既存のテスト（Vitest/Jest）がパスすることを確認してください。
