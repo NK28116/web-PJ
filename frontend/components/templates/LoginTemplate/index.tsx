@@ -77,7 +77,7 @@ export const LoginTemplate: React.FC = () => {
         value={email}
         onChange={(e) => setEmail(e.target.value)}
         autoCapitalize="none"
-        className="w-[85%] h-10 bg-[#FFFFFF] border border-black rounded-[5px] px-3 mt-[15px] mb-0.5 text-black placeholder-[#00A48D]"
+        className="w-[85%] h-10 bg-[#FFFFFF] border border-black rounded-[5px] px-3 mt-[15px] mb-0.5 text-black placeholder-[#00A48D] focus:bg-transparent focus:text-white focus:caret-white focus:border-white focus:outline-none"
       />
 
       {/* パスワード忘れ */}
@@ -91,13 +91,13 @@ export const LoginTemplate: React.FC = () => {
       )}
 
       {/* パスワード入力 */}
-      <div className="w-[85%] h-10 bg-[#FFFFFF] border border-black rounded-[5px] flex items-center px-3 mt-[15px] mb-0.5">
+      <div className="w-[85%] h-10 bg-[#FFFFFF] border border-black rounded-[5px] flex items-center px-3 mt-[15px] mb-0.5 focus-within:bg-transparent focus-within:border-white">
         <input
           type={showPassword ? 'text' : 'password'}
           placeholder="パスワード"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className="flex-1 bg-transparent text-black placeholder-[#00A48D] outline-none"
+          className="flex-1 bg-transparent text-black placeholder-[#00A48D] outline-none focus:text-white focus:caret-white"
         />
         <button
           type="button"

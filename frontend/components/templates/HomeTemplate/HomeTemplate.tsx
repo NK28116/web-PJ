@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/router';
+import Link from 'next/link';
 import { BaseTemplate } from '@/templates/BaseTemplate';
 import { useAuth } from '@/hooks/useAuth';
 import { useAccountLink } from '@/hooks/useAccountLink';
@@ -125,6 +126,13 @@ export const HomeTemplate: React.FC<HomeTemplateProps> = ({
           shops={shops}
           onShopClick={handleShopClick}
         />
+
+        {/* 退会動線 */}
+        <div className="text-center pt-2 pb-4">
+          <Link href="/support" className="text-[12px] text-gray-400 underline">
+            退会の申し込みはサポート・ヘルプから
+          </Link>
+        </div>
       </div>
     </BaseTemplate>
   );

@@ -17,48 +17,8 @@ export interface HeaderProps {
   customTabLabels?: { [key: string]: string };
 }
 
-const MOCK_NOTIFICATIONS: Notification[] = [
-  {
-    id: '1',
-    storeName: 'Wyze Pizza',
-    content: 'Googleビジネスプロフィールの連携が切れました。再連携をしてください。',
-    receivedAt: new Date(Date.now() - 1 * 60 * 1000),
-    isRead: false,
-    redirectPath: '/home',
-  },
-  {
-    id: '2',
-    storeName: 'Wyze Pizza',
-    content: '新しい口コミ（★4）が届きました。',
-    receivedAt: new Date(Date.now() - 3 * 60 * 60 * 1000),
-    isRead: false,
-    redirectPath: '/review',
-  },
-  {
-    id: '3',
-    storeName: 'Wyze Pizza',
-    content: '11月はGoogleマップ上で3位まで上昇しました。プロフィール閲覧数は先月＋26%向上。',
-    receivedAt: new Date(Date.now() - 24 * 60 * 60 * 1000),
-    isRead: false,
-    redirectPath: '/report',
-  },
-  {
-    id: '4',
-    storeName: 'Wyze Pizza',
-    content: '月次レポートが生成されました。確認してください。',
-    receivedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
-    isRead: true,
-    redirectPath: '/report',
-  },
-  {
-    id: '5',
-    storeName: 'Wyze Pizza',
-    content: '新しい投稿が公開されました。',
-    receivedAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
-    isRead: true,
-    redirectPath: '/post',
-  },
-];
+// 通知 API が実装されるまで空配列を使用
+const INITIAL_NOTIFICATIONS: Notification[] = [];
 
 const tabs = [
   { id: 'home' as const, label: 'ホーム' },
@@ -77,7 +37,7 @@ export const Header: React.FC<HeaderProps> = ({
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
-  const [notifications, setNotifications] = useState<Notification[]>(MOCK_NOTIFICATIONS);
+  const [notifications, setNotifications] = useState<Notification[]>(INITIAL_NOTIFICATIONS);
   const [headerHeight, setHeaderHeight] = useState(0);
   const headerRef = useRef<HTMLDivElement>(null);
 
@@ -234,7 +194,7 @@ export const Header: React.FC<HeaderProps> = ({
             <li><Link href="/current-features" className="text-lg m-4">プラン確認・変更</Link></li>
             <li><Link href="/billing" className="text-lg m-4">お支払い情報</Link></li>
             <li><Link href="/account" className="text-lg m-4">店舗・アカウント情報</Link></li>
-            <li><a href="/help" className="text-lg m-4">サポート・ヘルプ</a></li>
+            <li><Link href="/support" className="text-lg m-4">サポート・ヘルプ</Link></li>
             <li>
               <button
                 onClick={() => {

@@ -261,7 +261,7 @@ const SubStep2_1: React.FC<SubStep2_1Props> = ({ email, setEmail, errorMessage, 
         value={email}
         onChange={(e) => setEmail(e.target.value)}
         autoCapitalize="none"
-        className="w-full h-10 bg-[#D9D9D9] border border-black rounded-[5px] px-3 mb-1 text-black placeholder-[#707070]"
+        className="w-full h-10 bg-[#D9D9D9] border border-black rounded-[5px] px-3 mb-1 text-black placeholder-[#707070] focus:bg-transparent focus:text-white focus:caret-white focus:border-white focus:outline-none"
       />
       {errorMessage && (
         <p className="w-full text-red-400 text-[13px] mb-2">{errorMessage}</p>
@@ -304,6 +304,22 @@ const SubStep2_2: React.FC<SubStep2_2Props> = ({
     const newCode = [...code];
     newCode[index] = num.slice(-1);
     setCode(newCode);
+    // 次の入力欄にフォーカス移動
+    if (num && index < 5) {
+      const nextInput = document.querySelector<HTMLInputElement>(`input[data-otp-index="${index + 1}"]`);
+      nextInput?.focus();
+    }
+  };
+
+  const handlePaste = (e: React.ClipboardEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const pastedText = e.clipboardData.getData('text').replace(/[^0-9]/g, '');
+    if (pastedText.length === 0) return;
+    const newCode = [...code];
+    for (let i = 0; i < 6 && i < pastedText.length; i++) {
+      newCode[i] = pastedText[i];
+    }
+    setCode(newCode);
   };
 
   // DEV_ONLY: モックコードを自動入力するボタン
@@ -340,7 +356,7 @@ const SubStep2_2: React.FC<SubStep2_2Props> = ({
         メールに記載された6桁の認証コードを入力してください
       </p>
 
-      <div className="flex gap-2 justify-center my-2">
+      <div className="flex gap-2 justify-center my-2" onPaste={handlePaste}>
         {[0, 1, 2, 3, 4, 5].map((i) => (
           <input
             key={i}
@@ -349,13 +365,30 @@ const SubStep2_2: React.FC<SubStep2_2Props> = ({
             maxLength={1}
             value={code[i]}
             onChange={(e) => handleCodeChange(i, e.target.value)}
-            className="w-9 h-12 bg-[#D9D9D9] border border-black rounded text-center text-xl font-bold text-black"
+            data-otp-index={i}
+            className="w-9 h-12 bg-[#D9D9D9] border border-black rounded text-center text-xl font-bold text-black focus:bg-transparent focus:text-white focus:caret-white focus:border-white focus:outline-none"
           />
         ))}
       </div>
 
       {errorMessage && (
         <p className="text-red-400 text-[13px] mt-1">{errorMessage}</p>
+      )}
+
+      {/* ステージング限定デバッグパネル（画面下部固定） */}
+      {serverCode && process.env.NODE_ENV !== 'production' && (
+        <div className="fixed bottom-0 left-0 right-0 z-50 bg-gray-900/95 border-t border-yellow-400 px-4 py-2 flex items-center justify-between max-w-[393px] mx-auto">
+          <div className="flex items-center gap-2">
+            <span className="text-yellow-400 text-[10px] font-bold">DEBUG</span>
+            <span className="text-white text-sm font-mono font-bold tracking-[0.3em]">{serverCode}</span>
+          </div>
+          <button
+            onClick={() => { navigator.clipboard.writeText(serverCode); }}
+            className="text-yellow-400 text-[10px] border border-yellow-400 rounded px-2 py-0.5"
+          >
+            COPY
+          </button>
+        </div>
       )}
 
       {/* DEV_ONLY: 開発用モックコード取得ボタン */}
@@ -527,13 +560,13 @@ const SubStep2_3: React.FC<SubStep2_3Props> = ({
       <p className="text-white text-sm font-normal w-full mb-1">
         パスワード(8文字以上) <span className="text-red-400">※必須</span>
       </p>
-      <div className="w-full h-10 bg-[#D9D9D9] border border-black rounded-[5px] flex items-center px-3 mb-1">
+      <div className="w-full h-10 bg-[#D9D9D9] border border-black rounded-[5px] flex items-center px-3 mb-1 focus-within:bg-transparent focus-within:border-white">
         <input
           type={showPassword ? 'text' : 'password'}
           placeholder="パスワード"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className="flex-1 bg-transparent text-black placeholder-[#707070] outline-none"
+          className="flex-1 bg-transparent text-black placeholder-[#707070] outline-none focus:text-white focus:caret-white"
         />
         <button
           type="button"
@@ -548,13 +581,13 @@ const SubStep2_3: React.FC<SubStep2_3Props> = ({
       </p>
 
       {/* パスワード確認 */}
-      <div className="w-full h-10 bg-[#D9D9D9] border border-black rounded-[5px] flex items-center px-3 mb-4">
+      <div className="w-full h-10 bg-[#D9D9D9] border border-black rounded-[5px] flex items-center px-3 mb-4 focus-within:bg-transparent focus-within:border-white">
         <input
           type={showConfirm ? 'text' : 'password'}
           placeholder="パスワード再入力"
           value={passwordConfirm}
           onChange={(e) => setPasswordConfirm(e.target.value)}
-          className="flex-1 bg-transparent text-black placeholder-[#707070] outline-none"
+          className="flex-1 bg-transparent text-black placeholder-[#707070] outline-none focus:text-white focus:caret-white"
         />
         <button
           type="button"
@@ -572,7 +605,7 @@ const SubStep2_3: React.FC<SubStep2_3Props> = ({
         placeholder="ニックネーム"
         value={nickname}
         onChange={(e) => setNickname(e.target.value)}
-        className="w-full h-10 bg-[#D9D9D9] border border-black rounded-[5px] px-3 mb-4 text-black placeholder-[#707070]"
+        className="w-full h-10 bg-[#D9D9D9] border border-black rounded-[5px] px-3 mb-4 text-black placeholder-[#707070] focus:bg-transparent focus:text-white focus:caret-white focus:border-white focus:outline-none"
       />
 
       {/* 生年月日 */}
@@ -581,7 +614,7 @@ const SubStep2_3: React.FC<SubStep2_3Props> = ({
         type="date"
         value={birthDate}
         onChange={(e) => setBirthDate(e.target.value)}
-        className="w-full h-10 bg-[#D9D9D9] border border-black rounded-[5px] px-3 mb-4 text-black"
+        className="w-full h-10 bg-[#D9D9D9] border border-black rounded-[5px] px-3 mb-4 text-black focus:bg-transparent focus:text-white focus:caret-white focus:border-white focus:outline-none"
       />
 
       {/* 業種 */}
@@ -589,7 +622,7 @@ const SubStep2_3: React.FC<SubStep2_3Props> = ({
       <select
         value={industry}
         onChange={(e) => setIndustry(e.target.value as Industry)}
-        className="w-full h-10 bg-[#D9D9D9] border border-black rounded-[5px] px-3 mb-1 text-black"
+        className="w-full h-10 bg-[#D9D9D9] border border-black rounded-[5px] px-3 mb-1 text-black focus:bg-transparent focus:text-white focus:border-white focus:outline-none"
       >
         <option value="">選択してください</option>
         {INDUSTRY_OPTIONS.map((opt) => (
@@ -607,7 +640,7 @@ const SubStep2_3: React.FC<SubStep2_3Props> = ({
         placeholder="店舗名"
         value={shopName}
         onChange={(e) => setShopName(e.target.value)}
-        className="w-full h-10 bg-[#D9D9D9] border border-black rounded-[5px] px-3 mb-1 text-black placeholder-[#707070]"
+        className="w-full h-10 bg-[#D9D9D9] border border-black rounded-[5px] px-3 mb-1 text-black placeholder-[#707070] focus:bg-transparent focus:text-white focus:caret-white focus:border-white focus:outline-none"
       />
       <p className="text-white text-[11px] w-full mb-4">
         ※最初に連携する主要な店舗名を入力してください。2店舗目以降は、登録完了後の管理画面から追加できます。

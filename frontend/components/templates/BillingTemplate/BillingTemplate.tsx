@@ -183,6 +183,7 @@ export const BillingTemplate: React.FC<BillingTemplateProps> = ({
   const [showCardForm, setShowCardForm] = useState(false);
   const [formSubmitting, setFormSubmitting] = useState(false);
   const [selectedPlanId, setSelectedPlanId] = useState<string>(PLANS[0].id);
+  const [cardRegistered, setCardRegistered] = useState(false);
 
   const isAnyLoading = billingLoading || pmLoading || formSubmitting;
 
@@ -196,6 +197,7 @@ export const BillingTemplate: React.FC<BillingTemplateProps> = ({
 
   const handleCardSetupSuccess = async (message: string) => {
     setShowCardForm(false);
+    setCardRegistered(true);
     setSuccessMessage(message);
     await refetchPaymentMethods();
   };
@@ -230,8 +232,8 @@ export const BillingTemplate: React.FC<BillingTemplateProps> = ({
     });
   };
 
-  // 実データまたはモックデータの支払い履歴
-  const paymentHistory: PaymentHistory[] = (!IS_MOCK && invoices.length > 0)
+  // 実データの支払い履歴（モック排除済み）
+  const paymentHistory: PaymentHistory[] = invoices.length > 0
     ? invoices.map((inv) => ({
         id: inv.id,
         date: formatDate(inv.created),
@@ -240,7 +242,7 @@ export const BillingTemplate: React.FC<BillingTemplateProps> = ({
         invoiceId: inv.id,
         invoicePdfUrl: inv.invoice_pdf_url,
       }))
-    : MOCK_PAYMENT_HISTORY;
+    : [];
 
   return (
     <BaseTemplate
@@ -302,6 +304,8 @@ export const BillingTemplate: React.FC<BillingTemplateProps> = ({
                   </button>
                 </div>
               ))
+            ) : cardRegistered ? (
+              <Text className="text-[13px] text-gray-400">カード情報を更新中...</Text>
             ) : (
               <div className="relative py-2">
                 <div className="blur-[3px] select-none pointer-events-none opacity-40 space-y-2">
@@ -431,6 +435,9 @@ export const BillingTemplate: React.FC<BillingTemplateProps> = ({
           </div>
           <div className="p-4 space-y-3">
             {invoicesLoading && <Text className="text-[13px] text-gray-400">読み込み中...</Text>}
+            {!invoicesLoading && paymentHistory.length === 0 && (
+              <Text className="text-[13px] text-gray-400 text-center py-2">履歴はありません</Text>
+            )}
             {paymentHistory.map((item) => (
               <div key={item.id} className="flex items-center justify-between">
                 <Text className="text-[14px] text-black">{item.date}</Text>
@@ -448,13 +455,9 @@ export const BillingTemplate: React.FC<BillingTemplateProps> = ({
           </div>
           {/* 次回お支払い */}
           <div className="border-t border-gray-300 p-4 text-center">
-            {!IS_MOCK && upcoming ? (
+            {upcoming ? (
               <Text className="text-[14px] text-gray-500">
                 次回のお支払い：{formatDate(upcoming.next_payment_date)} {formatCurrency(upcoming.amount_due)}
-              </Text>
-            ) : IS_MOCK && MOCK_NEXT_PAYMENT ? (
-              <Text className="text-[14px] text-gray-500">
-                次回のお支払い：{MOCK_NEXT_PAYMENT.date} {formatCurrency(MOCK_NEXT_PAYMENT.amount)}
               </Text>
             ) : (
               <Text className="text-[14px] text-gray-500">
