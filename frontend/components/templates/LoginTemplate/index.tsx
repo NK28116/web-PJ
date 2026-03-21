@@ -69,6 +69,9 @@ export const LoginTemplate: React.FC = () => {
       >
         Wyze
       </p>
+      {process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_REF === 'develop' && (
+        <span className="bg-yellow-400 text-black text-[10px] font-bold px-1.5 py-0.5 rounded mb-2">[branch:develop]</span>
+      )}
 
       {/* メールアドレス入力 */}
       <input
