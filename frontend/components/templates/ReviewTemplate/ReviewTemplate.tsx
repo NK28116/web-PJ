@@ -68,9 +68,11 @@ export const ReviewTemplate: React.FC = () => {
     setReplyError(null);
     try {
       await submitReply(id, replyText);
+      // 成功時のみモーダルを閉じる
       setSelectedReview(null);
     } catch (err) {
-      setReplyError(err instanceof Error ? err.message : '返信の送信に失敗しました');
+      // 例外を再スローしてモーダル側に伝える
+      throw err;
     }
   };
 

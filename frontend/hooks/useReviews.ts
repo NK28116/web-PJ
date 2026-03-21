@@ -54,15 +54,20 @@ export const useReviews = () => {
   }, [fetchReviews]);
 
   const submitReply = useCallback(async (reviewId: string, comment: string) => {
-    console.log('[useReviews] POST /api/google/reviews/' + reviewId + '/reply:', { comment });
-    await apiPost(`/api/google/reviews/${reviewId}/reply`, { comment });
-    setReviews((prev) =>
-      prev.map((r) =>
-        r.id === reviewId
-          ? { ...r, replyStatus: 'replied' as const, replyText: comment, replyCreatedAt: new Date().toISOString().split('T')[0] }
-          : r
-      )
-    );
+    try {
+      console.log('[useReviews] POST /api/google/reviews/' + reviewId + '/reply:', { comment });
+      await apiPost(`/api/google/reviews/${reviewId}/reply`, { comment });
+      setReviews((prev) =>
+        prev.map((r) =>
+          r.id === reviewId
+            ? { ...r, replyStatus: 'replied' as const, replyText: comment, replyCreatedAt: new Date().toISOString().split('T')[0] }
+            : r
+        )
+      );
+    } catch (err) {
+      console.error('[useReviews] POST /api/google/reviews reply failed:', err);
+      throw err;
+    }
   }, []);
 
   return { reviews, loading, error, refetch: fetchReviews, submitReply };

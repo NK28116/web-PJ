@@ -69,6 +69,9 @@ export const ReviewDetailModal: React.FC<ReviewDetailModalProps> = ({
   const [replyText, setReplyText] = useState('');
   const router = useRouter();
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -78,6 +81,7 @@ export const ReviewDetailModal: React.FC<ReviewDetailModalProps> = ({
       document.body.style.overflow = 'hidden';
       setIsReplying(mode === 'reply');
       setReplyText(review.replyText ?? '');
+      setSubmitError(null);
     } else {
       document.body.style.overflow = 'unset';
     }
@@ -91,9 +95,21 @@ export const ReviewDetailModal: React.FC<ReviewDetailModalProps> = ({
   const displayImages = review.images.slice(0, 3);
   const extraCount = review.images.length - 3;
 
-  const handleSubmit = () => {
-    if (!replyText.trim()) return;
-    onReplySubmit(review.id, replyText.trim());
+  const handleSubmit = async () => {
+    if (!replyText.trim() || isSubmitting) return;
+    
+    setIsSubmitting(true);
+    setSubmitError(null);
+    try {
+      await onReplySubmit(review.id, replyText.trim());
+      onClose(); // 成功したら閉じる
+    } catch (err) {
+      console.error('Review reply failed:', err);
+      // 500エラーに限らず、返信失敗時は連携を促す
+      setSubmitError('Google アカウントを連携してください');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleDraftSave = () => {
@@ -228,8 +244,12 @@ export const ReviewDetailModal: React.FC<ReviewDetailModalProps> = ({
               onChange={(e) => setReplyText(e.target.value)}
               placeholder="返信内容を入力してください..."
               rows={5}
-              className="w-full border border-gray-300 rounded-lg p-3 text-sm text-gray-700 resize-none focus:outline-none focus:ring-2 focus:ring-[#1aa382] focus:border-transparent bg-white"
+              disabled={isSubmitting}
+              className="w-full border border-gray-300 rounded-lg p-3 text-sm text-gray-700 resize-none focus:outline-none focus:ring-2 focus:ring-[#1aa382] focus:border-transparent bg-white disabled:bg-gray-50"
             />
+            {submitError && (
+              <Text className="text-sm text-red-500 font-medium">{submitError}</Text>
+            )}
           </div>
         )}
 
@@ -239,20 +259,22 @@ export const ReviewDetailModal: React.FC<ReviewDetailModalProps> = ({
             <>
               <Button
                 onClick={handleDraftSave}
-                className="bg-white border border-[#333] text-gray-700 px-6 py-3 rounded text-sm font-medium"
+                disabled={isSubmitting}
+                className="bg-white border border-[#333] text-gray-700 px-6 py-3 rounded text-sm font-medium disabled:opacity-50"
               >
                 下書き保存
               </Button>
               <Button
                 onClick={handleSubmit}
-                disabled={!replyText.trim()}
+                disabled={!replyText.trim() || isSubmitting}
                 className="bg-[#1aa382] text-black px-6 py-3 rounded text-sm font-medium disabled:opacity-40"
               >
-                返信を投稿する
+                {isSubmitting ? '投稿中...' : '返信を投稿する'}
               </Button>
               <Button
                 onClick={onClose}
-                className="bg-white border border-[#333] text-gray-700 px-6 py-3 rounded text-sm font-medium"
+                disabled={isSubmitting}
+                className="bg-white border border-[#333] text-gray-700 px-6 py-3 rounded text-sm font-medium disabled:opacity-50"
               >
                 閉じる
               </Button>
