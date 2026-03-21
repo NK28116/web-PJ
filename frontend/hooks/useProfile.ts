@@ -24,12 +24,13 @@ export const useProfile = () => {
     fetchProfile();
   }, [fetchProfile]);
 
-  const updateProfile = useCallback(async (nickname: string, email?: string): Promise<boolean> => {
+  const updateProfile = useCallback(async (nickname: string, email?: string, shopName?: string): Promise<boolean> => {
     setLoading(true);
     setError(null);
     try {
       const body: Record<string, string> = { nickname };
       if (email) body.email = email;
+      if (shopName !== undefined) body.shop_name = shopName;
       const data = await apiPut<ProfileResponse>('/api/user/profile', body);
       setProfile(data);
       return true;

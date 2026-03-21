@@ -106,9 +106,9 @@ const AccountRow: React.FC<AccountRowProps> = ({
 };
 
 const GoogleIcon: React.FC = () => (
-  <span className="text-xl font-bold text-[#4285F4]">G</span>
+  <img src="/Icons/web_light_sq_na.svg" alt="Google" className="w-6 h-6" />
 );
 
 const InstagramIcon: React.FC = () => (
-  <span className="text-xl font-bold text-[#df42f4]">I</span>
+  <img src="/Icons/Instagram_Glyph_Gradient.svg" alt="Instagram" className="w-6 h-6" />
 );

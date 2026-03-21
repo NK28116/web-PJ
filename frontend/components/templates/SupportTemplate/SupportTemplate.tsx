@@ -156,7 +156,7 @@ export const SupportTemplate: React.FC<SupportTemplateProps> = ({
 
                 <Button
                   onClick={handleSubmit}
-                  className="w-full bg-[#00A48D] text-white text-[14px] py-2"
+                  className="w-full bg-[#00A48D] text-black text-[14px] py-2"
                 >
                   送信する
                 </Button>

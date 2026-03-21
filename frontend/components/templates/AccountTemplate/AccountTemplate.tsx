@@ -95,9 +95,19 @@ export const AccountTemplate: React.FC<AccountTemplateProps> = ({
     }
   }, [apiNickname, apiEmail, apiShopName]);
 
-  const handleSaveProfile = () => {
-    setProfile(editProfile);
-    setIsEditingProfile(false);
+  const handleSaveProfile = async () => {
+    setSaveError(null);
+    const success = await updateProfile(
+      owner.name,
+      undefined,
+      editProfile.shopName,
+    );
+    if (success) {
+      setProfile(editProfile);
+      setIsEditingProfile(false);
+    } else if (profileError) {
+      setSaveError(profileError);
+    }
   };
 
   const handleCancelProfile = () => {
@@ -110,6 +120,7 @@ export const AccountTemplate: React.FC<AccountTemplateProps> = ({
     const success = await updateProfile(
       editOwner.name,
       editOwner.email !== (apiProfile?.email ?? '') ? editOwner.email : undefined,
+      profile.shopName,
     );
     if (success) {
       setOwner(editOwner);

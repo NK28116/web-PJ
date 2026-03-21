@@ -325,7 +325,7 @@ export const PostTemplate: React.FC<PostTemplateProps> = () => {
             </Text>
             <Button
               onClick={() => { window.location.href = '/home'; }}
-              className="bg-[#00A48D] text-white text-[14px] py-2 px-6 rounded"
+              className="bg-[#00A48D] text-black text-[14px] py-2 px-6 rounded"
             >
               ホームで連携する
             </Button>

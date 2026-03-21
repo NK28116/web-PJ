@@ -78,6 +78,7 @@ export interface ProfileResponse {
   id: string;
   email: string;
   nickname: string;
+  shop_name: string;
   role: string;
   plan_tier: string;
 }
