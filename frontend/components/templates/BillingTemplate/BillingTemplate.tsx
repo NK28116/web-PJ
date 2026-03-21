@@ -18,6 +18,7 @@ interface PaymentHistory {
   amount: number;
   planName: string;
   invoiceId: string;
+  invoicePdfUrl?: string;
 }
 
 const MOCK_PAYMENT_HISTORY: PaymentHistory[] = [

@@ -139,7 +139,7 @@ export const Header: React.FC<HeaderProps> = ({
                 wyze
               </Text>
               {process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_REF === 'develop' && (
-                <span className="text-gray-500 text-[11px]">deploy from develop</span>
+                <span className="bg-yellow-400 text-black text-[10px] font-bold px-1.5 py-0.5 rounded">[branch:develop]</span>
               )}
             </div>
             {/* 通知・メニューを右側にまとめて配置 */}

@@ -1,0 +1,15 @@
+[
+  {
+    "name": "keep-latest-two",
+    "action": { "type": "Keep" },
+    "mostRecentVersions": { "keepCount": 2 }
+  },
+  {
+    "name": "delete-old",
+    "action": { "type": "Delete" },
+    "condition": {
+      "tagState": "any",
+      "olderThan": "1s"
+    }
+  }
+]

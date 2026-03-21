@@ -12,6 +12,7 @@ func isOriginAllowed(origin string) bool {
 		"http://localhost:3001",
 		"https://frontend-611370943102.us-east1.run.app",
 		"https://wyze-system.com",
+		"https://stg.wyze-system.com",
 	}
 
 	for _, o := range allowedOrigins {

@@ -12,7 +12,6 @@ env:
   FRONTEND_SERVICE: frontend
   BACKEND_IMAGE: us-east1-docker.pkg.dev/wyze-develop-staging/web-system-pj/backend
   FRONTEND_IMAGE: us-east1-docker.pkg.dev/wyze-develop-staging/web-system-pj/frontend
-  CLOUD_SQL_INSTANCE: wyze-develop-staging:us-east1:wyze-staging-db
 
 jobs:
   deploy-backend:
@@ -51,14 +50,8 @@ jobs:
 
       - name: Run migrations
         run: |
-          curl -o cloud-sql-proxy https://storage.googleapis.com/cloud-sql-connectors/cloud-sql-proxy/v2.14.3/cloud-sql-proxy.linux.amd64
-          chmod +x cloud-sql-proxy
-          ./cloud-sql-proxy ${{ env.CLOUD_SQL_INSTANCE }} --port=5432 &
-          PROXY_PID=$!
-          sleep 3
           cd backend
           DATABASE_URL="${{ secrets.DATABASE_URL_TCP }}" go run ./cmd/migrate/main.go up
-          kill $PROXY_PID
 
       # Backend デプロイ
       - name: Deploy Backend to Cloud Run
@@ -67,8 +60,11 @@ jobs:
           --image=${{ env.BACKEND_IMAGE }}:${{ github.sha }} \
           --region=${{ env.REGION }} \
           --platform=managed \
-          --add-cloudsql-instances=${{ env.CLOUD_SQL_INSTANCE }} \
+          --min-instances=0 \
+          --max-instances=1 \
+          --cpu-throttling \
+          --memory=256Mi \
           --allow-unauthenticated \
-          --set-env-vars=FRONTEND_URL=https://web-pj-three.vercel.app,GIN_MODE=release,GOOGLE_REDIRECT_URL=https://backend-611370943102.us-east1.run.app/api/auth/google/callback,INSTAGRAM_REDIRECT_URL=https://backend-611370943102.us-east1.run.app/api/auth/instagram/callback \
+          --set-env-vars=FRONTEND_URL=https://stg.wyze-system.com,GIN_MODE=release,GOOGLE_REDIRECT_URL=https://backend-7cehc4fw7q-ue.a.run.app/api/auth/google/callback,INSTAGRAM_REDIRECT_URL=https://backend-7cehc4fw7q-ue.a.run.app/api/auth/instagram/callback \
           --set-secrets=DATABASE_URL=DATABASE_URL:latest,JWT_SECRET=JWT_SECRET:latest,ENCRYPTION_KEY=ENCRYPTION_KEY:latest,GOOGLE_CLIENT_ID=GOOGLE_CLIENT_ID:latest,GOOGLE_CLIENT_SECRET=GOOGLE_CLIENT_SECRET:latest,INSTAGRAM_CLIENT_ID=INSTAGRAM_CLIENT_ID:latest,INSTAGRAM_CLIENT_SECRET=INSTAGRAM_CLIENT_SECRET:latest,STRIPE_SECRET_KEY=STRIPE_API:latest,STRIPE_WEBHOOK_SECRET=STRIPE_WEBHOOK_SECRET:latest,STRIPE_PRICE_ID_LIGHT=STRIPE_PRICE_ID_LIGHT:latest,STRIPE_PRICE_ID_BASIC=STRIPE_PRICE_ID_BASIC:latest,STRIPE_PRICE_ID_PRO=STRIPE_PRICE_ID_PRO:latest,STRIPE_PRICE_ID_LIGHT_BETA=STRIPE_PRICE_ID_LIGHT_BETA:latest,STRIPE_PRICE_ID_LIGHT_LAUNCH=STRIPE_PRICE_ID_LIGHT_LAUNCH:latest,STRIPE_PRICE_ID_LIGHT_GROWTH=STRIPE_PRICE_ID_LIGHT_GROWTH:latest,STRIPE_PRICE_ID_BASIC_BETA=STRIPE_PRICE_ID_BASIC_BETA:latest,STRIPE_PRICE_ID_BASIC_LAUNCH=STRIPE_PRICE_ID_BASIC_LAUNCH:latest,STRIPE_PRICE_ID_BASIC_GROWTH=STRIPE_PRICE_ID_BASIC_GROWTH:latest,STRIPE_PRICE_ID_PRO_BETA=STRIPE_PRICE_ID_PRO_BETA:latest,STRIPE_PRICE_ID_PRO_LAUNCH=STRIPE_PRICE_ID_PRO_LAUNCH:latest,STRIPE_PRICE_ID_PRO_GROWTH=STRIPE_PRICE_ID_PRO_GROWTH:latest,STRIPE_PRICE_ID_STAGING_TEST=STRIPE_PRICE_ID_STAGING_TEST:latest \
           --quiet
