@@ -1,15 +1,15 @@
-import { StepIndicator } from '@/atoms/StepIndicator';
-import { useAuth } from '@/hooks/useAuth';
-import { apiPost } from '@/utils/api';
-import { useRouter } from 'next/router';
-import React, { useState } from 'react';
-import { MdCheckCircleOutline } from 'react-icons/md';
+import { StepIndicator } from "@/atoms/StepIndicator";
+import { useAuth } from "@/hooks/useAuth";
+import { apiPost } from "@/utils/api";
+import { useRouter } from "next/router";
+import React, { useState } from "react";
+import { MdCheckCircleOutline } from "react-icons/md";
 
-const INDUSTRY_OPTIONS = ['飲食', '美容', 'その他'] as const;
-type Industry = typeof INDUSTRY_OPTIONS[number] | '';
+const INDUSTRY_OPTIONS = ["飲食", "美容", "その他"] as const;
+type Industry = (typeof INDUSTRY_OPTIONS)[number] | "";
 
 // MOCK_AUTH_CODE を定義 (開発用)
-const MOCK_AUTH_CODE = ['1', '2', '3', '4', '5', '6'];
+const MOCK_AUTH_CODE = ["1", "2", "3", "4", "5", "6"];
 
 export const SignUpTemplate: React.FC = () => {
   // 外部ステップ: 1=登録方法選択 / 2=アカウント情報入力 / 3=登録完了
@@ -17,71 +17,75 @@ export const SignUpTemplate: React.FC = () => {
   // ステップ2のサブステップ: 1=メール入力 / 2=認証コード / 3=ユーザー情報
   const [subStep, setSubStep] = useState(1);
 
-  const [email, setEmail] = useState('');
-  const [code, setCode] = useState(['', '', '', '', '', '']);
-  const [serverCode, setServerCode] = useState('');
-  const [nickname, setNickname] = useState('');
-  const [password, setPassword] = useState('');
-  const [passwordConfirm, setPasswordConfirm] = useState('');
-  const [birthDate, setBirthDate] = useState('');
-  const [industry, setIndustry] = useState<Industry>('');
-  const [shopName, setShopName] = useState('');
+  const [email, setEmail] = useState("");
+  const [code, setCode] = useState(["", "", "", "", "", ""]);
+  const [serverCode, setServerCode] = useState("");
+  const [nickname, setNickname] = useState("");
+  const [password, setPassword] = useState("");
+  const [passwordConfirm, setPasswordConfirm] = useState("");
+  const [birthDate, setBirthDate] = useState("");
+  const [industry, setIndustry] = useState<Industry>("");
+  const [shopName, setShopName] = useState("");
   const [agree, setAgree] = useState(false);
-  const [wyzeId, setWyzeId] = useState('');
-  const [errorMessage, setErrorMessage] = useState('');
+  const [wyzeId, setWyzeId] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
 
   const { register } = useAuth();
   const router = useRouter();
 
   const validatePassword = (pw: string): string => {
-    if (!pw) return '※パスワードを入力してください';
-    if (pw.length < 8) return 'パスワードは8文字以上で入力してください';
+    if (!pw) return "※パスワードを入力してください";
+    if (pw.length < 8) return "パスワードは8文字以上で入力してください";
     let types = 0;
     if (/[a-z]/.test(pw)) types++;
     if (/[A-Z]/.test(pw)) types++;
     if (/[0-9]/.test(pw)) types++;
     if (types < 2)
-      return 'パスワードは半角小文字・半角大文字・数字のうち2種類以上を含めてください';
-    return '';
+      return "パスワードは半角小文字・半角大文字・数字のうち2種類以上を含めてください";
+    return "";
   };
 
   const handleEmailSubmit = async () => {
-    setErrorMessage('');
+    setErrorMessage("");
     if (!email) {
-      setErrorMessage('※メールアドレスを入力してください');
+      setErrorMessage("※メールアドレスを入力してください");
       return;
     }
     try {
-      const res = await apiPost<{ code?: string }>('/api/auth/send-code', { email });
+      const res = await apiPost<{ code?: string }>("/api/auth/send-code", {
+        email,
+      });
       if (res.code) {
         setServerCode(res.code);
       }
       setSubStep(2);
     } catch {
-      setErrorMessage('認証メールの送信に失敗しました。しばらくしてから再試行してください。');
+      setErrorMessage(
+        "認証メールの送信に失敗しました。しばらくしてから再試行してください。",
+      );
     }
   };
 
   const handleCodeVerify = async (): Promise<boolean> => {
-    setErrorMessage('');
+    setErrorMessage("");
     if (code.some((c) => !c)) {
-      setErrorMessage('※6桁の認証コードを入力してください');
+      setErrorMessage("※6桁の認証コードを入力してください");
       return false;
     }
     try {
-      await apiPost('/api/auth/verify-code', { email, code: code.join('') });
+      await apiPost("/api/auth/verify-code", { email, code: code.join("") });
       setSubStep(3);
       return true;
     } catch {
-      setErrorMessage('認証コードが正しくありません');
+      setErrorMessage("認証コードが正しくありません");
       return false;
     }
   };
 
   const handleUserInfoSubmit = () => {
-    setErrorMessage('');
+    setErrorMessage("");
     if (!nickname) {
-      setErrorMessage('※ニックネームを入力してください');
+      setErrorMessage("※ニックネームを入力してください");
       return;
     }
     const pwError = validatePassword(password);
@@ -90,15 +94,17 @@ export const SignUpTemplate: React.FC = () => {
       return;
     }
     if (password !== passwordConfirm) {
-      setErrorMessage('パスワードが一致しません');
+      setErrorMessage("パスワードが一致しません");
       return;
     }
     if (!shopName) {
-      setErrorMessage('※店舗名を入力してください');
+      setErrorMessage("※店舗名を入力してください");
       return;
     }
     if (!agree) {
-      setErrorMessage('利用規約・プライバシーポリシー・cookieポリシーに同意してください');
+      setErrorMessage(
+        "利用規約・プライバシーポリシー・cookieポリシーに同意してください",
+      );
       return;
     }
     // ユニークなuuidを付与
@@ -107,19 +113,19 @@ export const SignUpTemplate: React.FC = () => {
   };
 
   const handleClear = () => {
-    setNickname('');
-    setPassword('');
-    setPasswordConfirm('');
-    setBirthDate('');
-    setIndustry('');
-    setShopName('');
+    setNickname("");
+    setPassword("");
+    setPasswordConfirm("");
+    setBirthDate("");
+    setIndustry("");
+    setShopName("");
     setAgree(false);
-    setErrorMessage('');
+    setErrorMessage("");
   };
 
   const handleFinish = () => {
     register(email, password);
-    router.replace('/home');
+    router.replace("/home");
   };
 
   const renderStep = () => {
@@ -127,8 +133,12 @@ export const SignUpTemplate: React.FC = () => {
       case 1:
         return (
           <Step1
-            onNext={() => { setErrorMessage(''); setStep(2); setSubStep(1); }}
-            onLoginRedirect={() => router.push('/')}
+            onNext={() => {
+              setErrorMessage("");
+              setStep(2);
+              setSubStep(1);
+            }}
+            onLoginRedirect={() => router.push("/")}
           />
         );
       case 2:
@@ -151,8 +161,13 @@ export const SignUpTemplate: React.FC = () => {
                 serverCode={serverCode}
                 errorMessage={errorMessage}
                 onVerify={handleCodeVerify}
-                onResend={() => { handleEmailSubmit(); }}
-                onResetEmail={() => { setErrorMessage(''); setSubStep(1); }}
+                onResend={() => {
+                  handleEmailSubmit();
+                }}
+                onResetEmail={() => {
+                  setErrorMessage("");
+                  setSubStep(1);
+                }}
               />
             );
           case 3:
@@ -188,7 +203,6 @@ export const SignUpTemplate: React.FC = () => {
     }
   };
 
-
   return (
     <div className="w-full min-h-screen bg-[#B9EAE5] flex flex-col items-center max-w-[393px] mx-auto">
       {/* ブランドロゴ */}
@@ -203,7 +217,9 @@ export const SignUpTemplate: React.FC = () => {
       <StepIndicator step={step} />
 
       {/* ステップコンテンツ */}
-      <div className="w-[95%] bg-[#00A48D] mt-2 rounded-[5px]">{renderStep()}</div>
+      <div className="w-[95%] bg-[#00A48D] mt-2 rounded-[5px]">
+        {renderStep()}
+      </div>
     </div>
   );
 };
@@ -240,9 +256,14 @@ interface SubStep2_1Props {
   onSubmit: () => void;
 }
 
-const SubStep2_1: React.FC<SubStep2_1Props> = ({ email, setEmail, errorMessage, onSubmit }) => {
-  const handleFillEmailNormal = () => setEmail('test@example.com');
-  const handleFillEmailAbnormal = () => setEmail('invalid-email');
+const SubStep2_1: React.FC<SubStep2_1Props> = ({
+  email,
+  setEmail,
+  errorMessage,
+  onSubmit,
+}) => {
+  const handleFillEmailNormal = () => setEmail("test@example.com");
+  const handleFillEmailAbnormal = () => setEmail("invalid-email");
 
   return (
     <div className="flex flex-col items-center py-6 px-4">
@@ -260,7 +281,9 @@ const SubStep2_1: React.FC<SubStep2_1Props> = ({ email, setEmail, errorMessage, 
         異常系メール入力（開発用）
       </button>
 
-      <p className="text-white text-sm font-normal w-full mb-1">メールアドレス</p>
+      <p className="text-white text-sm font-normal w-full mb-1">
+        メールアドレス
+      </p>
       <input
         type="email"
         placeholder="example@example.com"
@@ -308,20 +331,22 @@ const SubStep2_2: React.FC<SubStep2_2Props> = ({
   const [showVerifyNotification, setShowVerifyNotification] = useState(false);
 
   const handleCodeChange = (index: number, value: string) => {
-    const num = value.replace(/[^0-9]/g, '');
+    const num = value.replace(/[^0-9]/g, "");
     const newCode = [...code];
     newCode[index] = num.slice(-1);
     setCode(newCode);
     // 次の入力欄にフォーカス移動
     if (num && index < 5) {
-      const nextInput = document.querySelector<HTMLInputElement>(`input[data-otp-index="${index + 1}"]`);
+      const nextInput = document.querySelector<HTMLInputElement>(
+        `input[data-otp-index="${index + 1}"]`,
+      );
       nextInput?.focus();
     }
   };
 
   const handlePaste = (e: React.ClipboardEvent<HTMLDivElement>) => {
     e.preventDefault();
-    const pastedText = e.clipboardData.getData('text').replace(/[^0-9]/g, '');
+    const pastedText = e.clipboardData.getData("text").replace(/[^0-9]/g, "");
     if (pastedText.length === 0) return;
     const newCode = [...code];
     for (let i = 0; i < 6 && i < pastedText.length; i++) {
@@ -335,7 +360,7 @@ const SubStep2_2: React.FC<SubStep2_2Props> = ({
     setCode([...MOCK_AUTH_CODE]);
   };
   const handleFillMockCodeAbnormal = () => {
-    setCode(['0', '0', '0', '0', '0', '0']);
+    setCode(["0", "0", "0", "0", "0", "0"]);
   };
 
   const handleResend = () => {
@@ -383,22 +408,6 @@ const SubStep2_2: React.FC<SubStep2_2Props> = ({
         <p className="text-red-400 text-[13px] mt-1">{errorMessage}</p>
       )}
 
-      {/* デバッグパネル: バックエンドがcodeを返した場合のみ表示（本番では返さない） */}
-      {serverCode && (
-        <div className="fixed bottom-0 left-0 right-0 z-50 bg-gray-900/95 border-t border-yellow-400 px-4 py-2 flex items-center justify-between max-w-[393px] mx-auto">
-          <div className="flex items-center gap-2">
-            <span className="text-yellow-400 text-[10px] font-bold">DEBUG</span>
-            <span className="text-white text-sm font-mono font-bold tracking-[0.3em]">{serverCode}</span>
-          </div>
-          <button
-            onClick={() => { navigator.clipboard.writeText(serverCode); }}
-            className="text-yellow-400 text-[10px] border border-yellow-400 rounded px-2 py-0.5"
-          >
-            COPY
-          </button>
-        </div>
-      )}
-
       {/* DEV_ONLY: 開発用モックコード取得ボタン */}
       <button
         onClick={handleFillMockCode}
@@ -406,6 +415,19 @@ const SubStep2_2: React.FC<SubStep2_2Props> = ({
       >
         認証コードを取得（開発用）
       </button>
+      {/* デバッグパネル: バックエンドがcodeを返した場合のみ表示（本番では返さない） */}
+      {serverCode && (
+        <div className="fixed bottom-0 left-0 right-0 z-50 bg-gray-900/95 border-t border-yellow-400 px-4 py-2 flex items-center justify-between max-w-[393px] mx-auto">
+          <div className="flex items-center gap-2">
+            <span className="text-yellow-400 text-[10px] font-bold">
+              【認証コード】
+            </span>
+            <span className="text-white text-sm font-mono font-bold tracking-[0.3em]">
+              {serverCode}
+            </span>
+          </div>
+        </div>
+      )}
       <button
         onClick={handleFillMockCodeAbnormal}
         className="text-yellow-300 text-[11px] underline mt-1 mb-1 border border-yellow-300 rounded px-2 py-1"
@@ -456,7 +478,9 @@ const SubStep2_2: React.FC<SubStep2_2Props> = ({
 
       {/* メールが届かない場合のガイド */}
       <div className="w-full mt-4 border-t border-white/30 pt-3">
-        <p className="text-white text-[12px] font-bold mb-2">メールが届かない場合は？</p>
+        <p className="text-white text-[12px] font-bold mb-2">
+          メールが届かない場合は？
+        </p>
         <p className="text-white text-[11px] mb-1">
           ・docomo、au、SoftBankのメールアドレスをご利用の方
         </p>
@@ -475,6 +499,8 @@ const SubStep2_2: React.FC<SubStep2_2Props> = ({
         <p className="text-white/80 text-[11px] mb-1 pl-2">
           迷惑メールに届いている場合がございます。メールを受信トレイに移してからご利用ください。
         </p>
+        
+        【Gcloud log :】
       </div>
     </div>
   );
@@ -504,52 +530,60 @@ interface SubStep2_3Props {
 
 const SubStep2_3: React.FC<SubStep2_3Props> = ({
   email,
-  nickname, setNickname,
-  password, setPassword,
-  passwordConfirm, setPasswordConfirm,
-  birthDate, setBirthDate,
-  industry, setIndustry,
-  shopName, setShopName,
-  agree, setAgree,
-  errorMessage, onClear, onSubmit,
+  nickname,
+  setNickname,
+  password,
+  setPassword,
+  passwordConfirm,
+  setPasswordConfirm,
+  birthDate,
+  setBirthDate,
+  industry,
+  setIndustry,
+  shopName,
+  setShopName,
+  agree,
+  setAgree,
+  errorMessage,
+  onClear,
+  onSubmit,
 }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
   // DEV_ONLY: 正常系テストデータを入力
   const handleFillUserInfoNormal = () => {
-    setNickname('テストユーザー');
-    setPassword('Password1');
-    setPasswordConfirm('Password1');
-    setBirthDate('1990-01-01');
-    setIndustry('飲食');
-    setShopName('テスト店舗');
+    setNickname("テストユーザー");
+    setPassword("Password1");
+    setPasswordConfirm("Password1");
+    setBirthDate("1990-01-01");
+    setIndustry("飲食");
+    setShopName("テスト店舗");
     setAgree(true);
   };
 
   // DEV_ONLY: 異常系テストデータを入力（バリデーションエラー確認用）
   const handleFillUserInfoAbnormal = () => {
-    setNickname('');
-    setPassword('weak');
-    setPasswordConfirm('mismatch');
-    setBirthDate('');
-    setIndustry('');
-    setShopName('');
+    setNickname("");
+    setPassword("weak");
+    setPasswordConfirm("mismatch");
+    setBirthDate("");
+    setIndustry("");
+    setShopName("");
     setAgree(false);
   };
 
   return (
     <div className="flex flex-col items-center py-6 px-4">
-
-            {/* DEV_ONLY: 開発用ボタン */}
+      {/* DEV_ONLY: 開発用ボタン */}
       <button
         onClick={handleFillUserInfoNormal}
         className="text-yellow-300 text-[11px] underline mt-3 mb-1 border border-yellow-300 rounded px-2 py-1"
       >
-         正常系ユーザー情報を入力（開発用）
+        正常系ユーザー情報を入力（開発用）
       </button>
-      
-            {/* DEV_ONLY: 開発用ボタン */}
+
+      {/* DEV_ONLY: 開発用ボタン */}
       <button
         onClick={handleFillUserInfoAbnormal}
         className="text-yellow-300 text-[11px] underline mt-3 mb-1 border border-yellow-300 rounded px-2 py-1"
@@ -557,9 +591,10 @@ const SubStep2_3: React.FC<SubStep2_3Props> = ({
         異常系ユーザー情報を取得（開発用）
       </button>
 
-
       {/* メールアドレス（表示のみ） */}
-      <p className="text-white text-sm font-normal w-full mb-1">メールアドレス</p>
+      <p className="text-white text-sm font-normal w-full mb-1">
+        メールアドレス
+      </p>
       <div className="w-full bg-[#444444] rounded-[5px] px-3 py-2 mb-4 text-white text-sm">
         {email}
       </div>
@@ -570,7 +605,7 @@ const SubStep2_3: React.FC<SubStep2_3Props> = ({
       </p>
       <div className="w-full h-10 bg-[#D9D9D9] border border-black rounded-[5px] flex items-center px-3 mb-1 focus-within:bg-transparent focus-within:border-white">
         <input
-          type={showPassword ? 'text' : 'password'}
+          type={showPassword ? "text" : "password"}
           placeholder="パスワード"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
@@ -581,7 +616,7 @@ const SubStep2_3: React.FC<SubStep2_3Props> = ({
           onClick={() => setShowPassword((p) => !p)}
           className="text-[#707070] text-xs ml-2"
         >
-          {showPassword ? '非表示' : '表示'}
+          {showPassword ? "非表示" : "表示"}
         </button>
       </div>
       <p className="text-white text-[11px] w-full mb-3">
@@ -591,7 +626,7 @@ const SubStep2_3: React.FC<SubStep2_3Props> = ({
       {/* パスワード確認 */}
       <div className="w-full h-10 bg-[#D9D9D9] border border-black rounded-[5px] flex items-center px-3 mb-4 focus-within:bg-transparent focus-within:border-white">
         <input
-          type={showConfirm ? 'text' : 'password'}
+          type={showConfirm ? "text" : "password"}
           placeholder="パスワード再入力"
           value={passwordConfirm}
           onChange={(e) => setPasswordConfirm(e.target.value)}
@@ -602,7 +637,7 @@ const SubStep2_3: React.FC<SubStep2_3Props> = ({
           onClick={() => setShowConfirm((p) => !p)}
           className="text-[#707070] text-xs ml-2"
         >
-          {showConfirm ? '非表示' : '表示'}
+          {showConfirm ? "非表示" : "表示"}
         </button>
       </div>
 
@@ -626,7 +661,9 @@ const SubStep2_3: React.FC<SubStep2_3Props> = ({
       />
 
       {/* 業種 */}
-      <p className="text-white text-sm font-normal w-full mb-1">業種 <span className="text-red-400">※必須</span></p>
+      <p className="text-white text-sm font-normal w-full mb-1">
+        業種 <span className="text-red-400">※必須</span>
+      </p>
       <select
         value={industry}
         onChange={(e) => setIndustry(e.target.value as Industry)}
@@ -634,7 +671,9 @@ const SubStep2_3: React.FC<SubStep2_3Props> = ({
       >
         <option value="">選択してください</option>
         {INDUSTRY_OPTIONS.map((opt) => (
-          <option key={opt} value={opt}>{opt}</option>
+          <option key={opt} value={opt}>
+            {opt}
+          </option>
         ))}
       </select>
       <p className="text-white text-[11px] w-full mb-4">
@@ -642,7 +681,9 @@ const SubStep2_3: React.FC<SubStep2_3Props> = ({
       </p>
 
       {/* 店舗名 */}
-      <p className="text-white text-sm font-normal w-full mb-1">店舗名 <span className="text-red-400">※必須</span></p>
+      <p className="text-white text-sm font-normal w-full mb-1">
+        店舗名 <span className="text-red-400">※必須</span>
+      </p>
       <input
         type="text"
         placeholder="店舗名"
@@ -664,9 +705,17 @@ const SubStep2_3: React.FC<SubStep2_3Props> = ({
           className="mt-0.5 flex-shrink-0"
         />
         <span className="text-white text-[11px]">
-          <a href="#" className="text-[#38B6FF] underline">利用規約</a>、
-          <a href="#" className="text-[#38B6FF] underline">プライバシーポリシー</a>、
-          <a href="#" className="text-[#38B6FF] underline">cookieポリシー</a>
+          <a href="#" className="text-[#38B6FF] underline">
+            利用規約
+          </a>
+          、
+          <a href="#" className="text-[#38B6FF] underline">
+            プライバシーポリシー
+          </a>
+          、
+          <a href="#" className="text-[#38B6FF] underline">
+            cookieポリシー
+          </a>
           に同意します
         </span>
       </label>
@@ -682,8 +731,8 @@ const SubStep2_3: React.FC<SubStep2_3Props> = ({
       {errorMessage && (
         <p className="text-red-400 text-[13px] mb-2 w-full">{errorMessage}</p>
       )}
-      
-            <button
+
+      <button
         onClick={onClear}
         className="w-full bg-[#006355] text-white border border-white text-base font-normal py-2 rounded-[5px] mt-1"
       >
@@ -710,15 +759,16 @@ interface Step3Props {
 const Step3: React.FC<Step3Props> = ({ wyzeId, onStart }) => (
   <div className="flex flex-col items-center py-8 px-4">
     <div className="text-green-400 text-6xl mb-4">✓</div>
-    <p className="text-white text-base font-normal my-2">アカウント登録が完了しました</p>
+    <p className="text-white text-base font-normal my-2">
+      アカウント登録が完了しました
+    </p>
     {wyzeId && (
       <p className="text-white text-base font-normal my-1">WyzeID: {wyzeId}</p>
     )}
     <p className="text-white text-base font-normal my-2">Wyze へようこそ！</p>
     <p className="text-white text-[13px] text-center w-[85%] mt-2 mb-4">
       ご登録ありがとうございます！ 早速、集客自動化の第一歩として、
-      GoogleビジネスプロフィールとInstagram
-      の連携を始めましょう！
+      GoogleビジネスプロフィールとInstagram の連携を始めましょう！
     </p>
     <button
       onClick={onStart}
