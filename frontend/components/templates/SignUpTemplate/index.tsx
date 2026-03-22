@@ -430,33 +430,48 @@ const SubStep2_2: React.FC<SubStep2_2Props> = ({
         認証コードを取得（開発用）
       </button>
 
-      {/* デバッグパネル: 認証コードとGcloudログの表示 */}
-      <div className="w-full bg-gray-900/90 border border-yellow-400 rounded p-3 mt-4 overflow-hidden">
-        <div className="flex items-center gap-2 border-b border-white/20 pb-2 mb-2">
-          <span className="text-yellow-400 text-[12px] font-bold">
-            【認証コード】
-          </span>
-          <span className="text-white text-sm font-mono font-bold tracking-[0.3em] bg-white/10 px-2 py-0.5 rounded">
-            {serverCode || "--- ---"}
-          </span>
-        </div>
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center justify-between">
-            <span className="text-yellow-400 text-[12px] font-bold">
-              【Gcloud log :】
-            </span>
-            <button 
-              onClick={fetchLogs}
-              className="text-[10px] text-blue-400 underline"
-            >
-              Reload Logs
-            </button>
+      {/* スマートフォン向け最適化デバッグパネル: 認証コードとGcloudログの表示 */}
+      <div className="fixed bottom-0 left-0 right-0 z-[100] max-w-[393px] mx-auto pointer-events-none px-4 pb-4">
+        <details className="group pointer-events-auto bg-gray-900/95 border border-yellow-400 rounded-lg shadow-2xl overflow-hidden transition-all duration-300">
+          <summary className="flex items-center justify-between p-3 cursor-pointer list-none select-none active:bg-gray-800">
+            <div className="flex items-center gap-2">
+              <span className="text-yellow-400 text-[11px] font-bold">
+                【DEBUG】
+              </span>
+              <span className="text-white text-[13px] font-mono font-bold tracking-[0.1em]">
+                {serverCode ? `Code: ${serverCode}` : "Waiting for code..."}
+              </span>
+            </div>
+            <div className="text-yellow-400 text-[10px] group-open:rotate-180 transition-transform">
+              ▲
+            </div>
+          </summary>
+          
+          <div className="p-3 pt-0 border-t border-white/10">
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between mt-2">
+                <span className="text-yellow-400 text-[11px] font-bold">
+                  【Gcloud log :】
+                </span>
+                <button 
+                  onClick={(e) => {
+                    e.preventDefault();
+                    fetchLogs();
+                  }}
+                  className="text-[11px] bg-blue-600/30 text-blue-400 px-2 py-1 rounded border border-blue-400/30 active:bg-blue-600/50"
+                >
+                  Reload Logs
+                </button>
+              </div>
+              <div className="w-full h-[200px] overflow-y-auto bg-black p-2 rounded text-[10px] font-mono text-green-400 whitespace-pre-wrap leading-tight border border-white/5 scrollbar-thin scrollbar-thumb-gray-700">
+                {backendLogs || "Tap 'Reload Logs' to fetch..."}
+              </div>
+              <div className="text-[9px] text-gray-500 italic mt-1">
+                ※ステージング環境限定のデバッグ表示です
+              </div>
+            </div>
           </div>
-          <div className="w-full max-h-[150px] overflow-y-auto bg-black p-2 rounded text-[9px] font-mono text-green-400 whitespace-pre-wrap leading-tight">
-            {/* ここに指示されたログコマンドの実行結果を想定したテキストを配置 */}
-            {backendLogs || "Wait for logs..."}
-          </div>
-        </div>
+        </details>
       </div>
 
       <button
