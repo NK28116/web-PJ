@@ -383,8 +383,8 @@ const SubStep2_2: React.FC<SubStep2_2Props> = ({
         <p className="text-red-400 text-[13px] mt-1">{errorMessage}</p>
       )}
 
-      {/* ステージング限定デバッグパネル（画面下部固定） */}
-      {serverCode && process.env.NODE_ENV !== 'production' && (
+      {/* デバッグパネル: バックエンドがcodeを返した場合のみ表示（本番では返さない） */}
+      {serverCode && (
         <div className="fixed bottom-0 left-0 right-0 z-50 bg-gray-900/95 border-t border-yellow-400 px-4 py-2 flex items-center justify-between max-w-[393px] mx-auto">
           <div className="flex items-center gap-2">
             <span className="text-yellow-400 text-[10px] font-bold">DEBUG</span>
