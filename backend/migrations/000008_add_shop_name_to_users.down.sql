@@ -1,1 +1,1 @@
-ALTER TABLE users DROP COLUMN shop_name;
+ALTER TABLE users DROP COLUMN IF EXISTS shop_name;
