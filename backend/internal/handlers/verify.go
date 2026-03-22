@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -38,8 +39,9 @@ func SendVerificationCode(verifyRepo *repository.VerificationRepository) gin.Han
 		log.Printf("【Verification Code】 email=%s code=%s expires=%s", req.Email, code, expiresAt.Format(time.RFC3339))
 
 		response := gin.H{"message": "code sent"}
-		// ステージング/開発環境では、デバッグパネル表示用にコードをレスポンスに含める
-		if gin.Mode() != gin.ReleaseMode {
+		// 非本番環境ではデバッグパネル表示用にコードをレスポンスに含める
+		// GIN_MODE=debug または RETURN_VERIFY_CODE=true の場合に有効
+		if gin.Mode() != gin.ReleaseMode || os.Getenv("RETURN_VERIFY_CODE") == "true" {
 			response["code"] = code
 		}
 

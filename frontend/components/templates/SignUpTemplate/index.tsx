@@ -333,12 +333,14 @@ const SubStep2_2: React.FC<SubStep2_2Props> = ({
 
   const fetchLogs = async () => {
     try {
-      // 本来はバックエンドにログ取得APIを用意すべきですが、
-      // ここでは指示に従い、 serverCode がある場合に簡易的に表示するか、
-      // 外部から流し込まれたログを表示する体裁を整えます。
-      setBackendLogs("Fetching logs from gcloud...\n(Here would be the output of: gcloud run services logs read backend --limit=50)");
+      setBackendLogs("Fetching logs from backend...");
+      // バックエンドのデバッグエンドポイントを叩く
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/debug/logs`);
+      const text = await res.text();
+      setBackendLogs(text || "No logs available.");
     } catch (err) {
       console.error("Log fetch failed", err);
+      setBackendLogs("Error fetching logs: " + (err instanceof Error ? err.message : String(err)));
     }
   };
 
