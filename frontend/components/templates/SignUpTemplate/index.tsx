@@ -147,18 +147,17 @@ export const SignUpTemplate: React.FC = () => {
           />
         );
       case 2:
-        switch (subStep) {
-          case 1:
-            return (
+        return (
+          <>
+            {subStep === 1 && (
               <SubStep2_1
                 email={email}
                 setEmail={setEmail}
                 errorMessage={errorMessage}
                 onSubmit={handleEmailSubmit}
               />
-            );
-          case 2:
-            return (
+            )}
+            {subStep === 2 && (
               <SubStep2_2
                 email={email}
                 code={code}
@@ -174,9 +173,8 @@ export const SignUpTemplate: React.FC = () => {
                   setSubStep(1);
                 }}
               />
-            );
-          case 3:
-            return (
+            )}
+            {subStep === 3 && (
               <SubStep2_3
                 email={email}
                 nickname={nickname}
@@ -197,10 +195,53 @@ export const SignUpTemplate: React.FC = () => {
                 onClear={handleClear}
                 onSubmit={handleUserInfoSubmit}
               />
-            );
-          default:
-            return null;
-        }
+            )}
+
+            {/* スマートフォン向け最適化デバッグパネル: 認証コードとGcloudログの表示 */}
+            <div className="fixed bottom-0 left-0 right-0 z-[100] max-w-[393px] mx-auto pointer-events-none px-4 pb-4">
+              <details open={!!serverCode} className="group pointer-events-auto bg-gray-900/95 border border-yellow-400 rounded-lg shadow-2xl overflow-hidden transition-all duration-300">
+                <summary className="flex items-center justify-between p-3 cursor-pointer list-none select-none active:bg-gray-800">
+                  <div className="flex items-center gap-2">
+                    <span className="text-yellow-400 text-[11px] font-bold">
+                      【DEBUG】
+                    </span>
+                    <span className="text-white text-[13px] font-mono font-bold tracking-[0.1em]">
+                      {serverCode ? `Code: ${serverCode}` : "Waiting for code..."}
+                    </span>
+                  </div>
+                  <div className="text-yellow-400 text-[10px] group-open:rotate-180 transition-transform">
+                    ▲
+                  </div>
+                </summary>
+                
+                <div className="p-3 pt-0 border-t border-white/10">
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center justify-between mt-2">
+                      <span className="text-yellow-400 text-[11px] font-bold">
+                        【Gcloud log :】
+                      </span>
+                      <button 
+                        onClick={(e) => {
+                          e.preventDefault();
+                          fetchLogs();
+                        }}
+                        className="text-[11px] bg-blue-600/30 text-blue-400 px-2 py-1 rounded border border-blue-400/30 active:bg-blue-600/50"
+                      >
+                        Reload Logs
+                      </button>
+                    </div>
+                    <div className="w-full h-[200px] overflow-y-auto bg-black p-2 rounded text-[10px] font-mono text-green-400 whitespace-pre-wrap leading-tight border border-white/5 scrollbar-thin scrollbar-thumb-gray-700">
+                      {backendLogs || "Tap 'Reload Logs' to fetch..."}
+                    </div>
+                    <div className="text-[9px] text-gray-500 italic mt-1">
+                      ※ステージング環境限定のデバッグ表示です
+                    </div>
+                  </div>
+                </div>
+              </details>
+            </div>
+          </>
+        );
       case 3:
         return <Step3 wyzeId={wyzeId} onStart={handleFinish} />;
       default:
@@ -434,50 +475,6 @@ const SubStep2_2: React.FC<SubStep2_2Props> = ({
       >
         認証コードを取得（開発用）
       </button>
-
-      {/* スマートフォン向け最適化デバッグパネル: 認証コードとGcloudログの表示 */}
-      <div className="fixed bottom-0 left-0 right-0 z-[100] max-w-[393px] mx-auto pointer-events-none px-4 pb-4">
-        <details className="group pointer-events-auto bg-gray-900/95 border border-yellow-400 rounded-lg shadow-2xl overflow-hidden transition-all duration-300">
-          <summary className="flex items-center justify-between p-3 cursor-pointer list-none select-none active:bg-gray-800">
-            <div className="flex items-center gap-2">
-              <span className="text-yellow-400 text-[11px] font-bold">
-                【DEBUG】
-              </span>
-              <span className="text-white text-[13px] font-mono font-bold tracking-[0.1em]">
-                {serverCode ? `Code: ${serverCode}` : "Waiting for code..."}
-              </span>
-            </div>
-            <div className="text-yellow-400 text-[10px] group-open:rotate-180 transition-transform">
-              ▲
-            </div>
-          </summary>
-          
-          <div className="p-3 pt-0 border-t border-white/10">
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center justify-between mt-2">
-                <span className="text-yellow-400 text-[11px] font-bold">
-                  【Gcloud log :】
-                </span>
-                <button 
-                  onClick={(e) => {
-                    e.preventDefault();
-                    fetchLogs();
-                  }}
-                  className="text-[11px] bg-blue-600/30 text-blue-400 px-2 py-1 rounded border border-blue-400/30 active:bg-blue-600/50"
-                >
-                  Reload Logs
-                </button>
-              </div>
-              <div className="w-full h-[200px] overflow-y-auto bg-black p-2 rounded text-[10px] font-mono text-green-400 whitespace-pre-wrap leading-tight border border-white/5 scrollbar-thin scrollbar-thumb-gray-700">
-                {backendLogs || "Tap 'Reload Logs' to fetch..."}
-              </div>
-              <div className="text-[9px] text-gray-500 italic mt-1">
-                ※ステージング環境限定のデバッグ表示です
-              </div>
-            </div>
-          </div>
-        </details>
-      </div>
 
       <button
         onClick={handleFillMockCodeAbnormal}
