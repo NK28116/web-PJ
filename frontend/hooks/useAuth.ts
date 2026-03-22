@@ -37,12 +37,14 @@ export const useAuth = () => {
     }
   };
 
-  const register = async (email: string, password?: string) => {
+  const register = async (email: string, password?: string, nickname?: string, shopName?: string) => {
     try {
       // パスワードがない場合はデフォルト値を設定（SignUpTemplate側の制約に合わせる）
       const res = await apiPost<LoginResponse>('/register', { 
         email, 
-        password: password || 'password12345' 
+        password: password || 'password12345',
+        nickname,
+        shop_name: shopName
       });
       localStorage.setItem(AUTH_TOKEN_KEY, res.token);
       localStorage.setItem(USER_EMAIL_KEY, res.user.email);
@@ -50,6 +52,7 @@ export const useAuth = () => {
       setUser({ email: res.user.email, wyzeId: res.user.id });
     } catch (err) {
       console.error('[useAuth] Register failed:', err);
+      throw err; // エラーを呼び出し元に伝える
     }
   };
 

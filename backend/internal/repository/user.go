@@ -46,12 +46,12 @@ func (r *UserRepository) FindByID(id string) (*models.User, error) {
 	return &user, nil
 }
 
-func (r *UserRepository) Create(email, hashedPassword, role string) (*models.User, error) {
+func (r *UserRepository) Create(email, hashedPassword, role, nickname, shopName string) (*models.User, error) {
 	var user models.User
 	err := r.db.QueryRow(
-		"INSERT INTO users (email, password, role) VALUES ($1, $2, $3) RETURNING id, email, role, created_at, updated_at",
-		email, hashedPassword, role,
-	).Scan(&user.ID, &user.Email, &user.Role, &user.CreatedAt, &user.UpdatedAt)
+		"INSERT INTO users (email, password, role, nickname, shop_name) VALUES ($1, $2, $3, $4, $5) RETURNING id, email, role, nickname, shop_name, created_at, updated_at",
+		email, hashedPassword, role, nickname, shopName,
+	).Scan(&user.ID, &user.Email, &user.Role, &user.Nickname, &user.ShopName, &user.CreatedAt, &user.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}

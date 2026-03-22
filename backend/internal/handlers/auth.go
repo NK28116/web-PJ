@@ -32,6 +32,8 @@ type loginResponse struct {
 type registerRequest struct {
 	Email    string `json:"email" binding:"required,email"`
 	Password string `json:"password" binding:"required,min=8"`
+	Nickname string `json:"nickname"`
+	ShopName string `json:"shop_name"`
 }
 
 func Register(cfg *config.Config, userRepo repository.UserRepositoryInterface, verifyRepo repository.VerificationRepositoryInterface) gin.HandlerFunc {
@@ -69,7 +71,7 @@ func Register(cfg *config.Config, userRepo repository.UserRepositoryInterface, v
 			return
 		}
 
-		user, err := userRepo.Create(req.Email, string(hashed), "user")
+		user, err := userRepo.Create(req.Email, string(hashed), "user", req.Nickname, req.ShopName)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create user"})
 			return

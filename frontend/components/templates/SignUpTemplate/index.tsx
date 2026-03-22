@@ -123,9 +123,14 @@ export const SignUpTemplate: React.FC = () => {
     setErrorMessage("");
   };
 
-  const handleFinish = () => {
-    register(email, password);
-    router.replace("/home");
+  const handleFinish = async () => {
+    try {
+      await register(email, password, nickname, shopName);
+      router.replace("/home");
+    } catch (err) {
+      console.error("Final registration failed", err);
+      // 必要に応じてここでエラー表示
+    }
   };
 
   const renderStep = () => {
