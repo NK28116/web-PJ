@@ -197,49 +197,42 @@ export const SignUpTemplate: React.FC = () => {
               />
             )}
 
-            {/* スマートフォン向け最適化デバッグパネル: 認証コードとGcloudログの表示 */}
-            <div className="fixed bottom-0 left-0 right-0 z-[100] max-w-[393px] mx-auto pointer-events-none px-4 pb-4">
-              <details open={!!serverCode} className="group pointer-events-auto bg-gray-900/95 border border-yellow-400 rounded-lg shadow-2xl overflow-hidden transition-all duration-300">
-                <summary className="flex items-center justify-between p-3 cursor-pointer list-none select-none active:bg-gray-800">
-                  <div className="flex items-center gap-2">
-                    <span className="text-yellow-400 text-[11px] font-bold">
-                      【DEBUG】
-                    </span>
-                    <span className="text-white text-[13px] font-mono font-bold tracking-[0.1em]">
-                      {serverCode ? `Code: ${serverCode}` : "Waiting for code..."}
-                    </span>
-                  </div>
-                  <div className="text-yellow-400 text-[10px] group-open:rotate-180 transition-transform">
-                    ▲
-                  </div>
-                </summary>
-                
-                <div className="p-3 pt-0 border-t border-white/10">
-                  <div className="flex flex-col gap-2">
+            {/* デバッグパネル: バックエンドがcodeを返した場合のみ表示 */}
+            {serverCode && (
+              <div className="fixed bottom-0 left-0 right-0 z-[100] max-w-[393px] mx-auto pointer-events-none px-4 pb-4">
+                <details open={!!serverCode} className="group pointer-events-auto bg-gray-900/95 border border-yellow-400 rounded-lg shadow-2xl overflow-hidden transition-all duration-300">
+                  <summary className="flex items-center justify-between p-3 cursor-pointer list-none select-none active:bg-gray-800">
+                    <div className="flex items-center gap-2">
+                      <span className="text-yellow-400 text-[11px] font-bold">
+                        【DEBUG】
+                      </span>
+                      <span className="text-white text-[13px] font-mono font-bold tracking-[0.1em]">
+                        {serverCode ? `Code: ${serverCode}` : "Waiting for code..."}
+                      </span>
+                    </div>
+                    <div className="text-yellow-400 text-[10px] group-open:rotate-180 transition-transform">
+                      ▲
+                    </div>
+                  </summary>
+                  <div className="p-3 pt-0 border-t border-white/10">
                     <div className="flex items-center justify-between mt-2">
                       <span className="text-yellow-400 text-[11px] font-bold">
                         【Gcloud log :】
                       </span>
-                      <button 
-                        onClick={(e) => {
-                          e.preventDefault();
-                          fetchLogs();
-                        }}
-                        className="text-[11px] bg-blue-600/30 text-blue-400 px-2 py-1 rounded border border-blue-400/30 active:bg-blue-600/50"
+                      <button
+                        onClick={() => navigator.clipboard.writeText(serverCode)}
+                        className="text-yellow-400 text-[10px] border border-yellow-400 rounded px-2 py-0.5"
                       >
-                        Reload Logs
+                        COPY
                       </button>
                     </div>
-                    <div className="w-full h-[200px] overflow-y-auto bg-black p-2 rounded text-[10px] font-mono text-green-400 whitespace-pre-wrap leading-tight border border-white/5 scrollbar-thin scrollbar-thumb-gray-700">
-                      {backendLogs || "Tap 'Reload Logs' to fetch..."}
-                    </div>
-                    <div className="text-[9px] text-gray-500 italic mt-1">
+                    <div className="text-[9px] text-gray-500 italic mt-2">
                       ※ステージング環境限定のデバッグ表示です
                     </div>
                   </div>
-                </div>
-              </details>
-            </div>
+                </details>
+              </div>
+            )}
           </>
         );
       case 3:
@@ -375,20 +368,6 @@ const SubStep2_2: React.FC<SubStep2_2Props> = ({
 }) => {
   const [showResendNotification, setShowResendNotification] = useState(false);
   const [showVerifyNotification, setShowVerifyNotification] = useState(false);
-  const [backendLogs, setBackendLogs] = useState<string>("");
-
-  const fetchLogs = async () => {
-    try {
-      setBackendLogs("Fetching logs from backend...");
-      // バックエンドのデバッグエンドポイントを叩く
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/debug/logs`);
-      const text = await res.text();
-      setBackendLogs(text || "No logs available.");
-    } catch (err) {
-      console.error("Log fetch failed", err);
-      setBackendLogs("Error fetching logs: " + (err instanceof Error ? err.message : String(err)));
-    }
-  };
 
   const handleCodeChange = (index: number, value: string) => {
     const num = value.replace(/[^0-9]/g, "");

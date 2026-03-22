@@ -37,12 +37,12 @@ export const useAuth = () => {
     }
   };
 
-  const register = async (email: string, password?: string, nickname?: string, shopName?: string) => {
+  const register = async (email: string, password: string, nickname?: string, shopName?: string) => {
+    if (!password) throw new Error('password is required');
     try {
-      // パスワードがない場合はデフォルト値を設定（SignUpTemplate側の制約に合わせる）
-      const res = await apiPost<LoginResponse>('/register', { 
-        email, 
-        password: password || 'password12345',
+      const res = await apiPost<LoginResponse>('/register', {
+        email,
+        password,
         nickname,
         shop_name: shopName
       });

@@ -59,7 +59,6 @@ func main() {
 	r.POST("/api/auth/send-code", handlers.SendVerificationCode(verifyRepo))
 	r.POST("/api/auth/verify-code", handlers.VerifyCode(verifyRepo))
 	r.POST("/api/webhooks/stripe", handlers.StripeWebhook(cfg, userRepo))
-	r.GET("/api/debug/logs", handlers.GetLogsStage) // ステージング環境用デバッグログ API
 
 	// OAuth routes (認証不要 — ブラウザリダイレクト経由)
 	auth := r.Group("/api/auth")

@@ -143,7 +143,7 @@ func GoogleCallback(cfg *config.Config, extAcctRepo *repository.ExternalAccountR
 				targetUser = existingUser
 			} else {
 				// 新規ユーザー作成（パスワードは空ハッシュ: ソーシャルログイン専用）
-				newUser, err := userRepo.Create(userInfo.Email, "", "user")
+				newUser, err := userRepo.Create(userInfo.Email, "", "user", "", "")
 				if err != nil {
 					log.Printf("google login create user error: %v", err)
 					redirectWithError(c, cfg.FrontendURL, "registration_failed")
