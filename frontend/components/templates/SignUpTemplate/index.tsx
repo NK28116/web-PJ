@@ -280,7 +280,7 @@ const Step1: React.FC<Step1Props> = ({ onNext, onLoginRedirect }) => (
     </button>
     <button
       onClick={onLoginRedirect}
-      className="text-[#38B6FF] text-[13px] underline mt-6 mb-4"
+      className="text-white text-[13px] underline mt-6 mb-4"
     >
       すでにアカウントをお持ちの方はこちら
     </button>
@@ -464,7 +464,7 @@ const SubStep2_2: React.FC<SubStep2_2Props> = ({
 
       <button
         onClick={handleResend}
-        className="text-[#38B6FF] text-[13px] underline mt-2 mb-1"
+        className="text-white text-[13px] underline mt-2 mb-1"
       >
         認証メールを再送信
       </button>
@@ -498,7 +498,7 @@ const SubStep2_2: React.FC<SubStep2_2Props> = ({
 
       <button
         onClick={onResetEmail}
-        className="text-[#38B6FF] text-[13px] underline mt-4 mb-2"
+        className="text-white text-[13px] underline mt-4 mb-2"
       >
         メールアドレスを再設定
       </button>
@@ -512,7 +512,7 @@ const SubStep2_2: React.FC<SubStep2_2Props> = ({
           ・docomo、au、SoftBankのメールアドレスをご利用の方
         </p>
         <p className="text-white/80 text-[11px] mb-2 pl-2">
-          メール設定でPLANBからの受信が許可されているかご確認ください。
+          メール設定で wyze-system.com からの受信が許可されているかご確認ください。
         </p>
         <p className="text-white text-[11px] mb-1">
           ・docomoのメールアドレスをご利用の方でWi-Fi(無線)接続をされている方
@@ -730,15 +730,15 @@ const SubStep2_3: React.FC<SubStep2_3Props> = ({
           className="mt-0.5 flex-shrink-0"
         />
         <span className="text-white text-[11px]">
-          <a href="#" className="text-[#38B6FF] underline">
+          <a href="#" className="text-white underline">
             利用規約
           </a>
           、
-          <a href="#" className="text-[#38B6FF] underline">
+          <a href="#" className="text-white underline">
             プライバシーポリシー
           </a>
           、
-          <a href="#" className="text-[#38B6FF] underline">
+          <a href="#" className="text-white underline">
             cookieポリシー
           </a>
           に同意します
